@@ -1,0 +1,38 @@
+package iuh.fit.backend.model;
+
+import jakarta.persistence.*;
+import lombok.*;
+import java.time.LocalDate;
+import java.util.List;
+
+@AllArgsConstructor @NoArgsConstructor
+@Getter @Setter @ToString
+@Entity @Table(name = "books")
+public class Book {
+    @Id
+    private String bookId;
+
+    private String title;
+    private String author;
+    private String publisher;
+    private String category;
+    private double price;
+    private int stock;
+    @Column(length = 2000)
+    private String description;
+    private LocalDate publishDate;
+    private String coverImage;
+
+    // Relations
+    @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    private List<OrderDetail> orderDetails;
+
+    @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    private List<CartItem> cartItems;
+
+    @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    private List<Review> reviews;
+}
