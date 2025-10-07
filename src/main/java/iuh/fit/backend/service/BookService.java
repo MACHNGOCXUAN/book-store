@@ -15,4 +15,6 @@ public interface BookService {
     List<Book> findAll();
 
     List<Book> searchByTitle(String keyword);
+
+    List<Book> saveAll(List<Book> books);
 }

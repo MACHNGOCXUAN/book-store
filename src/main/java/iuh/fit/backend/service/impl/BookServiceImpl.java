@@ -43,4 +43,9 @@ public class BookServiceImpl implements iuh.fit.backend.service.BookService {
     public List<Book> searchByTitle(String keyword) {
         return repo.findByTitleContainingIgnoreCase(keyword);
     }
+
+    @Override
+    public List<Book> saveAll(List<Book> books) {
+        return repo.saveAll(books);
+    }
 }

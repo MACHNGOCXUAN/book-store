@@ -1,0 +1,20 @@
+package iuh.fit.backend.config;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+/**
+ * Cho phép Spring Boot phục vụ file tĩnh trong thư mục /uploads
+ * Ví dụ: http://localhost:8080/uploads/books/cleancode.jpg
+ */
+@Configuration
+public class WebConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // "file:uploads/" = đường dẫn tuyệt đối đến thư mục chứa ảnh trong project
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations("file:uploads/");
+    }   
+}
