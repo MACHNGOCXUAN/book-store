@@ -20,99 +20,24 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { useAppDispatch, useAppSelector } from "@/stores/hooks";
-import { getUserCustomerFilter, getUserStaffFilter } from "@/stores/slices/user.slice";
+import {
+  deleteCustomer,
+  getUserCustomerFilter,
+  getUserStaffFilter,
+  resetMessage,
+  updateStatusCustomer,
+} from "@/stores/slices/user.slice";
 import { Table } from "@/components/table/table";
 import { UserDataType } from "@/types/users";
-
-
-const columns: TableProps<UserDataType>["columns"] = [
-  {
-    title: "Tên đăng nhập",
-    dataIndex: "userName",
-    key: "userName",
-    render: (text) => <a>{text}</a>,
-  },
-  {
-    title: "Họ và tên",
-    dataIndex: "fullName",
-    key: "fullName",
-    render: (text) => <a>{text}</a>,
-  },
-  {
-    title: "Email",
-    dataIndex: "email",
-    key: "email",
-  },
-  {
-    title: "Số điện thoại",
-    dataIndex: "phoneNumber",
-    key: "phoneNumber",
-  },
-  {
-    title: "Vài trò",
-    dataIndex: "role",
-    key: "role",
-    render: (role) => (
-      <Tag color={role === "STAFF" ? "blue" : "green"}>
-        {role === "STAFF" ? "Nhân viên" : "Khách hàng"}
-      </Tag>
-    ),
-  },
-  {
-    title: "Trạng thái",
-    dataIndex: "status",
-    key: "status",
-    width: 200,
-    render: (status) => (
-      <Tag color={status === true ? "green" : "volcano"}>
-        {status === true ? "Hoạt động" : "Không hoạt động"}
-      </Tag>
-    ),
-  },
-  {
-    title: "Địa chỉ",
-    dataIndex: "address",
-    key: "address",
-  },
-  {
-    title: "Ngày sinh",
-    dataIndex: "dateOfBirth",
-    key: "dateOfBirth",
-  },
-  {
-    title: "Điểm tích lũy",
-    dataIndex: "loyaltyPoints",
-    key: "loyaltyPoints",
-  },
-  {
-    title: "Thao tác",
-    key: "action",
-    render: (_, record) => (
-      <Space size="middle">
-        {record.status === true ? (
-          <LockOutlined
-            style={{ color: "red", cursor: "pointer" }}
-            onClick={() => console.log("Lock user:", record.userId)}
-          />
-        ) : (
-          <UnlockOutlined
-            style={{ color: "green", cursor: "pointer" }}
-            onClick={() => console.log("Unlock user:", record.userId)}
-          />
-        )}
-        <Button
-          style={{ color: "white", background: "red", outline: "none" }}
-          icon={<DeleteOutlined />}
-        />
-      </Space>
-    ),
-  },
-];
+import { useMyNotification } from "@/hooks/notification";
 
 export default function UserPage() {
   const [form] = Form.useForm();
   const dispatch = useAppDispatch();
-  const { listCustomer, pagination } = useAppSelector((state) => state.user);
+  const { listCustomer, pagination, message } = useAppSelector(
+    (state) => state.user
+  );
+  const { openNotification, contextHolder } = useMyNotification();
 
   useEffect(() => {
     dispatch(getUserCustomerFilter({}));
@@ -123,24 +48,149 @@ export default function UserPage() {
   };
 
   const onFinish = (values: any) => {
-    console.log("Finish:", values);
+    dispatch(getUserCustomerFilter(values));
   };
 
   const onReset = () => {
     form.resetFields();
+    dispatch(getUserCustomerFilter({}));
   };
+
+  const handleLockAccount = (id: string) => {
+    dispatch(
+      updateStatusCustomer({
+        userId: id,
+        status: false,
+      })
+    );
+  };
+  const handleUnLockAccount = (id: string) => {
+    dispatch(
+      updateStatusCustomer({
+        userId: id,
+        status: true,
+      })
+    );
+  };
+
+  useEffect(() => {
+    if (message) {
+      if (message.type == "success") {
+        openNotification("success", message?.message);
+      } else {
+        openNotification("error", message?.message);
+      }
+      dispatch(getUserCustomerFilter({}));
+    }
+    dispatch(resetMessage());
+  }, [message]);
+
+  const handleDeleteCustomer = (id: string) => {
+    dispatch(deleteCustomer(id));
+  };
+
+  const columns: TableProps<UserDataType>["columns"] = [
+    {
+      title: "Tên đăng nhập",
+      dataIndex: "userName",
+      key: "userName",
+      render: (text) => <a>{text}</a>,
+    },
+    {
+      title: "Họ và tên",
+      dataIndex: "fullName",
+      key: "fullName",
+      render: (text) => <a>{text}</a>,
+    },
+    {
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
+    },
+    {
+      title: "Số điện thoại",
+      dataIndex: "phoneNumber",
+      key: "phoneNumber",
+    },
+    {
+      title: "Vài trò",
+      dataIndex: "role",
+      key: "role",
+      render: (role) => (
+        <Tag color={role === "STAFF" ? "blue" : "green"}>
+          {role === "STAFF" ? "Nhân viên" : "Khách hàng"}
+        </Tag>
+      ),
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      width: 200,
+      render: (status) => (
+        <Tag color={status === true ? "green" : "volcano"}>
+          {status === true ? "Hoạt động" : "Không hoạt động"}
+        </Tag>
+      ),
+    },
+    {
+      title: "Địa chỉ",
+      dataIndex: "address",
+      key: "address",
+    },
+    {
+      title: "Ngày sinh",
+      dataIndex: "dateOfBirth",
+      key: "dateOfBirth",
+    },
+    {
+      title: "Điểm tích lũy",
+      dataIndex: "loyaltyPoints",
+      key: "loyaltyPoints",
+    },
+    {
+      title: "Thao tác",
+      key: "action",
+      render: (_, record) => (
+        <Space size="middle">
+          {record.status === true ? (
+            <LockOutlined
+              style={{ color: "red", cursor: "pointer" }}
+              onClick={() => handleLockAccount(record.userId)}
+            />
+          ) : (
+            <UnlockOutlined
+              style={{ color: "green", cursor: "pointer" }}
+              onClick={() => handleUnLockAccount(record.userId)}
+            />
+          )}
+          <Button
+            style={{ color: "white", background: "red", outline: "none" }}
+            icon={<DeleteOutlined />}
+            onClick={() => handleDeleteCustomer(record.userId)}
+          />
+        </Space>
+      ),
+    },
+  ];
 
   const items: CollapseProps["items"] = [
     {
       key: "1",
       label: <h5 className="font-bold text-sm">Bộ lọc</h5>,
       children: (
-        <Form form={form} onFinish={onFinish}>
+        <Form
+          form={form}
+          onFinish={onFinish}
+          initialValues={{
+            status: "tat_ca",
+          }}
+        >
           <Row gutter={16}>
             <Col span={8}>
               <Form.Item
                 label="Tên người dùng"
-                name="tenNguoiDung"
+                name="name"
                 rules={[{ required: false }]}
               >
                 <Input placeholder="Nhập tên người dùng" />
@@ -148,12 +198,8 @@ export default function UserPage() {
             </Col>
 
             <Col span={6}>
-              <Form.Item label="Trạng thái" name="trangThai">
-                <Select
-                  placeholder="Chọn trạng thái"
-                  allowClear
-                  defaultValue={"tat_ca"}
-                >
+              <Form.Item label="Trạng thái" name="status">
+                <Select placeholder="Chọn trạng thái" allowClear>
                   <Select.Option value="tat_ca">Tất cả</Select.Option>
                   <Select.Option value="hoat_dong">Hoạt động</Select.Option>
                   <Select.Option value="khong_hoat_dong">
@@ -183,13 +229,14 @@ export default function UserPage() {
 
   return (
     <div className="boxpage">
+      { contextHolder }
       <div className="boxItemPage flex justify-between items-center">
-        <h5 className="font-bold text-sm">Quản lý người dùng</h5>
-        <div>
+        <h5 className="font-bold text-sm">Quản lý khách hàng</h5>
+        {/* <div>
           <Button type="primary" size="middle">
             Thêm người dùng mới
           </Button>
-        </div>
+        </div> */}
       </div>
       <div className="boxItemPage">
         <Collapse defaultActiveKey={["1"]} ghost items={items} />

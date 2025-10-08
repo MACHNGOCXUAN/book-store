@@ -53,11 +53,12 @@ export default function StaffPage() {
   };
 
   const onFinish = (values: any) => {
-    console.log("Finish:", values);
+    dispatch(getUserStaffFilter(values));
   };
 
   const onReset = () => {
     form.resetFields();
+    dispatch(getUserStaffFilter({}));
   };
 
   const items: CollapseProps["items"] = [
@@ -76,7 +77,7 @@ export default function StaffPage() {
             <Col span={8}>
               <Form.Item
                 label="Tên người dùng"
-                name="tenNguoiDung"
+                name="name"
                 rules={[{ required: false }]}
               >
                 <Input placeholder="Nhập tên người dùng" />

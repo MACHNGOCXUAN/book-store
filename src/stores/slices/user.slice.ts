@@ -58,6 +58,30 @@ export const deleteStaff = createAsyncThunk(
   }
 );
 
+export const deleteCustomer = createAsyncThunk(
+  "user/deleteCustomer",
+  async (id: string) => {
+    const response = await http.delete(`customer/${id}`);
+    return response;
+  }
+);
+
+export const searchPhone = createAsyncThunk(
+  "user/searchPhone",
+  async (phone: string) => {
+    const response = await http.post("customer/search-phone", { phone });
+    return response;
+  }
+);
+
+export const updateStatusCustomer = createAsyncThunk(
+  "user/updateStatusCustomer",
+  async (data: any) => {
+    const response = await http.post("customer/update-status", data);
+    return response;
+  }
+);
+
 const pagination = {
   curPage: 1,
   limitPage: 10,
@@ -207,6 +231,57 @@ export const userSlice = createSlice({
           type: "error",
           message: "Xóa thất bại!",
         };
+      });
+
+    builder
+      .addCase(deleteCustomer.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(deleteCustomer.fulfilled, (state, action) => {
+        state.loading = false;
+        state.message = {
+          type: "success",
+          message: "Xóa thành công!",
+        };
+      })
+      .addCase(deleteCustomer.rejected, (state) => {
+        state.loading = false;
+        state.message = {
+          type: "error",
+          message: "Xóa thất bại!",
+        };
+      });
+
+    builder
+      .addCase(updateStatusCustomer.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(updateStatusCustomer.fulfilled, (state, action) => {
+        state.loading = false;
+        state.message = {
+          type: "success",
+          message: "Cập nhật thành công!",
+        };
+      })
+      .addCase(updateStatusCustomer.rejected, (state) => {
+        state.loading = false;
+        state.message = {
+          type: "error",
+          message: "Cập nhật thất bại!",
+        };
+      });
+
+    builder
+      .addCase(searchPhone.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(searchPhone.fulfilled, (state, action) => {
+        state.loading = false;
+        state.listCustomer = action.payload.data;
+      })
+      .addCase(searchPhone.rejected, (state) => {
+        state.loading = false;
+        state.listCustomer = [];
       });
   },
 });
