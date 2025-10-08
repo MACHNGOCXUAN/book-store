@@ -17,5 +17,5 @@ public class Customer extends User {
     private String fullName;
     private String address;
     private LocalDate dateOfBirth;
-    private int loyaltyPoints;
+    private Integer loyaltyPoints;
 }
