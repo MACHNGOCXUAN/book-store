@@ -4,6 +4,7 @@ import iuh.fit.backend.model.Customer;
 import iuh.fit.backend.model.Staff;
 import iuh.fit.backend.repository.CustomerRepository;
 import iuh.fit.backend.requests.UserFilter;
+import iuh.fit.backend.requests.UserUpdateStatusDto;
 import iuh.fit.backend.service.CustomerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -38,7 +39,7 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public Page<Customer> getCustomersFilter(UserFilter userFilter) {
         String name = userFilter.getName() != null ? userFilter.getName() : "";
-//        String statusStr = userFilter.getStatus() != null ? userFilter.getStatus() : "tat_ca";
+        String statusStr = userFilter.getStatus() != null ? userFilter.getStatus() : "tat_ca";
         int page = userFilter.getPage() != null ? userFilter.getPage() - 1 : 0;
         int limit = userFilter.getLimit() != null ? userFilter.getLimit() : 10;
 
@@ -51,14 +52,46 @@ public class CustomerServiceImpl implements CustomerService {
 
             predicates.add((cb.equal(root.get("role"), "CUSTOMER")));
 
-//            if (!statusStr.equals("tat_ca")) {
-//                boolean status = statusStr.equals("hoat_dong");
-//                predicates.add(cb.equal(root.get("status"), status));
-//            }
+            if (!statusStr.equals("tat_ca")) {
+                boolean status = statusStr.equals("hoat_dong");
+                predicates.add(cb.equal(root.get("status"), status));
+            }
 
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         };
 
         return customerRepository.findAll(spec, PageRequest.of(page, limit, Sort.by("userName").ascending()));
+    }
+
+    @Override
+    public boolean deleteCustomerById(String id) {
+        if(customerRepository.findById(id).isPresent()){
+            customerRepository.deleteById(id);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public List<Customer> findCustomerByPhone(String phone) {
+        return this.customerRepository.findByPhoneNumber(phone);
+    }
+
+    @Override
+    public boolean updateCustomerStatus(UserUpdateStatusDto customerUpdateStatusDto) {
+        try {
+            Customer customer = customerRepository.findById(customerUpdateStatusDto.getUserId()).orElse(null);
+            if(customer == null) {
+                System.out.println("Khoong tim thay khach hang: " + customerUpdateStatusDto.getUserId());
+                return false;
+            }
+            customer.setStatus(customerUpdateStatusDto.isStatus());
+
+            customerRepository.save(customer);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 }

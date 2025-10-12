@@ -2,6 +2,7 @@ package iuh.fit.backend.service;
 
 import iuh.fit.backend.model.Customer;
 import iuh.fit.backend.requests.UserFilter;
+import iuh.fit.backend.requests.UserUpdateStatusDto;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
@@ -11,4 +12,7 @@ public interface CustomerService {
     List<Customer> findAllCustomers();
     Customer saveCustomer(Customer customer);
     Page<Customer> getCustomersFilter(UserFilter userFilter);
+    boolean deleteCustomerById(String id);
+    List<Customer> findCustomerByPhone(String phone);
+    boolean updateCustomerStatus(UserUpdateStatusDto customerUpdateStatusDto);
 }
