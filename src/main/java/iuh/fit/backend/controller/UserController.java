@@ -4,8 +4,7 @@ import iuh.fit.backend.model.Customer;
 import iuh.fit.backend.model.Staff;
 import iuh.fit.backend.model.User;
 import iuh.fit.backend.requests.StaffCreateDto;
-import iuh.fit.backend.requests.StaffUpdateDto;
-import iuh.fit.backend.requests.StaffUpdateStatusDto;
+import iuh.fit.backend.requests.UserUpdateStatusDto;
 import iuh.fit.backend.requests.UserFilter;
 import iuh.fit.backend.service.CustomerService;
 import iuh.fit.backend.service.StaffService;
@@ -116,7 +115,7 @@ public class UserController {
     }
 
     @PostMapping("/admin/staff/update-status")
-    public ResponseEntity<?> updateStatusStaff(@RequestBody StaffUpdateStatusDto request) {
+    public ResponseEntity<?> updateStatusStaff(@RequestBody UserUpdateStatusDto request) {
         System.out.println("nk: " + request);
         boolean success = staffService.updateStatusStaff(request);
         if(success) {
@@ -135,6 +134,36 @@ public class UserController {
         } else {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Xóa nhân viên thất bại"));
+        }
+    }
+
+    @DeleteMapping("/admin/customer/{id}")
+    public ResponseEntity<?> deleteCustomerById(@PathVariable String id) {
+        boolean success = customerService.deleteCustomerById(id);;
+        if(success) {
+            return ResponseEntity.ok(Map.of("message", "Xóa khách hàng thành công"));
+        } else {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Xóa khách hàng thất bại"));
+        }
+    }
+
+    @PostMapping("/admin/customer/search-phone")
+    public ResponseEntity<?> searchPhone(@RequestBody String phone) {
+        List<Customer> customerList = customerService.findCustomerByPhone(phone);
+        Map<String, Object> response = new HashMap<>();
+        response.put("data", customerList);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/admin/customer/update-status")
+    public ResponseEntity<?> updateStatusCustomer(@RequestBody UserUpdateStatusDto request) {
+        boolean success = customerService.updateCustomerStatus(request);
+        if(success) {
+            return ResponseEntity.ok(Map.of("message", "Cập nhật khách hàng thành công"));
+        } else {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Cập nhật khách hàng thất bại"));
         }
     }
 }

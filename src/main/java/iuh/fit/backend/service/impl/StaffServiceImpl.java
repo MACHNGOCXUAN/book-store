@@ -4,7 +4,7 @@ import iuh.fit.backend.model.Staff;
 import iuh.fit.backend.model.enums.Role;
 import iuh.fit.backend.repository.StaffRepository;
 import iuh.fit.backend.requests.StaffCreateDto;
-import iuh.fit.backend.requests.StaffUpdateStatusDto;
+import iuh.fit.backend.requests.UserUpdateStatusDto;
 import iuh.fit.backend.requests.UserFilter;
 import iuh.fit.backend.service.StaffService;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +39,7 @@ public class StaffServiceImpl implements StaffService {
     @Override
     public Page<Staff> getStaffsFilter(UserFilter userFilter) {
         String name = userFilter.getName() != null ? userFilter.getName() : "";
-//        String statusStr = userFilter.getStatus() != null ? userFilter.getStatus() : "tat_ca";
+        String statusStr = userFilter.getStatus() != null ? userFilter.getStatus() : "tat_ca";
         int page = userFilter.getPage() != null ? userFilter.getPage() - 1 : 0;
         int limit = userFilter.getLimit() != null ? userFilter.getLimit() : 10;
 
@@ -52,10 +52,10 @@ public class StaffServiceImpl implements StaffService {
 
             predicates.add((cb.equal(root.get("role"), "STAFF")));
 
-//            if (!statusStr.equals("tat_ca")) {
-//                boolean status = statusStr.equals("hoat_dong");
-//                predicates.add(cb.equal(root.get("status"), status));
-//            }
+            if (!statusStr.equals("tat_ca")) {
+                boolean status = statusStr.equals("hoat_dong");
+                predicates.add(cb.equal(root.get("status"), status));
+            }
 
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         };
@@ -130,7 +130,7 @@ public class StaffServiceImpl implements StaffService {
     }
 
     @Override
-    public boolean updateStatusStaff(StaffUpdateStatusDto staffUpdateStatusDto) {
+    public boolean updateStatusStaff(UserUpdateStatusDto staffUpdateStatusDto) {
         try {
             Staff staff = staffRepository.findById(staffUpdateStatusDto.getUserId()).orElse(null);
             if(staff == null) {
