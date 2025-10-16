@@ -1,7 +1,7 @@
 package iuh.fit.backend.service.impl;
 
 import iuh.fit.backend.model.Customer;
-import iuh.fit.backend.model.Staff;
+import iuh.fit.backend.model.enums.Role;
 import iuh.fit.backend.repository.CustomerRepository;
 import iuh.fit.backend.requests.UserFilter;
 import iuh.fit.backend.requests.UserUpdateStatusDto;
@@ -20,6 +20,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CustomerServiceImpl implements CustomerService {
     private final CustomerRepository customerRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @Override
     public Customer findCustomerById(String id) {
@@ -33,7 +34,19 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Override
     public Customer saveCustomer(Customer customer) {
-        return null;
+        try {
+            if (customer.getPassword() != null && !customer.getPassword().isEmpty()) {
+                customer.setPassword(passwordEncoder.encode(customer.getPassword()));
+            }
+            customer.setRole(Role.CUSTOMER);
+            if (customer.getUserId() == null || customer.getUserId().isEmpty()) {
+                customer.setUserId("USER" + System.currentTimeMillis());
+            }
+            return customerRepository.save(customer);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     @Override
