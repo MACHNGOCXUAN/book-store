@@ -3,7 +3,7 @@
 "use client"
 
 import React from "react"
-import { Card, Tabs, Form, Input, Button, Checkbox, Typography, Flex, message, Divider } from "antd"
+import { Card, Tabs, Form, Input, Button, Checkbox, Typography, message, Divider } from "antd"
 import type { TabsProps } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined, PhoneOutlined } from '@ant-design/icons';
 import { GoogleIcon } from "../components/icons/GoogleIcon";
@@ -197,12 +197,12 @@ const LoginForm = () => {
       </Form.Item>
 
       <Form.Item>
-        <Flex justify="space-between" align="center">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Form.Item name="remember" valuePropName="checked" noStyle>
             <Checkbox>Ghi nhớ đăng nhập</Checkbox>
           </Form.Item>
           <Link href="#">Quên mật khẩu?</Link>
-        </Flex>
+        </div>
       </Form.Item>
 
       <Form.Item>
@@ -237,6 +237,7 @@ const LoginForm = () => {
 
   // --- Register Form Component ---
   const RegisterForm = () => {
+    const [form] = Form.useForm();
     const onFinish = (values: any) => {
       const { fullName, email, phone, password } = values;
       import("../lib/api").then(({ default: api }) => {
@@ -244,8 +245,7 @@ const LoginForm = () => {
           .register(fullName, email, phone, password)
           .then((_res: any) => {
             message.success("Đăng ký tài khoản thành công! Vui lòng đăng nhập.");
-            // optionally redirect to login tab/page
-            window.location.href = "/auth";
+            try { form.resetFields(); } catch (e) {}
           })
           .catch((err: any) => {
             message.error(err.message || "Đăng ký thất bại");
@@ -255,7 +255,7 @@ const LoginForm = () => {
   
 
   return (
-    <Form name="register" onFinish={onFinish} layout="vertical" size="large">
+    <Form form={form} name="register" onFinish={onFinish} layout="vertical" size="large">
       <Form.Item
         name="fullName"
         rules={[{ required: true, message: "Vui lòng nhập họ và tên!" }]}
@@ -333,16 +333,16 @@ export default function AuthPage() {
   ];
 
   return (
-    <Flex align="center" justify="center" style={{ minHeight: '100vh', background: '#f0f2f5' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#f0f2f5' }}>
       <Card style={{ width: 400, boxShadow: '0 8px 24px hsla(210, 8%, 62%, .2)' }}>
-        <Flex vertical align="center" style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 24 }}>
           {/* Bạn có thể thay thế bằng logo của mình */}
           {/* <Image src="/logo.svg" alt="Logo" width={150} height={50} /> */}
           <Title level={3} style={{textAlign:"center"}}>Chào mừng bạn đến với website của chúng tôi</Title>
           <Text type="secondary">Vui lòng đăng nhập hoặc đăng ký để tiếp tục</Text>
-        </Flex>
+        </div>
         <Tabs defaultActiveKey="login" items={items} centered />
       </Card>
-    </Flex>
+    </div>
   );
 }

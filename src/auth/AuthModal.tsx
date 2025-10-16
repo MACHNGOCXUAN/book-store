@@ -3,7 +3,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react";
-import { Modal, Tabs, Form, Input, Button, Checkbox, Typography, Flex, message, Divider } from "antd";
+import { Modal, Tabs, Form, Input, Button, Checkbox, Typography, message, Divider } from "antd";
 import type { TabsProps } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined, PhoneOutlined } from '@ant-design/icons';
 import { GoogleIcon } from "../components/icons/GoogleIcon";
@@ -195,20 +195,20 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
         <Input.Password prefix={<LockOutlined />} placeholder="Mật khẩu" />
       </Form.Item>
       <Form.Item>
-        <Flex justify="space-between" align="center">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Form.Item name="remember" valuePropName="checked" noStyle><Checkbox>Ghi nhớ đăng nhập</Checkbox></Form.Item>
           <Link href="#">Quên mật khẩu?</Link>
-        </Flex>
+        </div>
       </Form.Item>
       <Form.Item><Button type="primary" htmlType="submit" block>Đăng nhập</Button></Form.Item>
       <Divider>Hoặc</Divider>
       <Form.Item>
-        <Flex vertical align="center" gap="middle">
-          <div id="google-signin-button" />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+          <div id="google-signin-button" style={{ marginBottom: 12 }} />
           <Button block icon={<GoogleIcon />} size="large" onClick={handleGoogleLogin}>
             Đăng nhập bằng tài khoản Google
           </Button>
-        </Flex>
+        </div>
       </Form.Item>
       <Modal title="Dán Google ID token" open={isTokenModalVisible} onOk={handlePasteTokenOk} onCancel={() => setIsTokenModalVisible(false)} okText="Gửi">
         <Input.TextArea rows={4} value={pastedToken} onChange={(e) => setPastedToken(e.target.value)} placeholder="Dán id_token ở đây" />
@@ -220,13 +220,15 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
 
 // --- Register Form Component ---
 const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
+  const [form] = Form.useForm();
   const onFinish = (values: any) => {
     const { fullName, email, phone, password } = values;
     import("../lib/api").then(({ default: api }) => {
       api.register(fullName, email, phone, password)
         .then((_res: any) => {
           message.success("Đăng ký thành công! Vui lòng đăng nhập.");
-          onSwitchToLogin(); // THAY ĐỔI: Chuyển sang tab đăng nhập
+          try { form.resetFields(); } catch (e) {}
+          try { onSwitchToLogin(); } catch (e) {}
         })
         .catch((err: any) => {
           message.error(err.message || "Đăng ký thất bại");
@@ -235,7 +237,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
   };
 
   return (
-    <Form name="register" onFinish={onFinish} layout="vertical" size="large">
+    <Form form={form} name="register" onFinish={onFinish} layout="vertical" size="large">
       <Form.Item name="fullName" rules={[{ required: true, message: "Vui lòng nhập họ và tên!" }]}>
         <Input prefix={<UserOutlined />} placeholder="Họ và tên" />
       </Form.Item>
@@ -275,10 +277,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onCancel, onSuccess }) => {
   ];
 
   const modalTitle = (
-    <Flex vertical align="center">
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <Title level={3} style={{ textAlign: "center", margin: 0 }}>Chào mừng bạn</Title>
       <Text type="secondary">Đăng nhập hoặc đăng ký để tiếp tục</Text>
-    </Flex>
+    </div>
   );
 
   return (

@@ -14,7 +14,6 @@
     UserOutlined,
     MenuOutlined,
     SearchOutlined,
-    DownOutlined,
     LogoutOutlined,
     SolutionOutlined,
   } from "@ant-design/icons";
@@ -25,8 +24,7 @@
     Menu,
     Input,
     Badge,
-    Avatar,
-    Button,
+  Button,
     Dropdown,
     Drawer,
     Grid,
@@ -37,7 +35,7 @@
     Modal,
   } from "antd";
   import type { MenuProps } from "antd";
-  import AuthModal from "../auth/AuthModal";
+import AuthModal from '../auth/AuthModal';
 
   const { Header: AntHeader } = Layout;
   const { useBreakpoint } = Grid;
