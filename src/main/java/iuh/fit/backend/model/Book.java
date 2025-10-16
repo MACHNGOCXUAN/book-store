@@ -21,6 +21,9 @@ public class Book {
     @Column(length = 2000)
     private String description;
     private LocalDate publishDate;
+
+    @Lob
+    @Column(columnDefinition = "MEDIUMTEXT")
     private String coverImage;
 
     // Relations
