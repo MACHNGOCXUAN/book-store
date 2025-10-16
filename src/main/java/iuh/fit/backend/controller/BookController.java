@@ -1,19 +1,23 @@
 package iuh.fit.backend.controller;
 
 import iuh.fit.backend.model.Book;
+import iuh.fit.backend.requests.ProductFilterDto;
+import iuh.fit.backend.requests.UserFilter;
 import iuh.fit.backend.service.BookService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/books")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class BookController {
 
     private final BookService service;
@@ -67,11 +71,36 @@ public class BookController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable String id) {
-        if (service.findById(id).isEmpty()) {
-            return ResponseEntity.notFound().build();
+    public ResponseEntity<?> delete(@PathVariable String id) {
+        boolean isDeletedBook = service.delete(id);
+        if(isDeletedBook) {
+            return ResponseEntity.ok(Map.of("message", "Xóa sản phẩm thành công!"));
+        } else {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Xóa sản phẩm thất bại"));
         }
-        service.delete(id);
-        return ResponseEntity.noContent().build();
     }
+
+
+
+    // admin
+    @PostMapping("/filter")
+    public ResponseEntity<?> getFilterProduct(@RequestBody ProductFilterDto productFilterDto) {
+        Page<Book> pageBook = service.getProductFilter(productFilterDto);
+        List<Book> bookList = pageBook.getContent();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("data", bookList);
+
+        Map<String, Object> paging = new HashMap<>();
+        paging.put("curPage", pageBook.getNumber() + 1);
+        paging.put("limitPage", pageBook.getSize());
+        paging.put("totalRows", pageBook.getTotalElements());
+        paging.put("totalPage", pageBook.getTotalPages());
+
+        response.put("paging", paging);
+
+        return ResponseEntity.ok(response);
+    }
+
 }

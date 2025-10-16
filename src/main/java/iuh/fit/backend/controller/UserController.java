@@ -1,5 +1,6 @@
 package iuh.fit.backend.controller;
 
+import iuh.fit.backend.model.ChatSession;
 import iuh.fit.backend.model.Customer;
 import iuh.fit.backend.model.Staff;
 import iuh.fit.backend.model.User;
@@ -19,11 +20,11 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")
-@CrossOrigin(origins = "*")
 public class UserController {
     private final JwtUtils jwtUtils;
     private final UserService userService;
@@ -107,7 +108,7 @@ public class UserController {
     public ResponseEntity<?> updateStaff(@RequestBody StaffCreateDto request) {
         boolean success = staffService.updateStaff(request);
         if(success) {
-            return ResponseEntity.ok(Map.of("message", "Cập nhật nhân viên thành công"));
+            return ResponseEntity.ok(Map.of("message", "Cập nhậts nhân viên thành công"));
         } else {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Cập nhật nhân viên thất bại"));
@@ -139,7 +140,7 @@ public class UserController {
 
     @DeleteMapping("/admin/customer/{id}")
     public ResponseEntity<?> deleteCustomerById(@PathVariable String id) {
-        boolean success = customerService.deleteCustomerById(id);;
+        boolean success = customerService.deleteCustomerById(id);
         if(success) {
             return ResponseEntity.ok(Map.of("message", "Xóa khách hàng thành công"));
         } else {
@@ -165,5 +166,33 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Cập nhật khách hàng thất bại"));
         }
+    }
+
+    @GetMapping("/staff/chat-customers")
+    public ResponseEntity<?> getCustomersChattingWithStaff(@RequestHeader("Authorization") String authHeader) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.badRequest().body("Missing Authorization header");
+        }
+        String token = authHeader.substring(7);
+        String staffId = jwtUtils.getUserIdFromToken(token);
+
+        List<ChatSession> sessions = staffService.getSessionsByStaffId(staffId);
+
+        // Lấy danh sách customer duy nhất từ các session
+        List<Customer> customers = sessions.stream()
+                .map(ChatSession::getCustomer)
+                .distinct()
+                .toList();
+
+        return ResponseEntity.ok(Map.of("data", customers));
+    }
+
+    @GetMapping("/user/search/{phone}")
+    public ResponseEntity<?> getUserByPhone(@PathVariable String phone) {
+        Optional<User> user = userService.findUserByPhone(phone);
+        Map<String, Object> response = new HashMap<>();
+        response.put("data", user);
+        return ResponseEntity.ok(response);
     }
 }

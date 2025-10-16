@@ -1,7 +1,10 @@
 package iuh.fit.backend.service.impl;
 
+import iuh.fit.backend.model.ChatSession;
+import iuh.fit.backend.model.Customer;
 import iuh.fit.backend.model.Staff;
 import iuh.fit.backend.model.enums.Role;
+import iuh.fit.backend.repository.ChatSessionRepository;
 import iuh.fit.backend.repository.StaffRepository;
 import iuh.fit.backend.requests.StaffCreateDto;
 import iuh.fit.backend.requests.UserUpdateStatusDto;
@@ -25,6 +28,7 @@ public class StaffServiceImpl implements StaffService {
 
     private final StaffRepository staffRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ChatSessionRepository chatSessionRepository;
 
     @Override
     public Staff getStaffById(String staffId) {
@@ -145,6 +149,28 @@ public class StaffServiceImpl implements StaffService {
             e.printStackTrace();
             return false;
         }
+    }
+
+    @Override
+    public List<ChatSession> getSessionsByStaffId(String staffId) {
+        return chatSessionRepository.findActiveSessionsByStaffId(staffId);
+    }
+
+    @Override
+    public List<ChatSession> getCustomersChattingWithStaff(String staffId) {
+        List<ChatSession> chatSessions = chatSessionRepository.findActiveSessionsByStaffId(staffId);
+
+        List<Customer> customersChattingWithStaff = new ArrayList<>();
+        for (ChatSession chatSession : chatSessions) {
+            customersChattingWithStaff.add(chatSession.getCustomer());
+        }
+        return chatSessions;
+    }
+
+    @Override
+    public List<ChatSession> getStaffsChattingWithCustomer(String customerId) {
+        List<ChatSession> chatSessions = chatSessionRepository.findCustomerActiveSessionsByStaffId(customerId);
+        return chatSessions;
     }
 
 }

@@ -11,22 +11,29 @@ import java.util.List;
 @Entity @Table(name = "chat_sessions")
 public class ChatSession {
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private String sessionId;
 
     @ManyToOne
-    @JoinColumn(name = "customer_id", nullable = false)
-    private Customer customer;  // 1 customer - n sessions (theo sơ đồ là 1, nhưng thực tế thường nhiều)
+    @JoinColumn(name = "customer_id")
+    private Customer customer;
 
     @ManyToOne
-    @JoinColumn(name = "staff_id", nullable = false)
-    private Staff staff;        // 1 staff - n sessions
+    @JoinColumn(name = "staff_id")
+    private Staff staff;
 
     private LocalDateTime startTime;
-    private LocalDateTime endTime;
-    @Enumerated(EnumType.STRING)
-    private ChatStatus status;      // "OPEN", "CLOSED", ...
+    private LocalDateTime lastMessageTime;
+    private boolean isActive;
 
-    @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
-    @ToString.Exclude
-    private List<Message> messages; // 1 session - n messages
+    @PrePersist
+    public void prePersist() {
+        if (startTime == null) {
+            startTime = LocalDateTime.now();
+        }
+        if (lastMessageTime == null) {
+            lastMessageTime = LocalDateTime.now();
+        }
+        isActive = true;
+    }
 }
