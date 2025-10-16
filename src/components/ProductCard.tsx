@@ -1,86 +1,177 @@
-import React from "react";
-import type { Book } from "../types/Book";
-import { Image } from "react-bootstrap";
-import { Link } from "react-router-dom";
-import { ShoppingCart, Eye } from "lucide-react";
+"use client"
+
+// src/components/ProductCard.tsx
+
+import type React from "react"
+import { useNavigate } from "react-router-dom"
+import type { Book } from "../types/Book"
+import { Card, Button, Typography, Tooltip } from "antd"
+import { ShoppingCartOutlined, EyeOutlined } from "@ant-design/icons"
 
 interface ProductCardProps {
-  book: Book;
-  onAddToCart?: (book: Book) => void;
+  book: Book
+  onAddToCart?: (book: Book) => void
 }
 
+const { Text } = Typography
+
 const ProductCard: React.FC<ProductCardProps> = ({ book, onAddToCart }) => {
+  const navigate = useNavigate()
+
+  // Hàm điều hướng đến trang chi tiết sản phẩm
+  const handleViewDetails = () => {
+    navigate(`/books/${book.bookId}`)
+  }
+
   return (
-    <div
-      className="
-        group relative overflow-hidden 
-        bg-white rounded-2xl border border-gray-200 
-        shadow-sm hover:shadow-lg transition-all duration-300
-      "
-    >
-      {/* Ảnh lớn hơn */}
-      <div className="relative w-full h-72 overflow-hidden rounded-t-xl">
-        <Image
-          src={`http://localhost:8080${book.coverImage}`}
-          alt={book.title}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
-
-        {/* Thanh action trượt lên khi hover */}
+    <Card
+      hoverable
+      cover={
         <div
-          className="
-            absolute inset-x-0 bottom-0
-            translate-y-full group-hover:translate-y-0
-            transition-transform duration-300
-            bg-gradient-to-t from-black/60 to-black/0
-            p-3 flex justify-center
-          "
+          style={{
+            position: "relative",
+            overflow: "hidden",
+            backgroundColor: "#f5f5f5",
+            aspectRatio: "3/4",
+            borderBottom: "1px solid #f0f0f0",
+            padding: "12px",
+            height: "220px", // 👈 giảm chiều cao (mặc định bạn đang để full tỷ lệ)
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
         >
-          <button
-            onClick={() => onAddToCart?.(book)}
-            className="
-              flex items-center justify-around text-white
-              text-sm font-medium px-4 py-2
-              rounded-full shadow-md transition-colors
-            "
-          >
-            <ShoppingCart className="inline-block h-6 w-6 mr-2" />
-            Thêm vào giỏ
-          </button>
+          <img
+            alt={book.title}
+            src={book.coverImage}
+            style={{
+              height: "100%",
+              width: "auto",
+              objectFit: "contain",
+              transition: "transform 0.3s ease",
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
+            onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
+          />
         </div>
+      }
+
+      style={{
+        borderRadius: 16,
+        overflow: "hidden",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+        transition: "all 0.3s ease",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+      }}
+      bodyStyle={{
+        padding: "20px",
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.12)"
+        e.currentTarget.style.transform = "translateY(-4px)"
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)"
+        e.currentTarget.style.transform = "translateY(0)"
+      }}
+    >
+      <div>
+        <Tooltip title={book.title}>
+          <Text
+            strong
+            style={{
+              display: "block",
+              fontSize: "16px",
+              marginBottom: "8px",
+              lineHeight: "1.4",
+              height: "44px",
+              overflow: "hidden",
+            }}
+          >
+            {book.title}
+          </Text>
+        </Tooltip>
+
+        <Text
+          type="secondary"
+          style={{
+            display: "block",
+            fontSize: "14px",
+            marginBottom: "16px",
+          }}
+        >
+          {book.author}
+        </Text>
       </div>
 
-      {/* Thông tin sách nhỏ gọn hơn */}
-      <div className="p-3 text-center space-y-1">
-        <h3 className="text-sm font-semibold text-gray-900 line-clamp-1">
-          {book.title}
-        </h3>
-        <p className="text-xs text-gray-500 line-clamp-1">{book.author}</p>
-
-        <div className="pt-1">
-          <span className="inline-block rounded-full bg-sky-50 text-sky-700 px-3 py-1 text-[13px] font-bold">
+      <div style={{ marginTop: "auto" }}>
+        <div
+          style={{
+            marginBottom: 16,
+            textAlign: "center",
+            padding: "12px",
+            backgroundColor: "#f0f5ff",
+            borderRadius: "8px",
+          }}
+        >
+          <Text
+            strong
+            style={{
+              fontSize: "20px",
+              color: "#1890ff",
+              fontWeight: 600,
+            }}
+          >
             {Number(book.price).toLocaleString("vi-VN")} ₫
-          </span>
+          </Text>
         </div>
 
-        {/* Nút Xem chi tiết luôn hiển thị */}
-        <div className="pt-2">
-          <Link
-            to={`/books/${book.bookId}`}
-            className="
-              inline-flex items-center gap-2
-              rounded-full border border-gray-300
-              px-4 py-2 text-[13px] font-medium
-              text-gray-700 hover:bg-gray-100 transition-colors
-            "
+        <div
+          style={{
+            display: "flex",
+            gap: "8px",
+            justifyContent: "space-between",
+          }}
+        >
+          <Button
+            type="default"
+            icon={<EyeOutlined />}
+            onClick={handleViewDetails}
+            style={{
+              flex: 1,
+              borderRadius: "8px",
+              height: "40px",
+              fontWeight: 500,
+            }}
           >
-            <Eye className="h-4 w-4" />
             Xem chi tiết
-          </Link>
+          </Button>
+
+          <Button
+            type="primary"
+            icon={<ShoppingCartOutlined />}
+            onClick={() => onAddToCart?.(book)}
+            style={{
+              flex: 1,
+              borderRadius: "8px",
+              height: "40px",
+              fontWeight: 500,
+              background: "linear-gradient(135deg, #667eea 0%)",
+              border: "none",
+            }}
+          >
+            Thêm giỏ
+          </Button>
         </div>
       </div>
-    </div>
-  );
-};
+    </Card>
+  )
+}
 
-export default ProductCard;
+export default ProductCard

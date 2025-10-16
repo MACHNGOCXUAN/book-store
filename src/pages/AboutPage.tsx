@@ -1,4 +1,4 @@
-import React from 'react'
+// simple static page
 
 const AboutPage = () => {
   return (

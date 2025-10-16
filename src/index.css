@@ -1,1 +1,12 @@
 @import "tailwindcss";
+.product-card .ant-card-cover {
+  overflow: hidden; /* Đảm bảo ảnh không tràn ra ngoài khi zoom */
+}
+
+.product-card .ant-card-cover img {
+  transition: transform 0.3s ease-in-out;
+}
+
+.product-card:hover .ant-card-cover img {
+  transform: scale(1.05); /* Hiệu ứng zoom khi di chuột vào card */
+}

@@ -1,6 +1,4 @@
-import React from 'react'
-import ProductPage from '../components/ProductList'
-
+// contact page
 const ContactPage = () => {
   return (
     <div>
