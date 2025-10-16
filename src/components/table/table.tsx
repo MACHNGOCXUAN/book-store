@@ -5,6 +5,7 @@ import React from "react";
 interface CommonTableProps<T> {
   data: T[];
   columns: TableProps<T>["columns"];
+  loading?: boolean;
   pagination?: {
     current?: number;
     pageSize?: number;
@@ -21,11 +22,13 @@ export function Table<T>({
   data,
   columns,
   pagination,
+  loading
 }: CommonTableProps<T>) {
   return (
     <TableAnt<T>
       columns={columns}
       dataSource={data}
+      loading={loading}
       pagination={pagination}
     />
   );

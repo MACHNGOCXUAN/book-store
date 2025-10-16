@@ -82,7 +82,7 @@ const LoginPage = () => {
 
           <Form.Item className="mb-6">
             <Button
-              loading={loading}
+              // loading={loading}
               type="primary"
               htmlType="submit"
               size="large"

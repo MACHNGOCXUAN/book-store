@@ -1,22 +1,24 @@
-"use client"
-import React, { use } from "react";
-import { AntdRegistry } from "@ant-design/nextjs-registry";
-import { Metadata } from "next";
-import "@/app/globals.css";
+import type { Metadata } from "next";
+import "./globals.css";
 import { ReduxProvider } from "@/stores/provider";
+import { AntdRegistry } from "@ant-design/nextjs-registry";
 
-// export const metadata: Metadata = {
-//   title: "Books",
-// };
+export const metadata: Metadata = {
+  title: "Books",
+};
 
-const RootLayout = ({ children }: React.PropsWithChildren) => (
-  <html lang="en">
-    <body>
-      <AntdRegistry>
-        <ReduxProvider>{children}</ReduxProvider>
-      </AntdRegistry>
-    </body>
-  </html>
-);
-
-export default RootLayout;
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body suppressHydrationWarning>
+        <AntdRegistry>
+          <ReduxProvider>{children}</ReduxProvider>
+        </AntdRegistry>
+      </body>
+    </html>
+  );
+}

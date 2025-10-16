@@ -5,7 +5,7 @@ import { da } from "zod/locales";
 export const getUserStaffFilter = createAsyncThunk(
   "user/getStaff",
   async (data: any) => {
-    const response = await http.post("get-staff", data);
+    const response = await http.post("admin/get-staff", data);
     return response;
   }
 );
@@ -13,7 +13,7 @@ export const getUserStaffFilter = createAsyncThunk(
 export const getUserCustomerFilter = createAsyncThunk(
   "user/getCustomer",
   async (data: any) => {
-    const response = await http.post("get-customer", data);
+    const response = await http.post("admin/get-customer", data);
     return response;
   }
 );
@@ -21,7 +21,7 @@ export const getUserCustomerFilter = createAsyncThunk(
 export const createStaff = createAsyncThunk(
   "user/createStaff",
   async (data: any) => {
-    const response = await http.post("create-staff", data);
+    const response = await http.post("admin/create-staff", data);
     return response;
   }
 );
@@ -29,7 +29,7 @@ export const createStaff = createAsyncThunk(
 export const getStaffById = createAsyncThunk(
   "user/getStaffById",
   async (id: string) => {
-    const response = await http.get(`staff/${id}`);
+    const response = await http.get(`admin/staff/${id}`);
     return response;
   }
 );
@@ -37,7 +37,7 @@ export const getStaffById = createAsyncThunk(
 export const updateStaff = createAsyncThunk(
   "user/updateStaff",
   async (data: any) => {
-    const response = await http.put("staff/update", data);
+    const response = await http.put("admin/staff/update", data);
     return response;
   }
 );
@@ -45,7 +45,7 @@ export const updateStaff = createAsyncThunk(
 export const updateStatusStaff = createAsyncThunk(
   "user/updateStatusStaff",
   async (data: any) => {
-    const response = await http.post("staff/update-status", data);
+    const response = await http.post("admin/staff/update-status", data);
     return response;
   }
 );
@@ -53,7 +53,7 @@ export const updateStatusStaff = createAsyncThunk(
 export const deleteStaff = createAsyncThunk(
   "user/deleteStaff",
   async (id: string) => {
-    const response = await http.delete(`staff/${id}`);
+    const response = await http.delete(`admin/staff/${id}`);
     return response;
   }
 );
@@ -61,7 +61,7 @@ export const deleteStaff = createAsyncThunk(
 export const deleteCustomer = createAsyncThunk(
   "user/deleteCustomer",
   async (id: string) => {
-    const response = await http.delete(`customer/${id}`);
+    const response = await http.delete(`admin/customer/${id}`);
     return response;
   }
 );
@@ -69,7 +69,7 @@ export const deleteCustomer = createAsyncThunk(
 export const searchPhone = createAsyncThunk(
   "user/searchPhone",
   async (phone: string) => {
-    const response = await http.post("customer/search-phone", { phone });
+    const response = await http.post("admin/customer/search-phone", { phone });
     return response;
   }
 );
@@ -77,10 +77,18 @@ export const searchPhone = createAsyncThunk(
 export const updateStatusCustomer = createAsyncThunk(
   "user/updateStatusCustomer",
   async (data: any) => {
-    const response = await http.post("customer/update-status", data);
+    const response = await http.post("admin/customer/update-status", data);
     return response;
   }
 );
+
+export const searchUserByPhone = createAsyncThunk(
+  "user/searchUserByPhone",
+  async (phone: string) => {
+    const response = await http.get(`user/search/${phone}`)
+    return response
+  }
+)
 
 const pagination = {
   curPage: 1,
@@ -96,6 +104,7 @@ type initialStatetype = {
   pagination: any;
   message?: any;
   staff?: any;
+  user?: any
 };
 
 const initialState: initialStatetype = {
@@ -283,6 +292,20 @@ export const userSlice = createSlice({
         state.loading = false;
         state.listCustomer = [];
       });
+
+
+      builder
+        .addCase(searchUserByPhone.pending, state => {
+          state.loading = true;
+        })
+        .addCase(searchUserByPhone.fulfilled, (state, action) => {
+          state.loading = false;
+          state.user = action.payload.data;
+        })
+        .addCase(searchUserByPhone.rejected, state => {
+          state.loading = false;
+          state.user = null;
+        })
   },
 });
 

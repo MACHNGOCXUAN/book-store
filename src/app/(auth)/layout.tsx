@@ -1,10 +1,9 @@
-"use client"
+"use client";
+
 import { useAppDispatch, useAppSelector } from "@/stores/hooks";
 import { getProfileUser } from "@/stores/slices/auth.slice";
-import { Spin } from "antd";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { LoadingOutlined } from '@ant-design/icons';
 
 export default function AuthLayout({
   children,
@@ -25,11 +24,11 @@ export default function AuthLayout({
     }
   }, [isAuth, loading, router]);
 
-  return (
-    <html lang="en">
-      <body className="bg-gray-100 flex min-h-screen items-center justify-center">
-        {children}
-      </body>
-    </html>
-  );
+  // return (
+  //   <div className="bg-gray-100 flex min-h-screen items-center justify-center">
+  //     {children}
+  //   </div>
+  // );
+
+  return children
 }

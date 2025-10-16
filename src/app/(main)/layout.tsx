@@ -31,7 +31,7 @@ export default function MainLayout({
   const currentSiderWidth = collapsed ? SIDER_COLLAPSED_WIDTH : SIDER_WIDTH;
 
   const dispatch = useAppDispatch();
-  const { isAuth, loading } = useAppSelector((state) => state.auth);
+  const { isAuth, loading, user } = useAppSelector((state) => state.auth);
   const router = useRouter();
 
   useEffect(() => {
@@ -52,10 +52,14 @@ export default function MainLayout({
     dispatch(logout())
   };
 
+  const handleProfile = () => {
+    router.push("/profile")
+  }
+
   const items: MenuProps["items"] = [
     {
       key: "1",
-      label: "Mạch Ngọc Xuân",
+      label: user?.fullName || user?.userName,
       disabled: true,
     },
     {
@@ -64,7 +68,8 @@ export default function MainLayout({
     {
       key: "2",
       label: "Tài khoản",
-      icon: <UserOutlined />
+      icon: <UserOutlined />,
+      onClick: handleProfile
     },
     {
       key: "3",

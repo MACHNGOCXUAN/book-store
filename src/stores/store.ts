@@ -1,12 +1,16 @@
 import { configureStore } from '@reduxjs/toolkit'
 import authReducer from './slices/auth.slice'
 import userReducer from "./slices/user.slice"
+import productReducer from "./slices/product.slice"
+import sessionReducer from "./slices/session.slice"
 
 export const makeStore = () => {
   return configureStore({
     reducer: {
       auth: authReducer,
-      user: userReducer
+      user: userReducer,
+      product: productReducer,
+      session: sessionReducer
     },
   })
 }

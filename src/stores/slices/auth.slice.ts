@@ -1,8 +1,15 @@
 import http from "@/lib/utils/api";
+import { UserDataType } from "@/types/users";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 
 
-const initialState = {
+type initialStateType = {
+  loading: Boolean,
+  isAuth: Boolean,
+  user: UserDataType | null
+}
+
+const initialState: initialStateType = {
   loading: false,
   isAuth: false,
   user: null
@@ -57,7 +64,7 @@ export const authSlice = createSlice({
       .addCase(getProfileUser.fulfilled, (state, action) => {
         state.loading = false;
         state.isAuth = true;
-        state.user = action.payload.data
+        state.user = action.payload
       })
       .addCase(getProfileUser.rejected, state => {
         state.loading = false;
