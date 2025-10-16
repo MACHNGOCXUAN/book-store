@@ -21,12 +21,22 @@ public class BookServiceImpl implements iuh.fit.backend.service.BookService {
 
     @Override
     public Book save(Book book) {
-        // Nếu muốn phát sinh ID B001, B002 thì viết thêm logic ở đây
         if (book.getBookId() == null || book.getBookId().isBlank()) {
-//            String prefix = "B";
-//            int nextNum = (int) (repo.count() + 1);
-//            book.setBookId(prefix + String.format("%03d", nextNum));
-            book.setBookId("B" + System.currentTimeMillis());
+            // Lấy mã lớn nhất hiện có trong DB
+            String lastId = repo.findMaxBookId(); // Sẽ viết hàm này trong repository
+
+            int nextNum = 1; // mặc định nếu chưa có dữ liệu nào
+            if (lastId != null && lastId.startsWith("B")) {
+                try {
+                    nextNum = Integer.parseInt(lastId.substring(1)) + 1;
+                } catch (NumberFormatException e) {
+                    // fallback nếu format lỗi
+                    nextNum = 1;
+                }
+            }
+
+            String newId = "B" + String.format("%03d", nextNum);
+            book.setBookId(newId);
         }
         return repo.save(book);
     }

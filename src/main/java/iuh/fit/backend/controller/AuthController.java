@@ -1,10 +1,16 @@
 package iuh.fit.backend.controller;
 
+import iuh.fit.backend.model.Customer;
+import iuh.fit.backend.model.User;
 import iuh.fit.backend.requests.JwtAuthRequest;
 import iuh.fit.backend.requests.RegisterDto;
 import iuh.fit.backend.responses.JwtAuthResponse;
 import iuh.fit.backend.security.CustomUserDetail;
+import iuh.fit.backend.service.CustomerService;
+import iuh.fit.backend.service.UserService;
 import iuh.fit.backend.utils.JwtUtils;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -13,130 +19,122 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
-import java.util.Map;
 
+import java.time.LocalDate;
+import java.util.Map;
+import java.util.Optional;
+
+@Slf4j
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthenticationManager authenticationManager;
     private final JwtUtils jwtUtils;
-    private final iuh.fit.backend.service.CustomerService customerService;
+    private final CustomerService customerService;
+    private final UserService userService; // Dùng để tra user theo email (Google)
 
-    public AuthController(AuthenticationManager authenticationManager, JwtUtils jwtUtils, iuh.fit.backend.service.CustomerService customerService) {
-        this.authenticationManager = authenticationManager;
-        this.jwtUtils = jwtUtils;
-        this.customerService = customerService;
-    }
-
+    // ======================= ADMIN LOGIN =======================
     @PostMapping("/admin/login")
     public ResponseEntity<?> login(@RequestBody JwtAuthRequest body) {
         try {
-            Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(body.getPhone(), body.getPassword()));
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(body.getPhone(), body.getPassword())
+            );
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
             CustomUserDetail userDetails = (CustomUserDetail) authentication.getPrincipal();
+            String token = jwtUtils.generateToken(userDetails);
 
-            String token = this.jwtUtils.generateToken(userDetails);
             JwtAuthResponse jwtAuthResponse = new JwtAuthResponse();
             jwtAuthResponse.setAccess_token(token);
-            return new ResponseEntity<JwtAuthResponse>(jwtAuthResponse, HttpStatus.OK);
+            return ResponseEntity.ok(jwtAuthResponse);
         } catch (Exception e) {
-            return new ResponseEntity<>("Không đúng mật khẩu hoặc user.", HttpStatus.UNAUTHORIZED);
+            log.warn("Admin login failed for phone={}", body.getPhone(), e);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Không đúng mật khẩu hoặc user.");
         }
     }
 
+    // ======================= REGISTER (KHÁCH) =======================
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterDto body) {
         try {
-            iuh.fit.backend.model.Customer customer = new iuh.fit.backend.model.Customer();
-            customer.setUserId("USER" + System.currentTimeMillis());
+            // KHÔNG tự set userId ở controller — service sẽ phát sinh USER###
+            Customer customer = new Customer();
             customer.setUserName(body.getFullName());
             customer.setFullName(body.getFullName());
             customer.setEmail(body.getEmail());
             customer.setPhoneNumber(body.getPhone());
             customer.setStatus(true);
-            customer.setRegistrationDate(java.time.LocalDate.now());
-            // set raw password so service can encode it
-            customer.setPassword(body.getPassword());
+            customer.setRegistrationDate(LocalDate.now());
+            customer.setPassword(body.getPassword()); // service sẽ encode
 
-            iuh.fit.backend.model.Customer saved = customerService.saveCustomer(customer);
-            if (saved != null) {
-                return new ResponseEntity<>(saved, HttpStatus.CREATED);
+            Customer saved = customerService.saveCustomer(customer);
+            if (saved == null) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Đăng ký thất bại");
             }
-            return new ResponseEntity<>("Đăng ký thất bại", HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.status(HttpStatus.CREATED).body(saved);
         } catch (Exception e) {
-            e.printStackTrace();
-            return new ResponseEntity<>("Lỗi khi đăng ký", HttpStatus.INTERNAL_SERVER_ERROR);
+            log.error("Register error", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Lỗi khi đăng ký");
         }
     }
 
+    // ======================= GOOGLE LOGIN =======================
     @PostMapping("/google")
     public ResponseEntity<?> loginWithGoogle(@RequestBody Map<String, String> body) {
         String idToken = body.get("idToken");
-        if (idToken == null || idToken.isEmpty()) {
+        if (idToken == null || idToken.isBlank()) {
             return ResponseEntity.badRequest().body("Missing idToken");
         }
 
         try {
             RestTemplate rt = new RestTemplate();
             String verifyUrl = "https://oauth2.googleapis.com/tokeninfo?id_token=" + idToken;
-            Map resp = rt.getForObject(verifyUrl, Map.class);
-            // resp contains email, name, sub (google id), etc.
+            Map<?, ?> resp = rt.getForObject(verifyUrl, Map.class);
+
+            if (resp == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token");
+            }
+
             String email = (String) resp.get("email");
             String name = (String) resp.get("name");
-
-            if (email == null) return ResponseEntity.status(401).body("Invalid token");
-
-            // find existing user by email
-            java.util.Optional<iuh.fit.backend.model.User> existing = this.customerService instanceof iuh.fit.backend.service.CustomerService ? java.util.Optional.empty() : java.util.Optional.empty();
-            // use UserService via customerService? try to find by email via repository using customerService save/find methods
-            iuh.fit.backend.service.UserService userService = null;
-            try {
-                userService = (iuh.fit.backend.service.UserService) org.springframework.web.context.ContextLoader.getCurrentWebApplicationContext().getBean(iuh.fit.backend.service.UserService.class);
-            } catch (Exception ex) {
-                // fallback: try to query customer repository indirectly
+            if (email == null || email.isBlank()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token");
             }
 
-            iuh.fit.backend.model.User user = null;
-            if (userService != null) {
-                java.util.Optional<iuh.fit.backend.model.User> uopt = userService.findUserByEmail(email);
-                if (uopt.isPresent()) user = uopt.get();
-            }
+            // Tìm user theo email
+            Optional<User> optUser = userService.findUserByEmail(email);
+            User user = optUser.orElseGet(() -> {
+                // Nếu chưa có -> tạo Customer mới (không set userId ở đây)
+                Customer c = new Customer();
+                c.setUserName(name != null ? name : email);
+                c.setFullName(name != null ? name : email);
+                c.setEmail(email);
+                c.setPhoneNumber("");
+                c.setStatus(true);
+                c.setRegistrationDate(LocalDate.now());
+                // Không đặt password cho OAuth user (tùy policy của bạn)
+                return customerService.saveCustomer(c);
+            });
 
-            // if not found, create a customer
             if (user == null) {
-                iuh.fit.backend.model.Customer customer = new iuh.fit.backend.model.Customer();
-                customer.setUserId("USER" + System.currentTimeMillis());
-                customer.setUserName(name != null ? name : email);
-                customer.setFullName(name != null ? name : email);
-                customer.setEmail(email);
-                customer.setPhoneNumber("");
-                customer.setStatus(true);
-                customer.setRegistrationDate(java.time.LocalDate.now());
-                // let service save (it will encode password if present)
-                iuh.fit.backend.model.Customer saved = customerService.saveCustomer(customer);
-                user = saved;
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Không thể tạo tài khoản Google");
             }
 
-            // build JWT
-            iuh.fit.backend.security.CustomUserDetail cud = new iuh.fit.backend.security.CustomUserDetail(user);
-            String token = this.jwtUtils.generateToken(cud);
-            iuh.fit.backend.responses.JwtAuthResponse jwtAuthResponse = new iuh.fit.backend.responses.JwtAuthResponse();
+            CustomUserDetail cud = new CustomUserDetail(user);
+            String token = jwtUtils.generateToken(cud);
+            JwtAuthResponse jwtAuthResponse = new JwtAuthResponse();
             jwtAuthResponse.setAccess_token(token);
-            return new ResponseEntity< iuh.fit.backend.responses.JwtAuthResponse>(jwtAuthResponse, HttpStatus.OK);
+            return ResponseEntity.ok(jwtAuthResponse);
         } catch (Exception e) {
-            e.printStackTrace();
-            return new ResponseEntity<>("Google login failed", HttpStatus.UNAUTHORIZED);
+            log.error("Google login failed", e);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Google login failed");
         }
     }
-
-//    @GetMapping("/admin/get-profile")
-//    public ResponseEntity<?> getProfile(@RequestHeader (name="Authorization") String token) {
-//        try {
-//            System.out.println("je;;: " + token);
-//        } catch (Exception e) {
-//            return new ResponseEntity<>("Không tìm thấy ", HttpStatus.UNAUTHORIZED);
-//        }
-//    }
 }
