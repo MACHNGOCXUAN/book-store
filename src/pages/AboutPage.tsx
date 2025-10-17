@@ -9,17 +9,16 @@ const AboutPage = () => {
       {/* Hero Section */}
       <div
         style={{
-          background: 'linear-gradient(135deg, #C92127 0%, #E63946 100%)',
           padding: '80px 16px',
           textAlign: 'center',
           color: 'white',
         }}
       >
         <div className="container" style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <Title level={1} style={{ color: 'white', fontSize: '2.5rem', marginBottom: 16 }}>
+          <Title level={1} style={{ color: 'black', fontSize: '2.5rem', marginBottom: 16 }}>
             🌟 Về chúng tôi
           </Title>
-          <Paragraph style={{ color: 'white', fontSize: '1.1rem', opacity: 0.95 }}>
+          <Paragraph style={{ color: 'black', fontSize: '1.1rem', opacity: 0.95 }}>
             Câu chuyện về hành trình mang tri thức đến gần hơn với mọi người
           </Paragraph>
         </div>

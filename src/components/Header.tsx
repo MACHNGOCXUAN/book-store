@@ -217,6 +217,9 @@ const Header = () => {
         </div>
       )}
 
+      {/* Navigation Menu */}
+
+
       {/* Main Header */}
       <div
         style={{
@@ -590,7 +593,115 @@ const Header = () => {
           autoFocus
         />
       </Modal>
+      {screens.md && (
+        <div
+          style={{
+            background: "#F5F5F5"
+          }}
+        >
+          <div className="container" style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 40,
+                padding: "12px 0",
+                background: "#CF262D"
+              }}
+            >
+              <Link
+                to="/"
+                style={{
+                  color: location.pathname === '/' ? 'white' : 'white',
+                  textDecoration: 'none',
+                  fontSize: 15,
+                  fontWeight: 500,
+                  transition: 'color 0.3s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#white')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = location.pathname === '/contact' ? 'white' : 'white')}
+              >
+                Trang chủ
+              </Link>
+              <Link
+                to="/about"
+                style={{
+                  color: location.pathname === '/' ? 'white' : 'white',
+                  textDecoration: 'none',
+                  fontSize: 15,
+                  fontWeight: 500,
+                  transition: 'color 0.3s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#C92127')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = location.pathname === '/contact' ? 'white' : 'white')}
+              >
+                Giới thiệu
+              </Link>
+              <a
+                href="#"
+                style={{
+                  color: 'white',
+                  textDecoration: 'none',
+                  fontSize: 15,
+                  fontWeight: 500,
+                  position: 'relative',
+                  transition: 'color 0.3s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#C92127')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = location.pathname === '/contact' ? 'white' : 'white')}
+              >
+                Membership
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: -8,
+                    right: -35,
+                    background: '#FF3B5C',
+                    color: 'white',
+                    fontSize: 10,
+                    fontWeight: 600,
+                    padding: '2px 8px',
+                    borderRadius: 12,
+                    border: '1px solid white',
 
+                  }}
+                >
+                  HOT
+                </span>
+              </a>
+              <a
+                href="#"
+                style={{
+                  color: 'white',
+                  textDecoration: 'none',
+                  fontSize: 15,
+                  fontWeight: 500,
+                  transition: 'color 0.3s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#C92127')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = location.pathname === '/contact' ? 'white' : 'white')}
+              >
+                Review sách
+              </a>
+              <Link
+                to="/contact"
+                style={{
+                  color: location.pathname === '/contact' ? 'white' : 'white',
+                  textDecoration: 'none',
+                  fontSize: 15,
+                  fontWeight: 500,
+                  transition: 'color 0.3s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#C92127')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = location.pathname === '/contact' ? 'white' : 'white')}
+              >
+                Liên hệ
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Auth Modal */}
       <AuthModal
         open={isLoginModalOpen}
