@@ -2,11 +2,11 @@
 
 // src/components/ProductCard.tsx
 
+import { EyeOutlined, ShoppingCartOutlined } from "@ant-design/icons"
+import { Button, Card, Tooltip, Typography } from "antd"
 import type React from "react"
 import { useNavigate } from "react-router-dom"
 import type { Book } from "../types/Book"
-import { Card, Button, Typography, Tooltip } from "antd"
-import { ShoppingCartOutlined, EyeOutlined } from "@ant-design/icons"
 
 interface ProductCardProps {
   book: Book
@@ -57,28 +57,32 @@ const ProductCard: React.FC<ProductCardProps> = ({ book, onAddToCart }) => {
       }
 
       style={{
-        borderRadius: 16,
+        borderRadius: 12,
         overflow: "hidden",
         boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-        transition: "all 0.3s ease",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
         height: "100%",
         display: "flex",
         flexDirection: "column",
+        border: "1px solid #f0f0f0",
+        background: "#ffffff",
       }}
       bodyStyle={{
-        padding: "20px",
+        padding: "16px",
         flex: 1,
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.12)"
+        e.currentTarget.style.boxShadow = "0 8px 20px rgba(201,33,39,0.2)"
         e.currentTarget.style.transform = "translateY(-4px)"
+        e.currentTarget.style.borderColor = "#C92127"
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)"
         e.currentTarget.style.transform = "translateY(0)"
+        e.currentTarget.style.borderColor = "#f0f0f0"
       }}
     >
       <div>
@@ -113,22 +117,39 @@ const ProductCard: React.FC<ProductCardProps> = ({ book, onAddToCart }) => {
       <div style={{ marginTop: "auto" }}>
         <div
           style={{
-            marginBottom: 16,
-            textAlign: "center",
-            padding: "12px",
-            backgroundColor: "#f0f5ff",
-            borderRadius: "8px",
+            marginBottom: 12,
+            textAlign: "left",
           }}
         >
           <Text
             strong
             style={{
-              fontSize: "20px",
-              color: "#1890ff",
+              fontSize: "18px",
+              color: "#C92127",
+              fontWeight: 700,
+            }}
+          >
+            {Number(book.price).toLocaleString("vi-VN")}₫
+          </Text>
+          <br />
+          <Text
+            delete
+            type="secondary"
+            style={{
+              fontSize: "14px",
+            }}
+          >
+            {(Number(book.price) * 1.2).toLocaleString("vi-VN")}₫
+          </Text>
+          <Text
+            style={{
+              fontSize: "12px",
+              color: "#C92127",
+              marginLeft: 8,
               fontWeight: 600,
             }}
           >
-            {Number(book.price).toLocaleString("vi-VN")} ₫
+            -17%
           </Text>
         </div>
 
@@ -141,32 +162,38 @@ const ProductCard: React.FC<ProductCardProps> = ({ book, onAddToCart }) => {
         >
           <Button
             type="default"
+            size="small"
             icon={<EyeOutlined />}
             onClick={handleViewDetails}
             style={{
               flex: 1,
-              borderRadius: "8px",
-              height: "40px",
+              borderRadius: "6px",
+              height: "36px",
               fontWeight: 500,
+              border: "1px solid #E0E0E0",
+              color: "#666",
+              fontSize: "13px",
             }}
           >
-            Xem chi tiết
+            Chi tiết
           </Button>
 
           <Button
             type="primary"
+            size="small"
             icon={<ShoppingCartOutlined />}
             onClick={() => onAddToCart?.(book)}
             style={{
               flex: 1,
-              borderRadius: "8px",
-              height: "40px",
+              borderRadius: "6px",
+              height: "36px",
               fontWeight: 500,
-              background: "linear-gradient(135deg, #667eea 0%)",
+              background: "#C92127",
               border: "none",
+              fontSize: "13px",
             }}
           >
-            Thêm giỏ
+            Mua hàng
           </Button>
         </div>
       </div>

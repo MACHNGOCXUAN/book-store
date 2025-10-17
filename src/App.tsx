@@ -1,18 +1,22 @@
-import './App.css'
-import Header from './components/Header'
 import { Outlet } from 'react-router-dom'
-import ScrollToTop from './utils/ScrollToTop'
+import './App.css'
 import Footer from './components/Footer'
+import Header from './components/Header'
+import ScrollToTop from './utils/ScrollToTop'
 
 const App = () => {
   return (
-    <div className='w-100 h-screen flex flex-col justify-between'>
-      <ScrollToTop/>
-      <Header/>
-      <div>
-        <Outlet/>
+    <div className='w-100 h-screen flex flex-col justify-between' style={{
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
+      <ScrollToTop />
+      <Header />
+      <div style={{ flex: 1 }}>
+        <Outlet />
       </div>
-      <Footer/>
+      <Footer />
     </div>
   )
 }

@@ -3,23 +3,23 @@
 import type React from "react"
 
 import {
+  EnvironmentOutlined,
   FacebookOutlined,
-  TwitterOutlined,
+  HeartFilled,
   InstagramOutlined,
-  YoutubeOutlined,
   MailOutlined,
   PhoneOutlined,
-  EnvironmentOutlined,
-  HeartFilled,
+  TwitterOutlined,
+  YoutubeOutlined,
 } from "@ant-design/icons"
-import { Layout, Row, Col, Space, Typography, Divider, Button } from "antd"
+import { Button, Col, Divider, Layout, Row, Space, Typography } from "antd"
 import { Link } from "react-router-dom"
 
 const { Footer: AntFooter } = Layout
 const { Title, Text, Paragraph } = Typography
 
 // Matching header colors
-const FOOTER_BG_COLOR = "#2C3E50"
+const FOOTER_BG_COLOR = "#2C2C2C"
 const FOOTER_TEXT_COLOR = "#FFFFFF"
 const FOOTER_TEXT_SECONDARY = "rgba(255, 255, 255, 0.65)"
 const MAX_WIDTH_CONTAINER = 1200
@@ -45,11 +45,11 @@ const Footer = () => {
       style={{
         background: FOOTER_BG_COLOR,
         color: FOOTER_TEXT_COLOR,
-        padding: "48px 24px 0",
+        padding: "48px 0 0",
         marginTop: "auto",
       }}
     >
-      <div style={{ maxWidth: MAX_WIDTH_CONTAINER, margin: "0 auto" }}>
+      <div className="container" style={{ maxWidth: MAX_WIDTH_CONTAINER, margin: "0 auto", padding: "0 16px" }}>
         {/* Main Footer Content */}
         <Row gutter={[32, 32]}>
           {/* Company Info */}
@@ -202,7 +202,7 @@ const Footer = () => {
         </Row>
       </div>
 
-      
+
     </AntFooter>
   )
 }

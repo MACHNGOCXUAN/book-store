@@ -1,9 +1,9 @@
 // src/pages/ProductList.tsx
 
-import React, { useEffect, useState, useMemo } from "react";
+import { Col, Pagination, Result, Row, Select, Spin, Typography } from 'antd';
+import React, { useEffect, useMemo, useState } from "react";
 import ProductCard from "../components/ProductCard";
 import type { Book } from "../types/Book";
-import { Row, Col, Pagination, Spin, Result, Typography, Divider, Select } from 'antd';
 
 const { Text } = Typography;
 const BOOKS_PER_PAGE = 12;
@@ -67,39 +67,67 @@ const ProductList: React.FC = () => {
   }
 
   return (
-    <div style={{ background: '#f5f5f5', minHeight: '100vh' }}>
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 24px' }}>
+    <div style={{ background: '#F5F5F5', minHeight: '100vh', paddingTop: 24, paddingBottom: 24 }}>
+      <div className="container" style={{ maxWidth: 1200, margin: '0 auto', padding: '0 16px' }}>
         {/* === TIÊU ĐỀ VÀ BỘ LỌC === */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 16,
+          background: 'white',
+          padding: '16px 20px',
+          borderRadius: 8,
+          boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+          marginBottom: 24
+        }}>
+          <div>
+            <Text strong style={{ fontSize: 18, color: '#333', display: 'block' }}>
+              Sản phẩm nổi bật
+            </Text>
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Text strong>Sắp xếp theo:</Text>
+            <Text style={{ color: '#666', fontSize: 14 }}>Sắp xếp:</Text>
             <Select
               value={sortOrder}
               onChange={setSortOrder}
               style={{ width: 160 }}
+              size="middle"
               options={[
                 { value: 'default', label: 'Mặc định' },
                 { value: 'price-asc', label: 'Giá tăng dần' },
                 { value: 'price-desc', label: 'Giá giảm dần' },
-                { value: 'alpha-asc', label: 'Tên (A-Z)' },
+                { value: 'alpha-asc', label: 'Tên A-Z' },
               ]}
             />
           </div>
         </div>
 
-        <Divider style={{ margin: '24px 0' }} />
-
         {/* === DANH SÁCH SẢN PHẨM === */}
         <Row gutter={[24, 32]}>
-          {currentBooks.map((book) => (
-            <Col key={book.bookId} xs={12} sm={8} lg={6}>
+          {currentBooks.map((book, index) => (
+            <Col
+              key={book.bookId}
+              xs={12}
+              sm={8}
+              lg={6}
+              style={{
+                animation: `fadeInUp 0.6s ease-out ${index * 0.05}s both`
+              }}
+            >
               <ProductCard book={book} />
             </Col>
           ))}
         </Row>
 
         {/* === PHÂN TRANG === */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 48 }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          marginTop: 32,
+          padding: '24px 0'
+        }}>
           <Pagination
             current={currentPage}
             total={sortedBooks.length}
@@ -107,6 +135,7 @@ const ProductList: React.FC = () => {
             onChange={handlePageChange}
             showSizeChanger={false}
             showQuickJumper
+            size="default"
           />
         </div>
       </div>
