@@ -3,6 +3,7 @@ import './App.css'
 import Footer from './components/Footer'
 import Header from './components/Header'
 import ScrollToTop from './utils/ScrollToTop'
+import ChatPopoverWidget from './components/LiveChatWidget'
 
 const App = () => {
   return (
@@ -17,6 +18,7 @@ const App = () => {
         <Outlet />
       </div>
       <Footer />
+      <ChatPopoverWidget/>
     </div>
   )
 }
