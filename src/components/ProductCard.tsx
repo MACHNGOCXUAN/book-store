@@ -7,6 +7,8 @@ import { Button, Card, Tooltip, Typography } from "antd"
 import type React from "react"
 import { useNavigate } from "react-router-dom"
 import type { Book } from "../types/Book"
+import { toast } from "react-toastify"
+import { addCartItem } from "../lib/api"
 
 interface ProductCardProps {
   book: Book
@@ -15,7 +17,7 @@ interface ProductCardProps {
 
 const { Text } = Typography
 
-const ProductCard: React.FC<ProductCardProps> = ({ book, onAddToCart }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
   const navigate = useNavigate()
 
   // Hàm điều hướng đến trang chi tiết sản phẩm
@@ -23,6 +25,23 @@ const ProductCard: React.FC<ProductCardProps> = ({ book, onAddToCart }) => {
     navigate(`/books/${book.bookId}`)
   }
 
+  const handleAddToCart = async () => {
+    try {
+      const item = await addCartItem(book.bookId, 1);
+      toast.success("Đã thêm vào giỏ hàng!");
+      // If backend returned the created item we can dispatch updated event
+      try {
+        // request latest cart items count by emitting event; header will react
+        const ev = new CustomEvent('cart-updated', { detail: { added: true } });
+        window.dispatchEvent(ev);
+      } catch (e) {
+        // ignore
+      }
+      return item;
+    } catch (err: any) {
+      toast.error(err?.message || 'Thêm giỏ hàng thất bại');
+    }
+  }
   return (
     <Card
       hoverable
@@ -182,7 +201,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ book, onAddToCart }) => {
             type="primary"
             size="small"
             icon={<ShoppingCartOutlined />}
-            onClick={() => onAddToCart?.(book)}
+            onClick={() => handleAddToCart()}
             style={{
               flex: 1,
               borderRadius: "6px",
@@ -193,7 +212,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ book, onAddToCart }) => {
               fontSize: "13px",
             }}
           >
-            Mua hàng
+            Thêm vào giỏ hàng
           </Button>
         </div>
       </div>

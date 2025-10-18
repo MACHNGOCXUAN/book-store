@@ -6,6 +6,7 @@ export interface Book {
   category: string;
   price: number;
   stock: number;
+  discount: number;
   description: string;
   publishDate: string;
   coverImage: string;
