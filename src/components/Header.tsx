@@ -528,8 +528,8 @@ const Header = () => {
 
       {/* Secondary nav bar (desktop) */}
       {screens.md && (
-        <div style={{ background: "#F5F5F5" }}>
-          <div className="container" style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px" }}>
+        <div style={{ backgroundColor: "#CF262D" }}>
+          <div className="container" style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px" , backgroundColor:"#CF262D"}}>
             <div
               style={{
                 display: "flex",
@@ -549,6 +549,8 @@ const Header = () => {
                   fontWeight: 500,
                   transition: "color 0.3s",
                 }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#000")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "white")}
               >
                 Trang chủ
               </Link>
