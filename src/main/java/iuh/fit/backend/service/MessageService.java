@@ -1,9 +1,8 @@
 package iuh.fit.backend.service;
 
 import iuh.fit.backend.model.ChatSession;
-import iuh.fit.backend.model.Message;
 import iuh.fit.backend.model.User;
-import iuh.fit.backend.requests.MessageDTO;
+import iuh.fit.backend.dto.requests.MessageDTO;
 
 import java.util.List;
 

@@ -4,9 +4,9 @@ import iuh.fit.backend.model.ChatSession;
 import iuh.fit.backend.model.Customer;
 import iuh.fit.backend.model.Staff;
 import iuh.fit.backend.model.User;
-import iuh.fit.backend.requests.StaffCreateDto;
-import iuh.fit.backend.requests.UserUpdateStatusDto;
-import iuh.fit.backend.requests.UserFilter;
+import iuh.fit.backend.dto.requests.StaffCreateDto;
+import iuh.fit.backend.dto.requests.UserUpdateStatusDto;
+import iuh.fit.backend.dto.requests.UserFilter;
 import iuh.fit.backend.service.CustomerService;
 import iuh.fit.backend.service.StaffService;
 import iuh.fit.backend.service.UserService;
@@ -195,4 +195,6 @@ public class UserController {
         response.put("data", user);
         return ResponseEntity.ok(response);
     }
+
+
 }

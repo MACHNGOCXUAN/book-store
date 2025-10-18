@@ -1,4 +1,4 @@
-package iuh.fit.backend.requests;
+package iuh.fit.backend.dto.requests;
 
 import lombok.Data;
 

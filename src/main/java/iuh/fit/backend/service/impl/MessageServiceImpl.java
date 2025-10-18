@@ -5,7 +5,7 @@ import iuh.fit.backend.model.enums.MessageType;
 import iuh.fit.backend.repository.ChatSessionRepository;
 import iuh.fit.backend.repository.MessageRepository;
 import iuh.fit.backend.repository.UserRepository;
-import iuh.fit.backend.requests.MessageDTO;
+import iuh.fit.backend.dto.requests.MessageDTO;
 import iuh.fit.backend.service.MessageService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service

@@ -2,9 +2,9 @@ package iuh.fit.backend.controller;
 
 import iuh.fit.backend.model.Customer;
 import iuh.fit.backend.model.User;
-import iuh.fit.backend.requests.JwtAuthRequest;
-import iuh.fit.backend.requests.RegisterDto;
-import iuh.fit.backend.responses.JwtAuthResponse;
+import iuh.fit.backend.dto.requests.JwtAuthRequest;
+import iuh.fit.backend.dto.requests.RegisterDto;
+import iuh.fit.backend.dto.responses.JwtAuthResponse;
 import iuh.fit.backend.security.CustomUserDetail;
 import iuh.fit.backend.service.CustomerService;
 import iuh.fit.backend.service.UserService;
@@ -70,6 +70,15 @@ public class AuthController {
             customer.setStatus(true);
             customer.setRegistrationDate(LocalDate.now());
             customer.setPassword(body.getPassword()); // service sẽ encode
+            // optional fields
+            try {
+                if (body.getAddress() != null) customer.setAddress(body.getAddress());
+            } catch (Exception ignored) {}
+            try {
+                if (body.getDateOfBirth() != null && !body.getDateOfBirth().isBlank()) {
+                    customer.setDateOfBirth(LocalDate.parse(body.getDateOfBirth()));
+                }
+            } catch (Exception ignored) {}
 
             Customer saved = customerService.saveCustomer(customer);
             if (saved == null) {

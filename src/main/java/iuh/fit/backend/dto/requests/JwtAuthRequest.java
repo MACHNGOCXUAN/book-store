@@ -1,4 +1,4 @@
-package iuh.fit.backend.requests;
+package iuh.fit.backend.dto.requests;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -9,9 +9,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter
 @Setter
-public class RegisterDto {
-    private String fullName;
-    private String email;
+public class JwtAuthRequest {
     private String phone;
     private String password;
 }

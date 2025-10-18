@@ -1,4 +1,4 @@
-package iuh.fit.backend.requests;
+package iuh.fit.backend.dto.requests;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -9,7 +9,11 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter
 @Setter
-public class JwtAuthRequest {
+public class RegisterDto {
+    private String fullName;
+    private String email;
     private String phone;
     private String password;
+    private String address;
+    private String dateOfBirth; // ISO yyyy-MM-dd expected
 }

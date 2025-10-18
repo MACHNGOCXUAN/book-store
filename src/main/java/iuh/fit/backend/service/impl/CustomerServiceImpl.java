@@ -1,11 +1,13 @@
 package iuh.fit.backend.service.impl;
 
+import iuh.fit.backend.model.Cart;
 import iuh.fit.backend.model.Customer;
 import iuh.fit.backend.model.enums.Role;
 import iuh.fit.backend.repository.CustomerRepository;
+import iuh.fit.backend.repository.CartRepository;
 import iuh.fit.backend.repository.UserRepository;
-import iuh.fit.backend.requests.UserFilter;
-import iuh.fit.backend.requests.UserUpdateStatusDto;
+import iuh.fit.backend.dto.requests.UserFilter;
+import iuh.fit.backend.dto.requests.UserUpdateStatusDto;
 import iuh.fit.backend.service.CustomerService;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,6 +29,7 @@ import java.util.List;
 public class CustomerServiceImpl implements CustomerService {
 
     private final CustomerRepository customerRepository;
+    private final CartRepository cartRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -44,31 +48,40 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     @Transactional
     public Customer saveCustomer(Customer customer) {
-        try {
-            // Đặt role CUSTOMER (ghi đè nếu thiếu)
-            customer.setRole(Role.CUSTOMER);
-
-            // Encode password nếu có
-            if (customer.getPassword() != null && !customer.getPassword().isBlank()) {
-                customer.setPassword(passwordEncoder.encode(customer.getPassword()));
-            }
-
-            // Phát sinh userId nếu trống
-            if (customer.getUserId() == null || customer.getUserId().isBlank()) {
-                customer.setUserId(nextUserId());
-            }
-
-            return customerRepository.save(customer);
-        } catch (DataIntegrityViolationException dupe) {
-            // Trong trường hợp va chạm unique (hiếm): thử lại một lần
-            log.warn("Duplicate userId detected, retrying id generation...");
-            customer.setUserId(nextUserId());
-            return customerRepository.save(customer);
-        } catch (Exception e) {
-            log.error("saveCustomer failed", e);
-            return null;
+        // 1) Chuẩn hóa dữ liệu
+        customer.setRole(Role.CUSTOMER);
+        if (customer.getPassword() != null && !customer.getPassword().isBlank()) {
+            customer.setPassword(passwordEncoder.encode(customer.getPassword()));
         }
+        if (customer.getUserId() == null || customer.getUserId().isBlank()) {
+            customer.setUserId(nextUserId());
+        }
+
+        // 2) Lưu Customer trước
+        Customer saved = customerRepository.save(customer);
+
+        // 3) Tạo Cart nếu chưa có (Cart là owning side → set customer rồi save cart)
+        cartRepository.findByCustomerUserId(saved.getUserId()).orElseGet(() -> {
+            Cart cart = new Cart();
+            // phát sinh cartId thủ công
+            String lastId = cartRepository.findMaxCartId();
+            int nextNum = 1;
+            if (lastId != null && lastId.startsWith("CART")) {
+                try { nextNum = Integer.parseInt(lastId.substring(4)) + 1; } catch (NumberFormatException ignored) {}
+            }
+            cart.setCartId("CART" + String.format("%03d", nextNum));
+            cart.setCustomer(saved);
+            cart.setCreatedDate(LocalDate.now());
+            cart.recalcTotals();
+            return cartRepository.save(cart);
+        });
+
+        // (tuỳ) đồng bộ 2 chiều trong Persistence Context
+        // saved.setCart(cart); // Không bắt buộc vì mappedBy, chỉ để đồng bộ object đang ở context
+
+        return saved;
     }
+
 
     // Tạo mã mới dạng USER### dựa trên MAX(userId) hiện có
     private String nextUserId() {

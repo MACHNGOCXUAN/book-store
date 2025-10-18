@@ -2,7 +2,7 @@ package iuh.fit.backend.service.impl;
 
 import iuh.fit.backend.model.Book;
 import iuh.fit.backend.repository.BookRepository;
-import iuh.fit.backend.requests.ProductFilterDto;
+import iuh.fit.backend.dto.requests.ProductFilterDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

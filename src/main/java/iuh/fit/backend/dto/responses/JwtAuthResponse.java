@@ -1,4 +1,4 @@
-package iuh.fit.backend.responses;
+package iuh.fit.backend.dto.responses;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

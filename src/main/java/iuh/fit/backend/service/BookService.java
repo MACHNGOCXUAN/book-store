@@ -1,7 +1,7 @@
 package iuh.fit.backend.service;
 
 import iuh.fit.backend.model.Book;
-import iuh.fit.backend.requests.ProductFilterDto;
+import iuh.fit.backend.dto.requests.ProductFilterDto;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
