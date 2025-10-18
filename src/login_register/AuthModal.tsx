@@ -339,7 +339,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
   const [form] = Form.useForm();
 
   const onFinish = async (values: any) => {
-    const { fullName, email, phone, password, address, dateOfBirth } = values;
+    const { fullName, email, phone, password, dateOfBirth } = values;
     try {
       const apiModule = await import("../lib/api");
       const api = (apiModule as any).default || apiModule;
@@ -349,8 +349,9 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
         if (typeof dateOfBirth === 'string') dobStr = dateOfBirth;
         else if (typeof (dateOfBirth as any).format === 'function') dobStr = (dateOfBirth as any).format('YYYY-MM-DD');
       }
-      await api.register(fullName, email, phone, password, address, dobStr);
-      message.success("Đăng ký thành công! Vui lòng đăng nhập.");
+      // address was removed from registration flow; pass undefined for that param
+      await api.register(fullName, email, phone, password, undefined, dobStr);
+      toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
       form.resetFields();
       onSwitchToLogin();
     } catch (err: any) {
@@ -381,9 +382,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
         <Input prefix={<PhoneOutlined />} placeholder="Số điện thoại" />
       </Form.Item>
 
-      <Form.Item name="address">
-        <Input prefix={<UserOutlined />} placeholder="Địa chỉ (ví dụ: Ho Chi Minh City)" />
-      </Form.Item>
+
 
       <Form.Item name="dateOfBirth">
         {/* Using antd DatePicker for DOB */}
