@@ -124,4 +124,14 @@ export async function deleteCartItem(cartItemId: string) {
   return true;
 }
 
+export async function getBookById(bookId: string) {
+  const res = await fetch(`${API_BASE}/api/books/${bookId}`);
+  if (res.ok) {
+    const data = await res.json();
+    return data;
+  } else {
+    throw new Error("Không tìm thấy sản phẩm");
+  }
+}
+
 export default { login, register, getProfile };
