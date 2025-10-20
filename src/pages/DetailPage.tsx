@@ -22,20 +22,7 @@ import {
 import { getBookById, addCartItem } from "../lib/api.ts"
 import ReviewSection from "../components/ReviewSection.tsx" 
 import { toast } from "react-toastify"
-
-interface Book {
-  bookId: string
-  title: string
-  author: string
-  publisher: string
-  category: string
-  price: number
-  stock: number
-  description: string
-  publishDate: string
-  coverImage: string
-  discount: number
-}
+import type { Book } from "../types/Book.ts"
 
 interface Comment {
   review_id: number
@@ -154,7 +141,9 @@ function DetailPage() {
   if (!book) return <div style={{ padding: "32px" }}>Đang tải...</div>
 
   const primaryColor = "rgb(207, 38, 45)"
-  const originalPrice = book.discount ? book.price / (1 - book.discount / 100) : book.price
+  const originalPrice = book.price;
+  const discountAmount = (book.price * book.discountPercent) / 100;
+  const discountedPrice = book.price - discountAmount;
 
   return (
     <ConfigProvider
@@ -195,7 +184,7 @@ function DetailPage() {
                         {originalPrice.toLocaleString()}₫
                       </span>
                       <span style={{ fontSize: "32px", fontWeight: "bold", color: primaryColor }}>
-                        {book.price.toLocaleString()}₫
+                        {discountedPrice.toLocaleString()}₫
                       </span>
                     </Space>
                   </div>
