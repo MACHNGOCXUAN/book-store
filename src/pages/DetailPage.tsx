@@ -17,17 +17,14 @@ import {
   CalendarOutlined,
   GiftOutlined,
   CheckCircleOutlined,
-  LockOutlined,
   FileTextOutlined,
-  AlertOutlined,
 } from "@ant-design/icons"
-
-import { getBookById,addCartItem } from "../lib/api.ts"
-// 1. IMPORT COMPONENT REVIEW SECTION
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import {addOrUpdateCartItem, fetchCart} from '../features/cart/cartSlice';
+import { getBookById, addCartItem } from "../lib/api.ts"
 import ReviewSection from "../components/ReviewSection.tsx" 
 import { toast } from "react-toastify"
 
-// --- INTERFACES (Cần phải được định nghĩa hoặc import nếu cần) ---
 interface Book {
   bookId: string
   title: string
@@ -35,7 +32,6 @@ interface Book {
   publisher: string
   category: string
   price: number
-  originalPrice: number
   stock: number
   description: string
   publishDate: string
@@ -48,20 +44,18 @@ interface Comment {
   content: string
   rating: number
   rating_date: string
-  book_id: number
+  book_id: string
   customer_id: number
   customer_name: string
 }
-// --- END INTERFACES ---
 
 const fakeComments: Comment[] = [
-  // Dữ liệu Comment giả lập giữ nguyên
   {
     review_id: 1,
     content: "Sản phẩm rất tốt, nội dung chi tiết và dễ hiểu. Tôi rất hài lòng với chất lượng của bộ sách này.",
     rating: 5,
     rating_date: "2024-10-15",
-    book_id: 10,
+    book_id: "B001",
     customer_id: 101,
     customer_name: "Nguyễn Văn A",
   },
@@ -70,21 +64,47 @@ const fakeComments: Comment[] = [
     content: "Bộ sách này giúp tôi cải thiện kỹ năng nghe nói rất nhiều.",
     rating: 4,
     rating_date: "2024-10-14",
-    book_id: 10,
+    book_id: "B001",
     customer_id: 102,
     customer_name: "Trần Thị B",
   },
-  // ... (các comments khác)
 ]
 
 function DetailPage() {
+  const dispatch = useAppDispatch();
   const { id } = useParams<string>()
   const [book, setBook] = useState<Book | null>(null)
   const [comments, setComments] = useState<Comment[]>(fakeComments)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  // 2. GIỮ ANTD FORM INSTANCE
-  const [form] = Form.useForm() 
+  const [form] = Form.useForm()
 
+  // async function handleAddToCart() {
+  //   addCartItem(book.bookId)
+  //   try {
+  //       await dispatch(addOrUpdateCartItem({ bookId: String(book?.bookId), quantity: delta })).unwrap();
+  //       } catch (e) {
+  //         console.log(e)
+  //       }
+  //       }
+  //         await dispatch(fetchCart()).unwrap();
+  //       try { window.dispatchEvent(new CustomEvent('cart-updated')); } catch (e) {}
+  //       toast.success("Thêm vào giỏ hàng thành công")    
+  // }
+
+  const handleAddToCart = async () => {
+  try {
+    if(id) {
+      await addCartItem(id)
+      toast.success("Đã thêm vào giỏ hàng 🎉");
+      // 🔥 Gửi tín hiệu toàn cục cho Header biết là giỏ hàng đã thay đổi
+      window.dispatchEvent(new CustomEvent("cart-updated"));
+    }
+
+  } catch (error) {
+    toast.error("Lỗi khi thêm sản phẩm 😢");
+  }
+};
+ 
   useEffect(() => {
     async function fetchBook() {
       try {
@@ -97,7 +117,6 @@ function DetailPage() {
     if (id) fetchBook()
   }, [id])
 
-  // --- LOGIC TÍNH TOÁN (Được giữ lại ở đây vì nó phụ thuộc vào comments state) ---
   const ratingStats = {
     5: comments.filter((c) => c.rating === 5).length,
     4: comments.filter((c) => c.rating === 4).length,
@@ -108,22 +127,17 @@ function DetailPage() {
 
   const totalRatings = comments.length
   const averageRating =
-    totalRatings > 0 ? (comments.reduce((sum, c) => sum + c.rating, 0) / totalRatings).toFixed(1) : '0'
-  // --- END LOGIC TÍNH TOÁN ---
+    totalRatings > 0 ? (comments.reduce((sum, c) => sum + c.rating, 0) / totalRatings).toFixed(1) : "0"
 
-  // 3. HÀM XỬ LÝ SUBMIT BÌNH LUẬN
   const handleCommentSubmit = (values: any) => {
-    if (!isLoggedIn) {
-      // Logic: Không cần làm gì nếu chưa đăng nhập (nút sẽ bị disabled hoặc ẩn)
-      return
-    }
+    if (!isLoggedIn) return
 
     const newComment: Comment = {
       review_id: Math.max(...comments.map((c) => c.review_id), 0) + 1,
-      content: values.content || values.comment, 
+      content: values.content || values.comment,
       rating: values.rating || 0,
       rating_date: new Date().toISOString().split("T")[0],
-      book_id: book?.bookId || '10', 
+      book_id: book?.bookId || "unknown",
       customer_id: Math.floor(Math.random() * 10000),
       customer_name: values.customer_name || "Khách hàng ẩn danh",
     }
@@ -131,17 +145,16 @@ function DetailPage() {
     setComments([newComment, ...comments])
     form.resetFields()
   }
-    
-  // 4. HÀM XỬ LÝ ĐĂNG NHẬP/XUẤT
+
   const handleToggleLogin = (status: boolean) => {
-      setIsLoggedIn(status);
-      form.resetFields();
+    setIsLoggedIn(status)
+    form.resetFields()
   }
 
-  // Sửa lỗi: kiểm tra book trước khi render
   if (!book) return <div style={{ padding: "32px" }}>Đang tải...</div>
 
   const primaryColor = "rgb(207, 38, 45)"
+  const originalPrice = book.discount ? book.price / (1 - book.discount / 100) : book.price
 
   return (
     <ConfigProvider
@@ -153,17 +166,13 @@ function DetailPage() {
       }}
     >
       <Layout style={{ minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
-        {/* Breadcrumb giữ nguyên */}
         <div style={{ backgroundColor: "#fff", borderBottom: "1px solid #f0f0f0", padding: "12px 24px" }}>
-          <p style={{ margin: 0, fontSize: "14px", color: "#666" }}>Trang chủ / NXB / NXB Khác / Compass</p>
+          <p style={{ margin: 0, fontSize: "14px", color: "#666" }}>Trang chủ / {book.category} / {book.publisher}</p>
         </div>
 
-        {/* Main Content */}
         <Layout.Content style={{ padding: "32px 24px" }}>
           <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-            {/* Product Section */}
             <Row gutter={[32, 32]} style={{ marginBottom: "32px" }}>
-              {/* Left: Product Image */}
               <Col xs={24} lg={8}>
                 <Card style={{ position: "relative" }}>
                   <img
@@ -174,27 +183,23 @@ function DetailPage() {
                 </Card>
               </Col>
 
-              {/* Middle: Product Info */}
               <Col xs={24} lg={8}>
                 <Card>
                   <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "24px", color: "#000" }}>
                     {book.title}
                   </h1>
 
-                  {/* Price Section */}
                   <div style={{ marginBottom: "24px" }}>
                     <Space size="large">
                       <span style={{ textDecoration: "line-through", color: "#999", fontSize: "18px" }}>
-                        {/* KIỂM TRA book.originalPrice TRƯỚC KHI GỌI toLocaleString() */}
-                        {book.originalPrice?.toLocaleString() || "0"}₫ 
+                        {originalPrice.toLocaleString()}₫
                       </span>
                       <span style={{ fontSize: "32px", fontWeight: "bold", color: primaryColor }}>
-                        {/* KIỂM TRA book.price TRƯỚC KHI GỌI toLocaleString() */}
-                        {book.price?.toLocaleString() || "0"}₫ 
+                        {book.price.toLocaleString()}₫
                       </span>
                     </Space>
                   </div>
-                  {/* Action Buttons */}
+
                   <Space direction="vertical" style={{ width: "100%", marginBottom: "24px" }} size="middle">
                     <Button
                       type="primary"
@@ -202,9 +207,8 @@ function DetailPage() {
                       icon={<ShoppingCartOutlined />}
                       block
                       style={{ backgroundColor: primaryColor, height: "48px", fontSize: "16px", fontWeight: "bold" }}
-                      onClick={()=>{
-                        addCartItem(book.bookId)
-                        toast.success("Thêm vào giỏ hàng thành công")
+                      onClick={() => {
+                        handleAddToCart()
                       }}
                     >
                       Thêm vào giỏ hàng
@@ -226,7 +230,6 @@ function DetailPage() {
                     </Button>
                   </Space>
 
-                  {/* Support Info */}
                   <Card
                     style={{
                       backgroundColor: "#f6ffed",
@@ -235,59 +238,23 @@ function DetailPage() {
                     }}
                   >
                     <p style={{ margin: 0, fontSize: "14px", color: "#333" }}>
-                      Nếu bạn cần hỗ trợ vương mắc gì trong quá trình thanh toán xin hãy liên hệ trực tiếp qua zalo của
-                      chúng tôi <span style={{ color: "#e91e63", fontWeight: "bold" }}>Zalo</span> thư viện sách tiếng
-                      anh để được tư vấn nhanh nhất.
+                      Nếu bạn cần hỗ trợ trong quá trình thanh toán, xin hãy liên hệ qua{" "}
+                      <span style={{ color: "#e91e63", fontWeight: "bold" }}>Zalo</span> để được tư vấn nhanh nhất.
                     </p>
                   </Card>
                 </Card>
               </Col>
 
-              {/* Right: Criteria Sidebar */}
               <Col xs={24} lg={8}>
                 <Card>
                   <h3 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "24px", color: primaryColor }}>
                     Tiêu chí của chúng tôi
                   </h3>
-
                   <Space direction="vertical" style={{ width: "100%" }} size="large">
-                    {/* Criteria Items */}
                     {[
-                      {
-                        icon: <CalendarOutlined />,
-                        title: "Phiên Bản Mới Nhất",
-                        desc: "Liên tục cập nhật",
-                      },
-                      {
-                        icon: <GiftOutlined />,
-                        title: "Mức Giá Phù Hợp",
-                        desc: "Tiết kiệm 10 lần",
-                      },
-                      {
-                        icon: <CalendarOutlined />,
-                        title: "Sản Phẩm Nguyên Gốc",
-                        desc: "Không chứa mã độc",
-                      },
-                      {
-                        icon: <LockOutlined />,
-                        title: "Tải Xuống Trực Tiếp",
-                        desc: "Không phải chờ đợi",
-                      },
-                      {
-                        icon: <CheckCircleOutlined />,
-                        title: "An Toàn & Uy Tín",
-                        desc: "Hơn 3.000 khách hàng",
-                      },
-                      {
-                        icon: <CheckCircleOutlined />,
-                        title: "Thanh Toán Bảo Mật",
-                        desc: "Hỗ trợ hơn 28 ngân hàng",
-                      },
-                      {
-                        icon: <LockOutlined />,
-                        title: "Hỗ Trợ Kỹ Thuật",
-                        desc: "Khi tải và cài đặt sản phẩm",
-                      },
+                      { icon: <CalendarOutlined />, title: "Phiên bản mới nhất", desc: "Liên tục cập nhật" },
+                      { icon: <GiftOutlined />, title: "Mức giá phù hợp", desc: "Tiết kiệm hơn 10 lần" },
+                      { icon: <CheckCircleOutlined />, title: "An toàn & Uy tín", desc: "Hơn 3.000 khách hàng" },
                     ].map((item, idx) => (
                       <div key={idx} style={{ display: "flex", gap: "12px" }}>
                         <div style={{ fontSize: "24px", color: "#999", flexShrink: 0 }}>{item.icon}</div>
@@ -302,7 +269,6 @@ function DetailPage() {
               </Col>
             </Row>
 
-            {/* Description Section */}
             <Card style={{ marginBottom: 30 }}>
               <Tabs
                 items={[
@@ -316,45 +282,10 @@ function DetailPage() {
                     ),
                     children: (
                       <div style={{ color: "#333", lineHeight: "1.6" }}>
-                        <p>
-                          Bộ sách <em>Integrate Listening & Speaking: Basic Building</em> là tài liệu học tiếng Anh cấp
-                          độ cơ bản, được thiết kế để giúp người học phát triển động thời kỹ năng nghe và nói trong các
-                          tình huống giao tiếp thực tế. Đây là bộ sách lý tưởng dành cho những người mới học hoặc những
-                          ai muốn cung cấp nền tảng chắc chắn cho việc phát triển kỹ năng giao tiếp tiếng Anh.
-                        </p>
-                        <h3 style={{ fontWeight: "bold", marginTop: "24px", marginBottom: "12px" }}>
-                          Cấu trúc của bộ sách:
-                        </h3>
-                        <ol style={{ paddingLeft: "20px" }}>
-                          <li style={{ marginBottom: "12px" }}>
-                            <strong>Mục tiêu cấp độ:</strong> Bộ sách thuộc cấp độ Basic, phù hợp với người học ở trình
-                            độ sơ cấp, giúp xây dựng nền tảng vững chắc cho việc phát triển kỹ năng giao tiếp tiếng Anh.
-                          </li>
-                          <li>
-                            <strong>Cấu trúc từng bài học:</strong> Các bài học được thiết kế đơn giản, dễ hiểu với
-                            trong tâm vào các tình huống giao tiếp hàng ngày.
-                          </li>
-                        </ol>
-                      </div>
-                    ),
-                  },
-                  {
-                    key: "notes",
-                    label: (
-                      <span>
-                        <AlertOutlined style={{ marginRight: "8px" }} />
-                        Lưu ý trước khi mua
-                      </span>
-                    ),
-                    children: (
-                      <div style={{ color: "#333", lineHeight: "1.6" }}>
-                        <p>Trước khi mua sản phẩm này, vui lòng lưu ý những điều sau:</p>
-                        <ul style={{ paddingLeft: "20px" }}>
-                          <li>Đây là sản phẩm kỹ thuật số, không phải bản in</li>
-                          <li>Sau khi thanh toán, bạn sẽ nhận được link tải xuống</li>
-                          <li>Sản phẩm không hỗ trợ hoàn tiền sau khi tải xuống</li>
-                          <li>Vui lòng kiểm tra tính tương thích với thiết bị của bạn</li>
-                        </ul>
+                        <p>{book.description}</p>
+                        <p><strong>Tác giả:</strong> {book.author}</p>
+                        <p><strong>Nhà xuất bản:</strong> {book.publisher}</p>
+                        <p><strong>Ngày xuất bản:</strong> {book.publishDate}</p>
                       </div>
                     ),
                   },
@@ -362,23 +293,18 @@ function DetailPage() {
               />
             </Card>
 
-            {/* 5. TÍCH HỢP COMPONENT REVIEW SECTION */}
             <ReviewSection
               bookTitle={book.title}
               ratingStats={ratingStats}
               totalRatings={totalRatings}
               averageRating={averageRating}
               primaryColor={primaryColor}
-              
-              // Truyền trạng thái và dữ liệu tương tác
               comments={comments}
               isLoggedIn={isLoggedIn}
               form={form}
               onCommentSubmit={handleCommentSubmit}
               onToggleLogin={handleToggleLogin}
             />
-            {/* END OF REVIEW SECTION */}
-
           </div>
         </Layout.Content>
       </Layout>
