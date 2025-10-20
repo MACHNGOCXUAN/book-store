@@ -12,14 +12,13 @@ import java.time.LocalDate;
 @AllArgsConstructor @NoArgsConstructor
 @Data
 @Entity
-@Table(name = "discounts")
-public class Discount {
+@Table(name = "discount_codes")
+public class DiscountCode {
     @Id
     private String discountId;
     private String name;
+    private int percent;
     private LocalDate startDate;
     private LocalDate endDate;
     private String description;
-
-
 }

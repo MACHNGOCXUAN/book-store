@@ -18,8 +18,9 @@ public class Book {
     private String publisher;
     private String category;
     private double price;
-    private int stock;
-    private double discount;
+    private int stockQuantity;
+    private int soldQuantity;
+    private int discountPercent;
     @Column(length = 2000)
     private String description;
     private LocalDate publishDate;
