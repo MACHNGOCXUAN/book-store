@@ -29,9 +29,16 @@ interface CartItemProps {
   onRemove: (id: string | number) => void;
 }
 
-// Hàm helper để định dạng tiền tệ
+// Hàm helper để định dạng tiền tệ - không làm tròn, giữ nguyên giá trị chính xác
 const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+  // Định dạng VND với 2 chữ số thập phân, không làm tròn
+  const formatter = new Intl.NumberFormat('vi-VN', { 
+    style: 'currency', 
+    currency: 'VND',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return formatter.format(amount);
 };
 
 export const CartItem: React.FC<CartItemProps> = ({ 
