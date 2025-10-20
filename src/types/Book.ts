@@ -5,8 +5,9 @@ export interface Book {
   publisher: string;
   category: string;
   price: number;
-  stock: number;
-  discount: number;
+  stockQuantity: number;
+  soldQuantity: number;
+  discountPercent: number;
   description: string;
   publishDate: string;
   coverImage: string;

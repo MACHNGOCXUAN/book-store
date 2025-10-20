@@ -148,7 +148,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
               fontWeight: 700,
             }}
           >
-            {Number(book.price).toLocaleString("vi-VN")}₫
+            {(Number(book.price) - (Number(book.price) * Number(book.discountPercent) / 100)).toLocaleString("vi-VN")}₫
           </Text>
           <br />
           <Text
@@ -158,7 +158,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
               fontSize: "14px",
             }}
           >
-            {(Number(book.price) * 1.2).toLocaleString("vi-VN")}₫
+            {(Number(book.price)).toLocaleString("vi-VN")}₫
           </Text>
           <Text
             style={{
@@ -168,7 +168,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
               fontWeight: 600,
             }}
           >
-            -17%
+            {`-${book.discountPercent}%`}
           </Text>
         </div>
 
