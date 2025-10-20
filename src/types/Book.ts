@@ -12,3 +12,4 @@ export interface Book {
   publishDate: string;
   coverImage: string;
 }
+

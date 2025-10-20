@@ -6,17 +6,18 @@ import { EyeOutlined, ShoppingCartOutlined } from "@ant-design/icons"
 import { Button, Card, Tooltip, Typography } from "antd"
 import type React from "react"
 import { useNavigate } from "react-router-dom"
-import type { Book } from "../types/Book"
+import type { Book } from "../types"
 import { toast } from "react-toastify"
 import { useAppDispatch } from "../store/hooks"
 import { addOrUpdateCartItem } from "../features/cart/cartSlice"
 
+const { Text } = Typography
+
+/* ===================== ProductCard Props ===================== */
 interface ProductCardProps {
   book: Book
   onAddToCart?: (book: Book) => void
 }
-
-const { Text } = Typography
 
 const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
   const navigate = useNavigate()

@@ -24,16 +24,7 @@ import { getBookById } from "../features/books/bookSlice"
 import { addOrUpdateCartItem } from "../features/cart/cartSlice"
 import ReviewSection from "../components/ReviewSection.tsx" 
 import { toast } from "react-toastify"
-
-interface Comment {
-  review_id: number
-  content: string
-  rating: number
-  rating_date: string
-  book_id: number
-  customer_id: number
-  customer_name: string
-}
+import type { Comment } from "../types"
 
 const fakeComments: Comment[] = [
   {

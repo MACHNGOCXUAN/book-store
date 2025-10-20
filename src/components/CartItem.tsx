@@ -7,7 +7,7 @@ import type { CheckboxChangeEvent } from 'antd/es/checkbox';
 
 const { Text } = Typography;
 
-// Định nghĩa kiểu dữ liệu cho một item trong giỏ hàng
+/* ===================== Cart Item Types ===================== */
 export interface CartItemType {
   id: string | number;
   bookId?: string | number;
@@ -20,7 +20,6 @@ export interface CartItemType {
   quantity: number;
 }
 
-// Định nghĩa props cho component
 interface CartItemProps {
   item: CartItemType;
   selected: boolean;

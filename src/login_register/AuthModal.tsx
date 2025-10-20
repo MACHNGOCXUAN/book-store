@@ -27,13 +27,15 @@ import { loginUser, registerUser, googleLogin } from "../features/auth/authSlice
 
 const { Title, Text, Link: TextLink } = Typography;
 
-/* ===================== Types ===================== */
+/* ===================== Props Types ===================== */
 interface LoginFormProps {
   onSuccess: () => void;
 }
+
 interface RegisterFormProps {
   onSwitchToLogin: () => void;
 }
+
 interface AuthModalProps {
   open: boolean;
   onCancel: () => void;

@@ -5,33 +5,24 @@ import { StarOutlined, MessageOutlined, LoginOutlined, LogoutOutlined, SendOutli
 // 1. IMPORT COMMENT ITEM
 import CommentItem from "./CommentItem" 
 
-// --- INTERFACES (Giữ nguyên) ---
-interface Comment {
-  review_id: number
-  content: string
-  rating: number
-  rating_date: string
-  book_id: number
-  customer_id: number
-  customer_name: string
-}
+// Import types
+import type { Comment } from "../types"
 
-// SỬA: Thay thế { [key: number]: number } bằng Record<number, number> để rõ ràng hơn
-interface RatingStats { [key: number]: number }
+/* ===================== ReviewSection Types ===================== */
+export type RatingStats = Record<number, number>;
 
 interface ReviewSectionProps {
-  bookTitle: string
-  ratingStats: RatingStats // Đã dùng RatingStats
-  totalRatings: number
-  averageRating: string
-  primaryColor: string
-  comments: Comment[]
-  isLoggedIn: boolean
-  form: any // Ant Design Form Instance
-  onCommentSubmit: (values: any) => void
-  onToggleLogin: (status: boolean) => void
+  bookTitle: string;
+  ratingStats: RatingStats;
+  totalRatings: number;
+  averageRating: string;
+  primaryColor: string;
+  comments: Comment[];
+  isLoggedIn: boolean;
+  form: any; // Ant Design Form Instance
+  onCommentSubmit: (values: any) => void;
+  onToggleLogin: (status: boolean) => void;
 }
-// --- END INTERFACES ---
 
 const ReviewSection: React.FC<ReviewSectionProps> = ({
   bookTitle,

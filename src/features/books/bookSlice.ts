@@ -1,13 +1,13 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import type { Book } from "../../types/Book";
+import type { Book } from "../../types";
 import { API_BASE } from "../../config/api";
 
-
-interface BookState {
+/* ===================== Book State Type ===================== */
+type BookState = {
   books: Book[];
   loading: boolean;
   error: string | null;
-}
+};
 
 const initialState: BookState = {
   books: [],

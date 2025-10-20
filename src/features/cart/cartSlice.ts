@@ -2,15 +2,15 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import type { RootState } from '../../store';
 import { API_BASE } from '../../config/api';
 
-// Server CartItem shape (partial)
-export interface ServerCartItem {
+/* ===================== Cart State Type ===================== */
+interface ServerCartItem {
   cartItemId: string;
   quantity: number;
   unitPrice: number;
   book: any;
 }
 
-export type CartState = {
+type CartState = {
   items: ServerCartItem[];
   status: 'idle' | 'loading' | 'failed';
   error?: string | null;

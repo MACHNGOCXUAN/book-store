@@ -1,20 +1,12 @@
 import React from "react";
 import { Card, Rate } from "antd";
 import { UserOutlined } from "@ant-design/icons";
+import type { Comment } from "../types";
 
-interface Comment {
-  review_id: number;
-  content: string;
-  rating: number;
-  rating_date: string;
-  book_id: number;
-  customer_id: number;
-  customer_name: string;
-}
-
+/* ===================== CommentItem Props ===================== */
 interface CommentItemProps {
-    comment: Comment;
-    primaryColor: string; // Phải truyền primaryColor vào
+  comment: Comment;
+  primaryColor: string;
 }
 
 const CommentItem: React.FC<CommentItemProps> = ({ comment, primaryColor }) => (
