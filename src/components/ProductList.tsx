@@ -1,36 +1,24 @@
 // src/pages/ProductList.tsx
 
-import { Col, Pagination, Result, Row, Select, Spin, Typography } from 'antd';
+import { Col, Pagination, Row, Select, Spin, Typography } from 'antd';
 import React, { useEffect, useMemo, useState } from "react";
 import ProductCard from "../components/ProductCard";
-import type { Book } from "../types/Book";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { fetchBooks } from "../features/books/bookSlice";
 
 const { Text } = Typography;
 const BOOKS_PER_PAGE = 12;
 
 const ProductList: React.FC = () => {
-  const [books, setBooks] = useState<Book[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
+  const books = useAppSelector((s) => s.books.books);
+  const loading = useAppSelector((s) => s.books.loading);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState('default'); // State cho việc sắp xếp
 
   useEffect(() => {
-    const fetchBooks = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch("http://localhost:8080/api/books");
-        if (!res.ok) throw new Error(`Lỗi HTTP: ${res.status}`);
-        const data: Book[] = await res.json();
-        setBooks(data);
-      } catch (err) {
-        setError((err as Error).message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchBooks();
-  }, []);
+    dispatch(fetchBooks());
+  }, [dispatch]);
 
   // Sắp xếp sách dựa trên sortOrder, sử dụng useMemo để tối ưu hiệu năng
   const sortedBooks = useMemo(() => {
@@ -61,10 +49,6 @@ const ProductList: React.FC = () => {
   const currentBooks = sortedBooks.slice(indexOfFirstBook, indexOfLastBook);
 
   if (loading) return (<div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin size="large" tip="Đang tải dữ liệu sách..." /></div>);
-
-  if (error) {
-    return <Result status="error" title="Không thể tải dữ liệu" subTitle={`Lỗi: ${error}`} />;
-  }
 
   return (
     <div style={{ background: '#F5F5F5', minHeight: '100vh', paddingTop: 24, paddingBottom: 24 }}>

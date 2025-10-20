@@ -23,7 +23,7 @@ import {
 } from "@ant-design/icons";
 import { GoogleIcon } from "../components/icons/GoogleIcon";
 import { useAppDispatch } from "../store/hooks";
-import { setAuth } from "../features/auth/authSlice";
+import { loginUser, registerUser, googleLogin } from "../features/auth/authSlice";
 
 const { Title, Text, Link: TextLink } = Typography;
 
@@ -53,38 +53,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     const password = values.password;
 
     try {
-      const { login, getProfile } = await import("../lib/api");
-
-      // 1) Gọi API lấy token
-      const res: any = await login(username, password);
-      if (!res?.access_token) {
-        setLoginError("Đăng nhập thất bại: không nhận được token");
-        return;
-      }
-      const token: string = res.access_token;
-
-      // 2) Lưu token vào Redux (và localStorage qua reducer)
-      dispatch(setAuth({ token }));
-
-      // 3) Lấy profile (getProfile nên đọc từ localStorage hoặc bạn truyền header)
-      try {
-        const user: any = await getProfile();
-        const u = {
-          userId: user?.userId,
-          userName: user?.userName,
-          fullName: user?.fullName,
-          email: user?.email,
-        };
-        // 4) Cập nhật lại Redux kèm user
-        dispatch(setAuth({ token, user: u }));
-      } catch {
-        // Nếu server chưa sẵn profile, vẫn chấp nhận login với token
-      }
-
-  toast.success("Đăng nhập thành công!");
-  onSuccess(); // đóng modal (Header tự cập nhật qua Redux)
+      await dispatch(loginUser({ phone: username, password })).unwrap();
+      toast.success("Đăng nhập thành công!");
+      onSuccess(); // đóng modal (Header tự cập nhật qua Redux)
     } catch (err: any) {
-      const msg = err?.message || "Đăng nhập thất bại";
+      const msg = err || "Đăng nhập thất bại";
       setLoginError(msg.toString());
     }
   };
@@ -120,45 +93,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     }
 
     try {
-      const { getProfile } = await import("../lib/api");
-
-      const r = await fetch("http://localhost:8080/api/auth/google", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      });
-
-      if (!r.ok) {
-        const t = await r.text();
-        throw new Error(t || "Google login failed");
-      }
-
-      const res: any = await r.json();
-      if (!res?.access_token) {
-        setLoginError("Google đăng nhập thất bại: không nhận token từ server");
-        return;
-      }
-
-      const token = res.access_token;
-      dispatch(setAuth({ token }));
-
-      try {
-        const user: any = await getProfile();
-        const u = {
-          userId: user?.userId,
-          userName: user?.userName,
-          fullName: user?.fullName,
-          email: user?.email,
-        };
-        dispatch(setAuth({ token, user: u }));
-      } catch {
-        /* ignore profile error */
-      }
-
-  toast.success("Đăng nhập bằng Google thành công");
-  onSuccess();
+      await dispatch(googleLogin({ idToken })).unwrap();
+      toast.success("Đăng nhập bằng Google thành công");
+      onSuccess();
     } catch (e: any) {
-      setLoginError(e?.message || "Google đăng nhập thất bại");
+      setLoginError(e || "Google đăng nhập thất bại");
     }
   };
 
@@ -210,44 +149,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     if (!pastedToken) return;
 
     try {
-      const r = await fetch("http://localhost:8080/api/auth/google", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken: pastedToken }),
-      });
-
-      if (!r.ok) {
-        const t = await r.text();
-        throw new Error(t || "Google login failed");
-      }
-
-      const res: any = await r.json();
-      if (!res?.access_token) {
-        setLoginError("Google đăng nhập thất bại: không nhận token từ server");
-        return;
-      }
-
-      const token = res.access_token;
-      dispatch(setAuth({ token }));
-
-      const { getProfile } = await import("../lib/api");
-      try {
-        const user: any = await getProfile();
-        const u = {
-          userId: user?.userId,
-          userName: user?.userName,
-          fullName: user?.fullName,
-          email: user?.email,
-        };
-        dispatch(setAuth({ token, user: u }));
-      } catch {
-        /* ignore */
-      }
-
-  toast.success("Đăng nhập Google (dev) thành công");
-  onSuccess();
+      await dispatch(googleLogin({ idToken: pastedToken })).unwrap();
+      toast.success("Đăng nhập Google (dev) thành công");
+      onSuccess();
     } catch (e: any) {
-      setLoginError(e?.message || "Google đăng nhập thất bại");
+      setLoginError(e || "Google đăng nhập thất bại");
     }
   };
 
@@ -337,30 +243,46 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
 /* ===================== Register Form ===================== */
 const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
   const [form] = Form.useForm();
+  const dispatch = useAppDispatch();
+  const [regError, setRegError] = useState<string | null>(null);
 
   const onFinish = async (values: any) => {
     const { fullName, email, phone, password, dateOfBirth } = values;
+    setRegError(null);
     try {
-      const apiModule = await import("../lib/api");
-      const api = (apiModule as any).default || apiModule;
       let dobStr: string | undefined = undefined;
       if (dateOfBirth) {
         // dateOfBirth may be a Dayjs/moment object (if using DatePicker) or a string from <input type="date" />
         if (typeof dateOfBirth === 'string') dobStr = dateOfBirth;
         else if (typeof (dateOfBirth as any).format === 'function') dobStr = (dateOfBirth as any).format('YYYY-MM-DD');
       }
-      // address was removed from registration flow; pass undefined for that param
-      await api.register(fullName, email, phone, password, undefined, dobStr);
+      await dispatch(registerUser({ fullName, email, phone, password, dateOfBirth: dobStr })).unwrap();
       toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
       form.resetFields();
       onSwitchToLogin();
     } catch (err: any) {
-      message.error(err?.message || "Đăng ký thất bại");
+      const msg = err || "Đăng ký thất bại";
+      setRegError(msg.toString());
     }
   };
 
   return (
     <Form form={form} name="register" onFinish={onFinish} layout="vertical" size="large">
+      {regError && (
+        <Form.Item>
+          <div
+            style={{
+              color: "#f5222d",
+              background: "#fff1f0",
+              padding: 12,
+              borderRadius: 6,
+              textAlign: "center",
+            }}
+          >
+            {regError}
+          </div>
+        </Form.Item>
+      )}
       <Form.Item name="fullName" rules={[{ required: true, message: "Vui lòng nhập họ và tên!" }]}>
         <Input prefix={<UserOutlined />} placeholder="Họ và tên" />
       </Form.Item>

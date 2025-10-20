@@ -19,17 +19,18 @@ import {
   CheckCircleOutlined,
   FileTextOutlined,
 } from "@ant-design/icons"
-import { getBookById, addCartItem } from "../lib/api.ts"
+import { useAppDispatch, useAppSelector } from "../store/hooks"
+import { getBookById } from "../features/books/bookSlice"
+import { addOrUpdateCartItem } from "../features/cart/cartSlice"
 import ReviewSection from "../components/ReviewSection.tsx" 
 import { toast } from "react-toastify"
-import type { Book } from "../types/Book.ts"
 
 interface Comment {
   review_id: number
   content: string
   rating: number
   rating_date: string
-  book_id: string
+  book_id: number
   customer_id: number
   customer_name: string
 }
@@ -40,7 +41,7 @@ const fakeComments: Comment[] = [
     content: "Sản phẩm rất tốt, nội dung chi tiết và dễ hiểu. Tôi rất hài lòng với chất lượng của bộ sách này.",
     rating: 5,
     rating_date: "2024-10-15",
-    book_id: "B001",
+    book_id: 1,
     customer_id: 101,
     customer_name: "Nguyễn Văn A",
   },
@@ -49,7 +50,7 @@ const fakeComments: Comment[] = [
     content: "Bộ sách này giúp tôi cải thiện kỹ năng nghe nói rất nhiều.",
     rating: 4,
     rating_date: "2024-10-14",
-    book_id: "B001",
+    book_id: 1,
     customer_id: 102,
     customer_name: "Trần Thị B",
   },
@@ -57,52 +58,34 @@ const fakeComments: Comment[] = [
 
 function DetailPage() {
   const { id } = useParams<string>()
-  const [book, setBook] = useState<Book | null>(null)
+  const dispatch = useAppDispatch()
+  const reduxBook = useAppSelector((s) => {
+    // Find the book by id from Redux books list if available
+    const foundBook = s.books.books.find((b) => b.bookId === id)
+    return foundBook || null
+  })
   const [comments, setComments] = useState<Comment[]>(fakeComments)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [form] = Form.useForm()
 
-  // async function handleAddToCart() {
-  //   addCartItem(book.bookId)
-  //   try {
-  //       await dispatch(addOrUpdateCartItem({ bookId: String(book?.bookId), quantity: delta })).unwrap();
-  //       } catch (e) {
-  //         console.log(e)
-  //       }
-  //       }
-  //         await dispatch(fetchCart()).unwrap();
-  //       try { window.dispatchEvent(new CustomEvent('cart-updated')); } catch (e) {}
-  //       toast.success("Thêm vào giỏ hàng thành công")    
-  // }
-
   const handleAddToCart = async () => {
-  try {
-    if(id) {
-      await addCartItem(id)
-      toast.success("Đã thêm vào giỏ hàng 🎉");
-      // 🔥 Gửi tín hiệu toàn cục cho Header biết là giỏ hàng đã thay đổi
-      window.dispatchEvent(new CustomEvent("cart-updated"));
-    }
-
-  } catch (error) {
-    console.log(error)
-    toast.error("Lỗi khi thêm sản phẩm 😢");
-  }
-};
- 
-  useEffect(() => {
-    async function fetchBook() {
-      try {
-        if(id) {
-          const res = await getBookById(id)
-          setBook(res)
-        }
-      } catch (error) {
-        console.log(error)
+    try {
+      if (id) {
+        await dispatch(addOrUpdateCartItem({ bookId: id, quantity: 1 })).unwrap()
+        toast.success("Đã thêm vào giỏ hàng 🎉")
+        window.dispatchEvent(new CustomEvent("cart-updated"))
       }
+    } catch (error) {
+      console.log(error)
+      toast.error("Lỗi khi thêm sản phẩm 😢")
     }
-    if (id) fetchBook()
-  }, [id])
+  }
+
+  useEffect(() => {
+    if (id) {
+      dispatch(getBookById(id))
+    }
+  }, [id, dispatch])
 
   const ratingStats = {
     5: comments.filter((c) => c.rating === 5).length,
@@ -124,7 +107,7 @@ function DetailPage() {
       content: values.content || values.comment,
       rating: values.rating || 0,
       rating_date: new Date().toISOString().split("T")[0],
-      book_id: book?.bookId || "unknown",
+      book_id: typeof reduxBook?.bookId === 'string' ? parseInt(reduxBook.bookId) : (reduxBook?.bookId || 0),
       customer_id: Math.floor(Math.random() * 10000),
       customer_name: values.customer_name || "Khách hàng ẩn danh",
     }
@@ -138,12 +121,12 @@ function DetailPage() {
     form.resetFields()
   }
 
-  if (!book) return <div style={{ padding: "32px" }}>Đang tải...</div>
+  if (!reduxBook) return <div style={{ padding: "32px" }}>Đang tải...</div>
 
   const primaryColor = "rgb(207, 38, 45)"
-  const originalPrice = book.price;
-  const discountAmount = (book.price * book.discountPercent) / 100;
-  const discountedPrice = book.price - discountAmount;
+  const originalPrice = reduxBook.price
+  const discountAmount = (reduxBook.price * reduxBook.discountPercent) / 100
+  const discountedPrice = reduxBook.price - discountAmount
 
   return (
     <ConfigProvider
@@ -156,7 +139,7 @@ function DetailPage() {
     >
       <Layout style={{ minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
         <div style={{ backgroundColor: "#fff", borderBottom: "1px solid #f0f0f0", padding: "12px 24px" }}>
-          <p style={{ margin: 0, fontSize: "14px", color: "#666" }}>Trang chủ / {book.category} / {book.publisher}</p>
+          <p style={{ margin: 0, fontSize: "14px", color: "#666" }}>Trang chủ / {reduxBook.category} / {reduxBook.publisher}</p>
         </div>
 
         <Layout.Content style={{ padding: "32px 24px" }}>
@@ -165,8 +148,8 @@ function DetailPage() {
               <Col xs={24} lg={8}>
                 <Card style={{ position: "relative" }}>
                   <img
-                    src={book.coverImage || "/placeholder.svg"}
-                    alt={book.title}
+                    src={reduxBook.coverImage || "/placeholder.svg"}
+                    alt={reduxBook.title}
                     style={{ width: "100%", height: "auto", borderRadius: "8px" }}
                   />
                 </Card>
@@ -175,7 +158,7 @@ function DetailPage() {
               <Col xs={24} lg={8}>
                 <Card>
                   <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "24px", color: "#000" }}>
-                    {book.title}
+                    {reduxBook.title}
                   </h1>
 
                   <div style={{ marginBottom: "24px" }}>
@@ -271,10 +254,10 @@ function DetailPage() {
                     ),
                     children: (
                       <div style={{ color: "#333", lineHeight: "1.6" }}>
-                        <p>{book.description}</p>
-                        <p><strong>Tác giả:</strong> {book.author}</p>
-                        <p><strong>Nhà xuất bản:</strong> {book.publisher}</p>
-                        <p><strong>Ngày xuất bản:</strong> {book.publishDate}</p>
+                        <p>{reduxBook.description}</p>
+                        <p><strong>Tác giả:</strong> {reduxBook.author}</p>
+                        <p><strong>Nhà xuất bản:</strong> {reduxBook.publisher}</p>
+                        <p><strong>Ngày xuất bản:</strong> {reduxBook.publishDate}</p>
                       </div>
                     ),
                   },
@@ -283,7 +266,7 @@ function DetailPage() {
             </Card>
 
             <ReviewSection
-              bookTitle={book.title}
+              bookTitle={reduxBook.title}
               ratingStats={ratingStats}
               totalRatings={totalRatings}
               averageRating={averageRating}

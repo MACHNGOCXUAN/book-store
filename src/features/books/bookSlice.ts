@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import type { Book } from "../../types/Book";
+import { API_BASE } from "../../config/api";
 
 
 interface BookState {
@@ -14,16 +15,33 @@ const initialState: BookState = {
   error: null,
 };
 
-// Gọi API Spring Boot: GET http://localhost:8080/api/books
+// Fetch all books
 export const fetchBooks = createAsyncThunk<Book[], void, { rejectValue: string }>(
   "books/fetchBooks",
   async (_, { rejectWithValue }) => {
     try {
-      const res = await fetch("http://localhost:8080/api/books");
+      const res = await fetch(`${API_BASE}/books`);
       if (!res.ok) {
         return rejectWithValue(`HTTP ${res.status}`);
       }
       const data = (await res.json()) as Book[];
+      return data;
+    } catch (error) {
+      return rejectWithValue((error as Error).message);
+    }
+  }
+);
+
+// Fetch book by ID
+export const getBookById = createAsyncThunk<Book, string, { rejectValue: string }>(
+  "books/getBookById",
+  async (bookId, { rejectWithValue }) => {
+    try {
+      const res = await fetch(`${API_BASE}/books/${bookId}`);
+      if (!res.ok) {
+        return rejectWithValue("Không tìm thấy sản phẩm");
+      }
+      const data = (await res.json()) as Book;
       return data;
     } catch (error) {
       return rejectWithValue((error as Error).message);
