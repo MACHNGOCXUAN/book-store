@@ -19,8 +19,6 @@ import {
   CheckCircleOutlined,
   FileTextOutlined,
 } from "@ant-design/icons"
-import { useAppDispatch, useAppSelector } from '../store/hooks';
-import {addOrUpdateCartItem, fetchCart} from '../features/cart/cartSlice';
 import { getBookById, addCartItem } from "../lib/api.ts"
 import ReviewSection from "../components/ReviewSection.tsx" 
 import { toast } from "react-toastify"
@@ -71,7 +69,6 @@ const fakeComments: Comment[] = [
 ]
 
 function DetailPage() {
-  const dispatch = useAppDispatch();
   const { id } = useParams<string>()
   const [book, setBook] = useState<Book | null>(null)
   const [comments, setComments] = useState<Comment[]>(fakeComments)
@@ -101,6 +98,7 @@ function DetailPage() {
     }
 
   } catch (error) {
+    console.log(error)
     toast.error("Lỗi khi thêm sản phẩm 😢");
   }
 };
@@ -108,8 +106,10 @@ function DetailPage() {
   useEffect(() => {
     async function fetchBook() {
       try {
-        const res = await getBookById(id)
-        setBook(res)
+        if(id) {
+          const res = await getBookById(id)
+          setBook(res)
+        }
       } catch (error) {
         console.log(error)
       }
