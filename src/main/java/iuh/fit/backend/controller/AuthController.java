@@ -40,8 +40,7 @@ public class AuthController {
     public ResponseEntity<?> login(@RequestBody JwtAuthRequest body) {
         try {
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(body.getPhone(), body.getPassword())
-            );
+                    new UsernamePasswordAuthenticationToken(body.getUsername(), body.getPassword()));
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
             CustomUserDetail userDetails = (CustomUserDetail) authentication.getPrincipal();
@@ -51,7 +50,7 @@ public class AuthController {
             jwtAuthResponse.setAccess_token(token);
             return ResponseEntity.ok(jwtAuthResponse);
         } catch (Exception e) {
-            log.warn("Admin login failed for phone={}", body.getPhone(), e);
+            log.warn("Admin login failed for username={}", body.getUsername(), e);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Không đúng mật khẩu hoặc user.");
         }
@@ -72,13 +71,16 @@ public class AuthController {
             customer.setPassword(body.getPassword()); // service sẽ encode
             // optional fields
             try {
-                if (body.getAddress() != null) customer.setAddress(body.getAddress());
-            } catch (Exception ignored) {}
+                if (body.getAddress() != null)
+                    customer.setAddress(body.getAddress());
+            } catch (Exception ignored) {
+            }
             try {
                 if (body.getDateOfBirth() != null && !body.getDateOfBirth().isBlank()) {
                     customer.setDateOfBirth(LocalDate.parse(body.getDateOfBirth()));
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
 
             Customer saved = customerService.saveCustomer(customer);
             if (saved == null) {
@@ -113,23 +115,32 @@ public class AuthController {
             String email = (String) resp.get("email");
             String name = (String) resp.get("name");
             if (email == null || email.isBlank()) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token: missing email");
             }
 
             // Tìm user theo email
             Optional<User> optUser = userService.findUserByEmail(email);
-            User user = optUser.orElseGet(() -> {
-                // Nếu chưa có -> tạo Customer mới (không set userId ở đây)
+            User user;
+
+            if (optUser.isPresent()) {
+                // User đã tồn tại -> chỉ cần lấy ra
+                user = optUser.get();
+                log.info("Google login: User exists with email={}", email);
+            } else {
+                // User chưa tồn tại -> tạo mới Customer
+                log.info("Google login: Creating new user with email={}", email);
                 Customer c = new Customer();
-                c.setUserName(name != null ? name : email);
-                c.setFullName(name != null ? name : email);
+                c.setUserName(name != null && !name.isBlank() ? name : email);
+                c.setFullName(name != null && !name.isBlank() ? name : email);
                 c.setEmail(email);
-                c.setPhoneNumber("");
+                c.setPhoneNumber(""); // Để trống số điện thoại cho OAuth users
                 c.setStatus(true);
                 c.setRegistrationDate(LocalDate.now());
-                // Không đặt password cho OAuth user (tùy policy của bạn)
-                return customerService.saveCustomer(c);
-            });
+                // Không đặt password cho OAuth users (hoặc set thành null/random)
+                c.setPassword(""); // Backend sẽ xử lý encoding
+
+                user = customerService.saveCustomer(c);
+            }
 
             if (user == null) {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -143,7 +154,8 @@ public class AuthController {
             return ResponseEntity.ok(jwtAuthResponse);
         } catch (Exception e) {
             log.error("Google login failed", e);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Google login failed");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Google login failed: " + e.getMessage());
         }
     }
 }

@@ -10,6 +10,6 @@ import lombok.Setter;
 @Getter
 @Setter
 public class JwtAuthRequest {
-    private String phone;
+    private String username; // Có thể là phone hoặc email
     private String password;
 }
