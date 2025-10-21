@@ -23,6 +23,7 @@ import {
 import { GoogleLogin } from "@react-oauth/google";
 import { useAppDispatch } from "../store/hooks";
 import { loginUser, registerUser, googleLogin } from "../features/auth/authSlice";
+import { GoogleIcon } from "../components/icons/GoogleIcon";
 
 const { Title, Text, Link: TextLink } = Typography;
 
@@ -134,22 +135,67 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
         </div>
       </Form.Item>
 
+      {/* Nút Đăng nhập thường */}
       <Form.Item>
-        <Button type="primary" htmlType="submit" block>
+        <Button
+          type="primary"
+          htmlType="submit"
+          block
+          style={{
+            height: 48,
+            borderRadius: 8,
+            fontWeight: 600,
+            fontSize: 16,
+          }}
+        >
           Đăng nhập
         </Button>
       </Form.Item>
 
       <Divider>Hoặc đăng nhập bằng</Divider>
 
-      <Form.Item style={{ display: "flex", justifyContent: "center", marginBottom: 0, width: "100%" }}>
-        <GoogleLogin
-          onSuccess={handleGoogleSuccess}
-          onError={handleGoogleError}
-          text="continue_with"
-          size="large"
-        />
+      <Form.Item style={{ marginBottom: 0, padding: 0 }}>
+        <div style={{ position: "relative", width: "100%" }}>
+          <Button
+            block
+            icon={<GoogleIcon />}
+            style={{
+              height: 48,
+              borderRadius: 8,
+              fontWeight: 600,
+              fontSize: 16,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              backgroundColor: "#fff",
+              borderColor: "#d9d9d9",
+            }}
+          >
+            Đăng nhập bằng Google
+          </Button>
+
+          {/* GoogleLogin ẩn */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              opacity: 0,
+              pointerEvents: "auto",
+            }}
+          >
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              text="continue_with"
+              size="large"
+            />
+          </div>
+        </div>
       </Form.Item>
+
+
+
     </Form>
   );
 };
