@@ -33,16 +33,16 @@ async function safeJson(res: Response) {
 // Async thunk for login
 export const loginUser = createAsyncThunk<
   { token: string; user?: User },
-  { phone: string; password: string },
+  { username: string; password: string },
   { rejectValue: string }
 >(
   "auth/login",
-  async ({ phone, password }, { rejectWithValue }) => {
+  async ({ username, password }, { rejectWithValue }) => {
     try {
       const res = await fetch(`${API_BASE}/auth/admin/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, password }),
+        body: JSON.stringify({ username, password }),
       });
       if (!res.ok) {
         const data = await safeJson(res);

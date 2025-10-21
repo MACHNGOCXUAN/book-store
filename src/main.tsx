@@ -13,12 +13,18 @@ import { RouterProvider } from "react-router-dom";
 import router from "./routes/RouterApp";
 import { Provider } from "react-redux";
 import { store } from "./store";
+// Google OAuth
+import { GoogleOAuthProvider } from "@react-oauth/google";
+
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <Provider store={store}>
-      <RouterProvider router={router} />
-      <ToastContainer position="top-right" />
+      <GoogleOAuthProvider clientId={googleClientId}>
+        <RouterProvider router={router} />
+        <ToastContainer position="top-right" />
+      </GoogleOAuthProvider>
     </Provider>
   </React.StrictMode>
 );

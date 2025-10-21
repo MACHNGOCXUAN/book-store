@@ -1,7 +1,7 @@
 // src/components/AuthModal.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Modal,
   Tabs,
@@ -10,7 +10,6 @@ import {
   Button,
   Checkbox,
   Typography,
-  message,
   Divider,
 } from "antd";
 import { toast } from 'react-toastify';
@@ -21,7 +20,7 @@ import {
   MailOutlined,
   PhoneOutlined,
 } from "@ant-design/icons";
-import { GoogleIcon } from "../components/icons/GoogleIcon";
+import { GoogleLogin } from "@react-oauth/google";
 import { useAppDispatch } from "../store/hooks";
 import { loginUser, registerUser, googleLogin } from "../features/auth/authSlice";
 
@@ -45,8 +44,6 @@ interface AuthModalProps {
 /* ===================== Login Form ===================== */
 const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   const [loginError, setLoginError] = useState<string | null>(null);
-  const [isTokenModalVisible, setIsTokenModalVisible] = useState(false);
-  const [pastedToken, setPastedToken] = useState("");
   const dispatch = useAppDispatch();
 
   const onFinish = async (values: any) => {
@@ -55,7 +52,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     const password = values.password;
 
     try {
-      await dispatch(loginUser({ phone: username, password })).unwrap();
+      await dispatch(loginUser({ username, password })).unwrap();
       toast.success("Đăng nhập thành công!");
       onSuccess(); // đóng modal (Header tự cập nhật qua Redux)
     } catch (err: any) {
@@ -64,31 +61,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     }
   };
 
-  /* ---------- Google Sign-In ---------- */
-  const handleGoogleLogin = () => {
-    const clientId =
-      (window as any).__GOOGLE_CLIENT_ID ||
-      (window as any).__REACT_APP_GOOGLE_CLIENT_ID ||
-      undefined;
-
-    if (!clientId) {
-      setIsTokenModalVisible(true); // Dev fallback: dán id_token
-      return;
-    }
-
-    try {
-      if ((window as any).google?.accounts?.id) {
-        (window as any).google.accounts.id.prompt();
-        return;
-      }
-    } catch {
-      /* ignore */
-    }
-    message.info("Vui lòng dùng nút Google xuất hiện trên form.");
-  };
-
-  const handleCredentialResponse = async (response: any) => {
-    const idToken = response?.credential;
+  /* ---------- Google Sign-In Handler ---------- */
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    setLoginError(null);
+    
+    const idToken = credentialResponse?.credential;
     if (!idToken) {
       setLoginError("Google sign-in failed: no credential returned");
       return;
@@ -99,64 +76,15 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
       toast.success("Đăng nhập bằng Google thành công");
       onSuccess();
     } catch (e: any) {
-      setLoginError(e || "Google đăng nhập thất bại");
+      const errorMsg = e || "Google đăng nhập thất bại";
+      setLoginError(errorMsg.toString());
+      toast.error(errorMsg.toString());
     }
   };
 
-  // Khởi tạo Google Identity khi có clientId và element sẵn sàng
-  useEffect(() => {
-    const clientId =
-      (window as any).__GOOGLE_CLIENT_ID ||
-      (window as any).__REACT_APP_GOOGLE_CLIENT_ID ||
-      undefined;
-    if (!clientId) return;
-
-    const initializeGSI = () => {
-      try {
-        (window as any).google.accounts.id.initialize({
-          client_id: clientId,
-          callback: handleCredentialResponse,
-          auto_select: false,
-        });
-        const target = document.getElementById("google-signin-button");
-        if (target) {
-          (window as any).google.accounts.id.renderButton(target, {
-            theme: "outline",
-            size: "large",
-            width: "350",
-          });
-          // (window as any).google.accounts.id.prompt(); // tuỳ bạn muốn auto prompt hay không
-        }
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error("Google identity init failed", e);
-      }
-    };
-
-    if ((window as any).google?.accounts?.id) {
-      initializeGSI();
-    } else {
-      const script = document.createElement("script");
-      script.src = "https://accounts.google.com/gsi/client";
-      script.async = true;
-      script.defer = true;
-      script.onload = initializeGSI;
-      document.head.appendChild(script);
-    }
-  }, []);
-
-  // Dev fallback: dán id_token thủ công
-  const handlePasteTokenOk = async () => {
-    setIsTokenModalVisible(false);
-    if (!pastedToken) return;
-
-    try {
-      await dispatch(googleLogin({ idToken: pastedToken })).unwrap();
-      toast.success("Đăng nhập Google (dev) thành công");
-      onSuccess();
-    } catch (e: any) {
-      setLoginError(e || "Google đăng nhập thất bại");
-    }
+  const handleGoogleError = () => {
+    setLoginError("Google sign-in failed");
+    toast.error("Google sign-in failed");
   };
 
   return (
@@ -212,32 +140,16 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
         </Button>
       </Form.Item>
 
-      <Divider>Hoặc</Divider>
+      <Divider>Hoặc đăng nhập bằng</Divider>
 
-      <Form.Item>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-          <div id="google-signin-button" style={{ marginBottom: 12 }} />
-          <Button block icon={<GoogleIcon />} size="large" onClick={handleGoogleLogin}>
-            Đăng nhập bằng tài khoản Google
-          </Button>
-        </div>
-      </Form.Item>
-
-      {/* Dev modal dán id_token */}
-      <Modal
-        title="Dán Google ID token"
-        open={isTokenModalVisible}
-        onOk={handlePasteTokenOk}
-        onCancel={() => setIsTokenModalVisible(false)}
-        okText="Gửi"
-      >
-        <Input.TextArea
-          rows={4}
-          value={pastedToken}
-          onChange={(e) => setPastedToken(e.target.value)}
-          placeholder="Dán id_token ở đây"
+      <Form.Item style={{ display: "flex", justifyContent: "center", marginBottom: 0, width: "100%" }}>
+        <GoogleLogin
+          onSuccess={handleGoogleSuccess}
+          onError={handleGoogleError}
+          text="continue_with"
+          size="large"
         />
-      </Modal>
+      </Form.Item>
     </Form>
   );
 };
@@ -249,16 +161,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
   const [regError, setRegError] = useState<string | null>(null);
 
   const onFinish = async (values: any) => {
-    const { fullName, email, phone, password, dateOfBirth } = values;
+    const { fullName, email, phone, password } = values;
     setRegError(null);
     try {
-      let dobStr: string | undefined = undefined;
-      if (dateOfBirth) {
-        // dateOfBirth may be a Dayjs/moment object (if using DatePicker) or a string from <input type="date" />
-        if (typeof dateOfBirth === 'string') dobStr = dateOfBirth;
-        else if (typeof (dateOfBirth as any).format === 'function') dobStr = (dateOfBirth as any).format('YYYY-MM-DD');
-      }
-      await dispatch(registerUser({ fullName, email, phone, password, dateOfBirth: dobStr })).unwrap();
+      await dispatch(registerUser({ fullName, email, phone, password })).unwrap();
       toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
       form.resetFields();
       onSwitchToLogin();
@@ -301,17 +207,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
 
       <Form.Item
         name="phone"
-        rules={[{ required: true, message: "Vui lòng nhập số điện thoại!" }]}
-      >
+        rules={[{ required: true, message: "Vui lòng nhập số điện thoại!" }]}>
         <Input prefix={<PhoneOutlined />} placeholder="Số điện thoại" />
-      </Form.Item>
-
-
-
-      <Form.Item name="dateOfBirth">
-        {/* Using antd DatePicker for DOB */}
-        {/* Import DatePicker at top of file if not already present */}
-        <Input type="date" />
       </Form.Item>
 
       <Form.Item
