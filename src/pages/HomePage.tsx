@@ -1,7 +1,7 @@
-import { CustomerServiceOutlined, FireOutlined, LeftOutlined, RightOutlined, RocketOutlined, SafetyOutlined, ShoppingOutlined, TrophyOutlined } from '@ant-design/icons'
-import { Button, Card, Col, Modal, Row, Typography } from 'antd'
-import { useEffect, useRef, useState } from 'react'
-import ProductCard from '../components/ProductCard'
+import { CustomerServiceOutlined, RocketOutlined, SafetyOutlined, ShoppingOutlined, TrophyOutlined } from '@ant-design/icons'
+import { Card, Col, Row, Typography } from 'antd'
+import { useEffect, useState } from 'react'
+import ProductBestSaler from '../components/ProductBestSaler'
 import ProductList from '../components/ProductList'
 
 // Import banner images
@@ -26,130 +26,6 @@ const miniBannerImages = [
   { img: miniBanner4, alt: 'MC Books' },
 ]
 
-// Mock data for bestselling books
-const mockBestsellingBooks = [
-  {
-    bookId: '1',
-    title: 'Đắc Nhân Tâm',
-    author: 'Dale Carnegie',
-    publisher: 'NXB Tổng Hợp',
-    category: 'Kỹ năng sống',
-    price: 86000,
-    stock: 150,
-    description: 'Cuốn sách kinh điển về nghệ thuật giao tiếp và ứng xử',
-    publishDate: '2020-01-15',
-    coverImage: 'https://salt.tikicdn.com/cache/280x280/ts/product/45/3b/fc/aa81d0a534b45706ae1eee1e344e80d9.jpg',
-  },
-  {
-    bookId: '2',
-    title: 'Nhà Giả Kim',
-    author: 'Paulo Coelho',
-    publisher: 'NXB Hội Nhà Văn',
-    category: 'Tiểu thuyết',
-    price: 67000,
-    stock: 200,
-    description: 'Câu chuyện về hành trình tìm kiếm kho báu và ý nghĩa cuộc sống',
-    publishDate: '2019-05-20',
-    coverImage: 'https://salt.tikicdn.com/cache/280x280/ts/product/45/3b/fc/aa81d0a534b45706ae1eee1e344e80d9.jpg',
-  },
-  {
-    bookId: '3',
-    title: 'Tuổi Trẻ Đáng Giá Bao Nhiêu',
-    author: 'Rosie Nguyễn',
-    publisher: 'NXB Hội Nhà Văn',
-    category: 'Kỹ năng sống',
-    price: 72000,
-    stock: 180,
-    description: 'Những trải nghiệm và bài học quý giá cho tuổi trẻ',
-    publishDate: '2021-03-10',
-    coverImage: 'https://salt.tikicdn.com/cache/280x280/ts/product/45/3b/fc/aa81d0a534b45706ae1eee1e344e80d9.jpg',
-  },
-  {
-    bookId: '4',
-    title: 'Sapiens: Lược Sử Loài Người',
-    author: 'Yuval Noah Harari',
-    publisher: 'NXB Trẻ',
-    category: 'Lịch sử',
-    price: 189000,
-    stock: 120,
-    description: 'Câu chuyện về sự tiến hóa của loài người',
-    publishDate: '2018-08-15',
-    coverImage: 'https://salt.tikicdn.com/cache/280x280/ts/product/45/3b/fc/aa81d0a534b45706ae1eee1e344e80d9.jpg',
-  },
-  {
-    bookId: '5',
-    title: 'Atomic Habits',
-    author: 'James Clear',
-    publisher: 'NXB Thế Giới',
-    category: 'Kỹ năng sống',
-    price: 179000,
-    stock: 95,
-    description: 'Cách xây dựng thói quen tốt và phá bỏ thói quen xấu',
-    publishDate: '2020-11-25',
-    coverImage: 'https://salt.tikicdn.com/cache/280x280/ts/product/45/3b/fc/aa81d0a534b45706ae1eee1e344e80d9.jpg',
-  },
-  {
-    bookId: '6',
-    title: 'Thinking, Fast and Slow',
-    author: 'Daniel Kahneman',
-    publisher: 'NXB Thế Giới',
-    category: 'Tâm lý học',
-    price: 165000,
-    stock: 88,
-    description: 'Khám phá hai hệ thống tư duy của con người',
-    publishDate: '2019-07-10',
-    coverImage: 'https://salt.tikicdn.com/cache/280x280/ts/product/45/3b/fc/aa81d0a534b45706ae1eee1e344e80d9.jpg',
-  },
-  {
-    bookId: '7',
-    title: 'Tôi Tài Giỏi, Bạn Cũng Thế',
-    author: 'Adam Khoo',
-    publisher: 'NXB Tổng Hợp',
-    category: 'Kỹ năng sống',
-    price: 99000,
-    stock: 145,
-    description: 'Phương pháp học tập hiệu quả cho học sinh',
-    publishDate: '2020-09-18',
-    coverImage: 'https://salt.tikicdn.com/cache/280x280/ts/product/45/3b/fc/aa81d0a534b45706ae1eee1e344e80d9.jpg',
-  },
-  {
-    bookId: '8',
-    title: 'Làm Chủ Cảm Xúc',
-    author: 'Nghiêm Thùy Chi',
-    publisher: 'NXB Lao Động',
-    category: 'Tâm lý học',
-    price: 89000,
-    stock: 167,
-    description: 'Hướng dẫn kiểm soát và quản lý cảm xúc',
-    publishDate: '2021-06-22',
-    coverImage: 'https://salt.tikicdn.com/cache/280x280/ts/product/45/3b/fc/aa81d0a534b45706ae1eee1e344e80d9.jpg',
-  },
-  {
-    bookId: '9',
-    title: 'Nghệ Thuật Sống',
-    author: 'Arthur Schopenhauer',
-    publisher: 'NXB Văn Học',
-    category: 'Triết học',
-    price: 125000,
-    stock: 73,
-    description: 'Những triết lý về cuộc sống và hạnh phúc',
-    publishDate: '2019-12-05',
-    coverImage: 'https://salt.tikicdn.com/cache/280x280/ts/product/45/3b/fc/aa81d0a534b45706ae1eee1e344e80d9.jpg',
-  },
-  {
-    bookId: '10',
-    title: 'Người Giàu Có Nhất Babylon',
-    author: 'George S. Clason',
-    publisher: 'NXB Tổng Hợp',
-    category: 'Tài chính',
-    price: 95000,
-    stock: 134,
-    description: 'Bí quyết làm giàu từ thành phố cổ đại',
-    publishDate: '2020-03-30',
-    coverImage: 'https://salt.tikicdn.com/cache/280x280/ts/product/45/3b/fc/aa81d0a534b45706ae1eee1e344e80d9.jpg',
-  },
-]
-
 // Famous book brands
 const famousBrands = [
   { name: 'NXB Kim Đồng', logo: 'https://cdn0.fahasa.com/media/wysiwyg/Duy-VHDT/Thuong_hieu_NCCBH.jpg' },
@@ -162,10 +38,6 @@ const famousBrands = [
 
 const HomePage = () => {
   const [currentBanner, setCurrentBanner] = useState(0)
-  const [activeTab, setActiveTab] = useState('week')
-  const [scrollPosition, setScrollPosition] = useState(0)
-  const [showAllBooks, setShowAllBooks] = useState(false)
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -174,21 +46,6 @@ const HomePage = () => {
 
     return () => clearInterval(interval)
   }, [])
-
-  const handleScroll = (direction: 'left' | 'right') => {
-    if (scrollContainerRef.current) {
-      const scrollAmount = 300
-      const newPosition = direction === 'left'
-        ? scrollPosition - scrollAmount
-        : scrollPosition + scrollAmount
-
-      scrollContainerRef.current.scrollTo({
-        left: newPosition,
-        behavior: 'smooth'
-      })
-      setScrollPosition(newPosition)
-    }
-  }
 
   return (
     <div>
@@ -390,164 +247,7 @@ const HomePage = () => {
       </div>
 
       {/* Bestselling Books Section */}
-      <div style={{ background: 'white', padding: '60px 0' }}>
-        <div className="container" style={{ maxWidth: 1200, margin: '0 auto', padding: '0 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <FireOutlined style={{ fontSize: 32, color: '#C92127' }} />
-              <Title level={2} style={{ margin: 0, color: '#C92127' }}>
-                Sách Bán Chạy
-              </Title>
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <Button
-                type={activeTab === 'week' ? 'primary' : 'default'}
-                onClick={() => setActiveTab('week')}
-                style={{
-                  background: activeTab === 'week' ? '#C92127' : 'transparent',
-                  borderColor: '#C92127',
-                  color: activeTab === 'week' ? 'white' : '#C92127',
-                }}
-              >
-                Tuần
-              </Button>
-              <Button
-                type={activeTab === 'month' ? 'primary' : 'default'}
-                onClick={() => setActiveTab('month')}
-                style={{
-                  background: activeTab === 'month' ? '#C92127' : 'transparent',
-                  borderColor: '#C92127',
-                  color: activeTab === 'month' ? 'white' : '#C92127',
-                }}
-              >
-                Tháng
-              </Button>
-              <Button
-                type={activeTab === 'year' ? 'primary' : 'default'}
-                onClick={() => setActiveTab('year')}
-                style={{
-                  background: activeTab === 'year' ? '#C92127' : 'transparent',
-                  borderColor: '#C92127',
-                  color: activeTab === 'year' ? 'white' : '#C92127',
-                }}
-              >
-                Năm
-              </Button>
-            </div>
-          </div>
-
-          {/* Carousel Container */}
-          <div style={{ position: 'relative' }}>
-            {/* Left Arrow */}
-            <Button
-              icon={<LeftOutlined />}
-              onClick={() => handleScroll('left')}
-              style={{
-                position: 'absolute',
-                left: -20,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                zIndex: 10,
-                width: 40,
-                height: 40,
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'white',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                border: '1px solid #e8e8e8',
-              }}
-            />
-
-            {/* Scrollable Container */}
-            <div
-              ref={scrollContainerRef}
-              style={{
-                display: 'flex',
-                gap: 16,
-                overflowX: 'auto',
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none',
-                padding: '8px 0',
-              }}
-              className="hide-scrollbar"
-            >
-              {mockBestsellingBooks.map((book) => (
-                <div
-                  key={book.bookId}
-                  style={{
-                    minWidth: 200,
-                    flex: '0 0 auto',
-                  }}
-                >
-                  <ProductCard book={book} />
-                </div>
-              ))}
-            </div>
-
-            {/* Right Arrow */}
-            <Button
-              icon={<RightOutlined />}
-              onClick={() => handleScroll('right')}
-              style={{
-                position: 'absolute',
-                right: -20,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                zIndex: 10,
-                width: 40,
-                height: 40,
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'white',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                border: '1px solid #e8e8e8',
-              }}
-            />
-          </div>
-
-          {/* View More Button */}
-          <div style={{ textAlign: 'center', marginTop: 32 }}>
-            <Button
-              type="link"
-              onClick={() => setShowAllBooks(true)}
-              style={{
-                color: '#C92127',
-                fontSize: 16,
-                fontWeight: 500,
-              }}
-            >
-              Xem thêm →
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Modal for All Books */}
-      <Modal
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <FireOutlined style={{ fontSize: 24, color: '#C92127' }} />
-            <span style={{ color: '#C92127', fontSize: 20 }}>Tất cả sách bán chạy</span>
-          </div>
-        }
-        open={showAllBooks}
-        onCancel={() => setShowAllBooks(false)}
-        footer={null}
-        width={1200}
-        style={{ top: 20 }}
-      >
-        <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
-          {mockBestsellingBooks.map((book) => (
-            <Col key={book.bookId} xs={12} sm={8} md={6} lg={4.8}>
-              <ProductCard book={book} />
-            </Col>
-          ))}
-        </Row>
-      </Modal>
+      <ProductBestSaler />
 
       {/* Famous Brands Section */}
       <div style={{ background: '#f5f5f5', padding: '60px 0' }}>

@@ -4,7 +4,6 @@ import { Col, Pagination, Row, Select, Spin, Typography } from 'antd';
 import React, { useEffect, useMemo, useState } from "react";
 import ProductCard from "../components/ProductCard";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
-import { fetchBooks } from "../features/books/bookSlice";
 
 const { Text } = Typography;
 const BOOKS_PER_PAGE = 12;
@@ -17,8 +16,27 @@ const ProductList: React.FC = () => {
   const [sortOrder, setSortOrder] = useState('default'); // State cho việc sắp xếp
 
   useEffect(() => {
-    dispatch(fetchBooks());
-  }, [dispatch]);
+    const fetchBooks = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch("http://localhost:8080/api/books");
+
+        if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+
+        // Parse JSON
+        const data = await res.json();
+
+        setBooks(data);
+      } catch (err) {
+        console.error(err);
+        setError((err as Error).message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBooks();
+  }, []);
 
   // Sắp xếp sách dựa trên sortOrder, sử dụng useMemo để tối ưu hiệu năng
   const sortedBooks = useMemo(() => {
