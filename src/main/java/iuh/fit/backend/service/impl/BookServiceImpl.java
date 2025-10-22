@@ -11,9 +11,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import iuh.fit.backend.dto.requests.ProductFilterDto;
 import iuh.fit.backend.model.Book;
 import iuh.fit.backend.repository.BookRepository;
-import iuh.fit.backend.requests.ProductFilterDto;
 import lombok.RequiredArgsConstructor;
 
 @Service

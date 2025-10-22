@@ -34,7 +34,6 @@ public class Book {
     // ngăn lặp vô hạn
     @JsonIgnore
     @ToString.Exclude
-    @JsonIgnore
     private List<OrderDetail> orderDetails;
 
     @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
