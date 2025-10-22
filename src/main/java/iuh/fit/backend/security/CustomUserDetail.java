@@ -1,6 +1,7 @@
 package iuh.fit.backend.security;
 
 import iuh.fit.backend.model.User;
+import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -13,12 +14,15 @@ public class CustomUserDetail implements UserDetails {
     private String id;
     private String username;
     private String password;
+    @Getter
+    private String role;
     private List<GrantedAuthority> authorities;
 
-    public CustomUserDetail(String id, String username, String password, List<GrantedAuthority> authorities) {
+    public CustomUserDetail(String id, String username, String password, String role, List<GrantedAuthority> authorities) {
         this.id = id;
         this.username = username;
         this.password = password;
+        this.role = role;
         this.authorities = authorities;
     }
 
@@ -26,6 +30,7 @@ public class CustomUserDetail implements UserDetails {
         this.id = user.getUserId();
         this.username = user.getPhoneNumber();
         this.password = user.getPassword();
+        this.role = String.valueOf(user.getRole());
         this.authorities = List.of(new SimpleGrantedAuthority(user.getRole().name().toLowerCase()));
     }
 
@@ -67,4 +72,5 @@ public class CustomUserDetail implements UserDetails {
     public boolean isEnabled() {
         return true;
     }
+
 }

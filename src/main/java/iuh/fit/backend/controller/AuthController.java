@@ -21,6 +21,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -157,5 +159,49 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Google login failed: " + e.getMessage());
         }
+    }
+
+    @PostMapping("/admin/login-admin")
+    public ResponseEntity<?> loginAdmin(@RequestBody JwtAuthRequest body) {
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(body.getUsername(), body.getPassword()));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            CustomUserDetail userDetails = (CustomUserDetail) authentication.getPrincipal();
+            String userRole = userDetails.getRole();
+            System.out.println("xuan: " + userRole);
+            List<String> allowedRoles = Arrays.asList("ADMIN", "STAFF");
+
+            if (!allowedRoles.contains(userRole)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("Bạn không có quyền truy cập!");
+            }
+
+            String token = jwtUtils.generateToken(userDetails);
+
+            JwtAuthResponse jwtAuthResponse = new JwtAuthResponse();
+            jwtAuthResponse.setAccess_token(token);
+            return ResponseEntity.ok(jwtAuthResponse);
+        } catch (Exception e) {
+            log.warn("Admin login failed for username={}", body.getUsername(), e);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Không đúng mật khẩu hoặc user.");
+        }
+    }
+
+    @GetMapping("admin/get-profile")
+    public ResponseEntity<?> getProfile(@RequestHeader("Authorization") String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.badRequest().body("Missing Authorization header");
+        }
+        String token = authHeader.substring(7);
+        String userId = jwtUtils.getUserIdFromToken(token);
+        User user = userService.findUserById(userId);
+
+        if (user.getRole().equals("CUSTOMER")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn không có quyền truy cập!");
+        }
+        return ResponseEntity.ok(user);
     }
 }

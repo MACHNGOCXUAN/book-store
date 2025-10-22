@@ -36,15 +36,8 @@ public class UserController {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.badRequest().body("Missing Authorization header");
         }
-
-        System.out.println("xua: " + authHeader);
-
         String token = authHeader.substring(7);
-        System.out.println("xua5: " + token);
         String userId = jwtUtils.getUserIdFromToken(token);
-
-        System.out.println("xua6: " + userId);
-
         User user = userService.findUserById(userId);
 
         return ResponseEntity.ok(user);
