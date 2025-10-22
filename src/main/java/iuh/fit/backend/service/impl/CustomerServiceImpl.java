@@ -1,27 +1,30 @@
 package iuh.fit.backend.service.impl;
 
-import iuh.fit.backend.model.Cart;
-import iuh.fit.backend.model.Customer;
-import iuh.fit.backend.model.enums.Role;
-import iuh.fit.backend.repository.CustomerRepository;
-import iuh.fit.backend.repository.CartRepository;
-import iuh.fit.backend.repository.UserRepository;
-import iuh.fit.backend.dto.requests.UserFilter;
-import iuh.fit.backend.dto.requests.UserUpdateStatusDto;
-import iuh.fit.backend.service.CustomerService;
-import jakarta.persistence.criteria.Predicate;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.*;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
+import iuh.fit.backend.dto.requests.UserFilter;
+import iuh.fit.backend.dto.requests.UserUpdateStatusDto;
+import iuh.fit.backend.model.Cart;
+import iuh.fit.backend.model.Customer;
+import iuh.fit.backend.model.enums.Role;
+import iuh.fit.backend.repository.CartRepository;
+import iuh.fit.backend.repository.CustomerRepository;
+import iuh.fit.backend.repository.UserRepository;
+import iuh.fit.backend.service.CustomerService;
+import jakarta.persistence.criteria.Predicate;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
