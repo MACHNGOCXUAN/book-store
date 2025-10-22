@@ -72,6 +72,7 @@ public class StaffServiceImpl implements StaffService {
         try {
             Staff staff = new Staff();
             staff.setUserId("USER" + System.currentTimeMillis());
+            System.out.println("dong usser: "+ staff.getUserId());
 
             staff.setUserName(staffInput.getUserName());
             staff.setEmail(staffInput.getEmail());
