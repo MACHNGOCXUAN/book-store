@@ -22,10 +22,13 @@ export function Table<T>({
   data,
   columns,
   pagination,
-  loading
+  loading,
+  rowKey
 }: CommonTableProps<T>) {
+
   return (
     <TableAnt<T>
+      rowKey={rowKey}
       columns={columns}
       dataSource={data}
       loading={loading}

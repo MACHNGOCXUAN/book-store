@@ -245,6 +245,7 @@ export default function UserPage() {
         <Table<UserDataType>
           columns={columns}
           data={listCustomer}
+          rowKey="userId"
           pagination={{
             showQuickJumper: false,
             showSizeChanger: true,

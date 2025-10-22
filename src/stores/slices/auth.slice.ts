@@ -4,8 +4,8 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 
 
 type initialStateType = {
-  loading: Boolean,
-  isAuth: Boolean,
+  loading: boolean,
+  isAuth: boolean,
   user: UserDataType | null
 }
 
@@ -17,16 +17,24 @@ const initialState: initialStateType = {
 
 export const loginUser = createAsyncThunk(
   "auth/login",
-  async (data: any) => {
-    const response = await http.post("http://localhost:8080/api/auth/admin/login", data)
-    return response
+  async (data: any, { rejectWithValue }) => {
+    try {
+      const response = await http.post("auth/admin/login-admin", data);
+      if (!response.access_token) {
+        return rejectWithValue("Sai tài khoản hoặc mật khẩu");
+      }
+      return response;
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data || "Đăng nhập thất bại");
+    }
   }
-)
+);
+
 
 export const getProfileUser = createAsyncThunk(
   "auth/profile",
   async () => {
-    const response = await http.get("http://localhost:8080/api/admin/me")
+    const response = await http.get("admin/me")
     return response
   }
 )

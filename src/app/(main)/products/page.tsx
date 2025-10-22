@@ -152,6 +152,7 @@ export default function ProductPage() {
           columns={columns}
           data={listProduct}
           loading={loading}
+          rowKey="bookId"
           pagination={{
             showQuickJumper: false,
             showSizeChanger: true,
@@ -159,7 +160,7 @@ export default function ProductPage() {
             current: pagination?.curPage || 1,
             pageSize: pagination?.limitPage || 10,
             total: pagination?.totalRows || 0,
-            onChange: handlePageChange,
+            onChange: handlePageChange
           }}
         />
       </div>

@@ -53,17 +53,19 @@ const ModelAddUser = ({ isModalOpen, setIsModalOpen }: any) => {
     if (message && message?.type === "success") {
       dispatch(getUserStaffFilter({}));
       setIsModalOpen(false);
-      dispatch(resetMessage())
+      dispatch(resetMessage());
     }
   }, [dispatch, message]);
 
   useEffect(() => {
-    if (staff) {
-      form.setFieldsValue(staff);
-    } else {
-      form.resetFields();
+    if (isModalOpen) {
+      if (staff) {
+        form.setFieldsValue(staff);
+      } else {
+        form.resetFields();
+      }
     }
-  }, [staff, form]);
+  }, [staff, form, isModalOpen]);
 
   return (
     <Modal

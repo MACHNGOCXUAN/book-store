@@ -14,7 +14,6 @@ import {
   Tag,
 } from "antd";
 import React, { useEffect, useState } from "react";
-import { LockOutlined, UserOutlined } from "@ant-design/icons";
 
 interface DataType {
   key: string;
@@ -179,7 +178,7 @@ export default function UserPage() {
         <Collapse defaultActiveKey={["1"]} ghost items={items} />
       </div>
       <div className="boxItemPage">
-        <Table<DataType> columns={columns} dataSource={data} />
+        <Table<DataType> columns={columns} dataSource={data}/>
       </div>
     </div>
   );
