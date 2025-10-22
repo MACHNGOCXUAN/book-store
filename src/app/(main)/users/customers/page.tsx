@@ -56,7 +56,7 @@ export default function UserPage() {
     dispatch(getUserCustomerFilter({}));
   };
 
-  const handleLockAccount = (id: string) => {
+  const handleUnLockAccount = (id: string) => {
     dispatch(
       updateStatusCustomer({
         userId: id,
@@ -64,7 +64,7 @@ export default function UserPage() {
       })
     );
   };
-  const handleUnLockAccount = (id: string) => {
+  const handleLockAccount = (id: string) => {
     dispatch(
       updateStatusCustomer({
         userId: id,
@@ -154,14 +154,14 @@ export default function UserPage() {
       render: (_, record) => (
         <Space size="middle">
           {record.status === true ? (
-            <LockOutlined
-              style={{ color: "red", cursor: "pointer" }}
-              onClick={() => handleLockAccount(record.userId)}
-            />
-          ) : (
             <UnlockOutlined
               style={{ color: "green", cursor: "pointer" }}
               onClick={() => handleUnLockAccount(record.userId)}
+            />
+          ) : (
+            <LockOutlined
+              style={{ color: "red", cursor: "pointer" }}
+              onClick={() => handleLockAccount(record.userId)}
             />
           )}
           <Button

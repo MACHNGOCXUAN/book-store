@@ -119,14 +119,14 @@ export default function StaffPage() {
     setIsModalOpen(true);
   };
 
-  const handleLockAccount = (id: string) => {
+  const handleUnLockAccount = (id: string) => {
     dispatch(updateStatusStaff({
       userId: id,
       status: false
     }))
   }
 
-  const handleUnlockAccount = (id: string) => {
+  const handleLockAccount = (id: string) => {
     dispatch(updateStatusStaff({
       userId: id,
       status: true
@@ -191,14 +191,15 @@ export default function StaffPage() {
       render: (_, record) => (
         <Space size="middle">
           {record.status === true ? (
+            <UnlockOutlined
+              style={{ color: "green", cursor: "pointer" }}
+              onClick={() => handleUnLockAccount(record.userId)}
+            />
+          ) : (
+            
             <LockOutlined
               style={{ color: "red", cursor: "pointer" }}
               onClick={() => handleLockAccount(record.userId)}
-            />
-          ) : (
-            <UnlockOutlined
-              style={{ color: "green", cursor: "pointer" }}
-              onClick={() => handleUnlockAccount(record.userId)}
             />
           )}
           <Button
