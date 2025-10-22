@@ -6,10 +6,10 @@ import { EyeOutlined, ShoppingCartOutlined } from "@ant-design/icons"
 import { Button, Card, Tooltip, Typography } from "antd"
 import type React from "react"
 import { useNavigate } from "react-router-dom"
-import type { Book } from "../types"
 import { toast } from "react-toastify"
-import { useAppDispatch } from "../store/hooks"
 import { addOrUpdateCartItem } from "../features/cart/cartSlice"
+import { useAppDispatch } from "../store/hooks"
+import type { Book } from "../types"
 
 const { Text } = Typography
 
@@ -55,7 +55,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
             aspectRatio: "3/4",
             borderBottom: "1px solid #f0f0f0",
             padding: "12px",
-            height: "220px",
+            height: "220px", // 👈 giảm chiều cao (mặc định bạn đang để full tỷ lệ)
             display: "flex",
             alignItems: "center",
             justifyContent: "center",

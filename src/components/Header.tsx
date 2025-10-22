@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAppSelector, useAppDispatch } from "../store/hooks";
 import logo from "../assets/logo1.png";
 import { fetchBooks } from "../features/books/bookSlice";
 import { fetchCart } from "../features/cart/cartSlice";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
 
 // Icons
 import {
@@ -35,9 +35,9 @@ import {
 } from "antd";
 
 // Local
+import { toast } from "react-toastify";
 import { clearAuth } from "../features/auth/authSlice";
 import AuthModal from "../login_register/AuthModal";
-import { toast } from "react-toastify";
 
 const { useBreakpoint } = Grid;
 const { Title } = Typography;
@@ -47,7 +47,7 @@ const Header = () => {
   const authUser = useAppSelector((s) => s.auth.user);
   const bookData = useAppSelector((s) => s.books.books);
   const cartItems = useAppSelector((s) => s.cart.items);
-  
+
   const dispatch = useAppDispatch();
 
   // -------------------- Local states --------------------
@@ -68,7 +68,7 @@ const Header = () => {
 
   const screens = useBreakpoint();
   const navigate = useNavigate();
-  
+
 
   const isLoggedIn = !!authUser; // dựa hoàn toàn vào Redux
   const displayName =
@@ -151,7 +151,7 @@ const Header = () => {
     { key: "logout", label: "Đăng xuất", icon: <LogoutOutlined />, danger: true },
   ];
 
-  
+
 
   // -------------------- Handlers --------------------
   const handleSearch = (value?: string) => {
@@ -163,18 +163,18 @@ const Header = () => {
     setIsSearchModalOpen(false);
   };
 
-  
+
   // Gọi toast ở đây
   const handleLogout = () => {
     dispatch(clearAuth());
     toast.error("Đã đăng xuất ☹️");
     // reload to clear any cached state and ensure header reflects logged-out state
     try { window.location.reload(); } catch {
-      try { navigate('/'); } catch {}
+      try { navigate('/'); } catch { }
     }
   };
 
-  
+
 
   const handleAuthSuccess = () => {
     // AuthModal đã dispatch setAuth({token, user})
@@ -425,11 +425,13 @@ const Header = () => {
                     <Dropdown
                       placement="bottomRight"
                       trigger={["click"]}
-                      menu={{ items: userMenuItems, onClick: ({ key }) => {
-                        if (key === "logout") return handleLogout();
-                        if (key === "profile") return navigate("/profile");
-                        if (key === "orders")  return navigate("/orders");
-                      }}}
+                      menu={{
+                        items: userMenuItems, onClick: ({ key }) => {
+                          if (key === "logout") return handleLogout();
+                          if (key === "profile") return navigate("/profile");
+                          if (key === "orders") return navigate("/orders");
+                        }
+                      }}
                     >
                       <Button
                         type="text"
@@ -501,7 +503,7 @@ const Header = () => {
       {/* Secondary nav bar (desktop) */}
       {screens.md && (
         <div style={{ backgroundColor: "#CF262D" }}>
-          <div className="container" style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px" , backgroundColor:"#CF262D"}}>
+          <div className="container" style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px", backgroundColor: "#CF262D" }}>
             <div
               style={{
                 display: "flex",
