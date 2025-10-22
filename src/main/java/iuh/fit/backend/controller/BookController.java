@@ -1,7 +1,8 @@
 package iuh.fit.backend.controller;
 
 import iuh.fit.backend.model.Book;
-import iuh.fit.backend.dto.requests.ProductFilterDto;
+import iuh.fit.backend.requests.ProductFilterDto;
+import iuh.fit.backend.requests.UserFilter;
 import iuh.fit.backend.service.BookService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

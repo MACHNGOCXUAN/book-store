@@ -31,6 +31,8 @@ public class Book {
 
     // Relations
     @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
+    // ngăn lặp vô hạn
+    @JsonIgnore
     @ToString.Exclude
     @JsonIgnore
     private List<OrderDetail> orderDetails;
