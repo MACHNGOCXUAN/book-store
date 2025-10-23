@@ -1,37 +1,33 @@
-import React from "react"
+import React, { useState } from "react"
 import { Row, Col, Card, Space, Button, Rate, Divider, Form, Input, Empty } from "antd"
-import { StarOutlined, MessageOutlined, LoginOutlined, LogoutOutlined, SendOutlined } from "@ant-design/icons"
+import { StarOutlined, MessageOutlined, SendOutlined } from "@ant-design/icons"
 
 // 1. IMPORT COMMENT ITEM
-import CommentItem from "./CommentItem" 
 
-// --- INTERFACES (Giữ nguyên) ---
-interface Comment {
-  review_id: number
-  content: string
-  rating: number
-  rating_date: string
-  book_id: number
-  customer_id: number
-  customer_name: string
-}
+// Import types
+import type { Comment } from "../types"
+import ReviewItem from "./ReviewItem";
 
-// SỬA: Thay thế { [key: number]: number } bằng Record<number, number> để rõ ràng hơn
-interface RatingStats { [key: number]: number }
+/* ===================== ReviewSection Types ===================== */
+export type RatingStats = Record<number, number>;
 
 interface ReviewSectionProps {
-  bookTitle: string
-  ratingStats: RatingStats // Đã dùng RatingStats
-  totalRatings: number
-  averageRating: string
-  primaryColor: string
-  comments: Comment[]
-  isLoggedIn: boolean
-  form: any // Ant Design Form Instance
-  onCommentSubmit: (values: any) => void
-  onToggleLogin: (status: boolean) => void
+  bookTitle: string;
+  ratingStats: RatingStats;
+  totalRatings: number;
+  averageRating: string;
+  primaryColor: string;
+  comments: Comment[];
+  isLoggedIn: boolean;
+  form: any; // Ant Design Form Instance
+  currentUserId?: string;
+  onCommentSubmit: (values: any) => void;
+  onEditComment?: (reviewId: string | number, rating: number, content: string) => Promise<void>;
+  onDeleteComment?: (reviewId: string | number) => Promise<void>;
+  onToggleLogin?: (status: boolean) => void;
 }
-// --- END INTERFACES ---
+
+const REVIEWS_PER_PAGE = 3; // Hiển thị 3 bình luận mỗi trang
 
 const ReviewSection: React.FC<ReviewSectionProps> = ({
   bookTitle,
@@ -42,9 +38,12 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({
   comments,
   isLoggedIn,
   form,
+  currentUserId,
   onCommentSubmit,
-  onToggleLogin,
+  onEditComment,
+  onDeleteComment,
 }) => {
+  const [displayedCount, setDisplayedCount] = useState(REVIEWS_PER_PAGE);
   
   // Hàm xử lý cuộn khi nhấn nút Đánh giá ngay
   const handleRateNowClick = () => {
@@ -53,6 +52,15 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({
         reviewFormAnchor.scrollIntoView({ behavior: 'smooth' });
     }
   }
+
+  // Hàm xử lý xem thêm bình luận
+  const handleLoadMore = () => {
+    setDisplayedCount(prev => prev + REVIEWS_PER_PAGE);
+  }
+
+  // Lấy bình luận hiển thị
+  const displayedComments = comments.slice(0, displayedCount);
+  const hasMore = displayedCount < comments.length;
 
   return (
     <Card style={{ marginBottom: "32px" }}>
@@ -141,96 +149,125 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({
       {/* ---------------------------------------------------- */}
       {/* 2. COMMENTS LIST (Sử dụng Component CommentItem) */}
       {/* ---------------------------------------------------- */}
-      <h3 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "24px" }}>
-        <MessageOutlined style={{ marginRight: "8px", color: primaryColor }} />
-        Bình luận ({totalRatings})
-      </h3>
+      {isLoggedIn ? (
+        <>
+          <h3 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "24px" }}>
+            <MessageOutlined style={{ marginRight: "8px", color: primaryColor }} />
+            Bình luận ({totalRatings})
+          </h3>
 
-      <Space direction="vertical" style={{ width: "100%", marginBottom: "32px" }} size="large">
-        {comments.length > 0 ? (
-          comments.map((comment) => (
-            // SỬ DỤNG COMMENT ITEM ĐÃ TÁCH
-            <CommentItem 
-                key={comment.review_id} 
-                comment={comment} 
-                primaryColor={primaryColor} // TRUYỀN PRIMARYCOLOR VÀO
-            />
-          ))
-        ) : (
-          <Empty description="Chưa có bình luận nào" />
-        )}
-      </Space>
+          <Space direction="vertical" style={{ width: "100%", marginBottom: "32px" }} size="large">
+            {comments.length > 0 ? (
+              <>
+                {displayedComments.map((comment) => {
+                  const isCurrentUser = (comment.customerId || comment.customer_id) === currentUserId;
+                  console.log("ReviewItem render:", {
+                    reviewId: comment.review_id,
+                    customerId: comment.customerId || comment.customer_id,
+                    currentUserId,
+                    isCurrentUser,
+                    comment
+                  });
+                  return (
+                    <ReviewItem 
+                        key={comment.review_id} 
+                        comment={comment} 
+                        primaryColor={primaryColor}
+                        isCurrentUserComment={isCurrentUser}
+                        onEdit={onEditComment}
+                        onDelete={onDeleteComment}
+                    />
+                  );
+                })}
+                
+                {/* Nút Xem thêm */}
+                {hasMore && (
+                  <div style={{ textAlign: "center", marginTop: "16px" }}>
+                    <Button
+                      type="default"
+                      size="large"
+                      onClick={handleLoadMore}
+                      style={{
+                        backgroundColor: "#f5f5f5",
+                        border: "1px solid #d9d9d9",
+                        color: "#000",
+                        fontWeight: "500",
+                        minWidth: "200px",
+                      }}
+                    >
+                      Xem thêm ({comments.length - displayedCount} bình luận)
+                    </Button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <Empty description="Chưa có bình luận nào" />
+            )}
+          </Space>
+        </>
+      ) : (
+        <Card
+          style={{
+            backgroundColor: "#fef3c7",
+            border: "1px solid #fcd34d",
+            borderRadius: "8px",
+            marginBottom: "32px",
+            textAlign: "center",
+            padding: "32px 24px",
+          }}
+        >
+          <p style={{ fontSize: "16px", color: "#92400e", margin: "0 0 16px 0", fontWeight: "500" }}>
+            Chỉ có thành viên mới có thể viết nhận xét. Vui lòng đăng nhập hoặc đăng ký.
+          </p>
+          
+        </Card>
+      )}
 
       <Divider style={{ margin: "32px 0" }} />
 
       {/* ---------------------------------------------------- */}
-      {/* 3. COMMENT SUBMISSION FORM (Giữ nguyên) */}
+      {/* 3. COMMENT SUBMISSION FORM */}
       {/* ---------------------------------------------------- */}
-      <h3 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "24px" }} id="review-form-anchor">
-        {isLoggedIn ? "Viết bình luận của bạn" : "Đăng nhập để bình luận"}
-      </h3>
+      {isLoggedIn && (
+        <>
+          <h3 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "24px" }} id="review-form-anchor">
+            Viết bình luận của bạn
+          </h3>
 
-      <Form layout="vertical" onFinish={onCommentSubmit} form={form}>
-        <Form.Item
-          name="rating"
-          label="Đánh giá"
-          rules={[{ required: true, message: "Vui lòng chọn đánh giá" }]}
-        >
-          <Rate style={{ fontSize: "24px" }} disabled={!isLoggedIn}/>
-        </Form.Item>
+          <Form layout="vertical" onFinish={onCommentSubmit} form={form}>
+            <Form.Item
+              name="rating"
+              label="Đánh giá"
+              rules={[{ required: true, message: "Vui lòng chọn đánh giá" }]}
+            >
+              <Rate style={{ fontSize: "24px" }} />
+            </Form.Item>
 
-        <Form.Item
-          name="content" 
-          label="Bình luận"
-          rules={[{ required: true, message: "Vui lòng nhập bình luận" }]}
-        >
-          <Input.TextArea
-            placeholder="Mời bạn tham gia thảo luận, vui lòng nhập tiếng Việt có dấu"
-            rows={4}
-            disabled={!isLoggedIn}
-          />
-        </Form.Item>
-        
-        <Form.Item
-            name="customer_name"
-            label="Tên của bạn"
-            rules={[{ required: true, message: "Vui lòng nhập tên" }]}
-            style={{ display: isLoggedIn ? 'none' : 'block' }}
-        >
-          <Input placeholder="Nhập tên của bạn" />
-        </Form.Item>
+            <Form.Item
+              name="content" 
+              label="Bình luận"
+              rules={[{ required: true, message: "Vui lòng nhập bình luận" }]}
+            >
+              <Input.TextArea
+                placeholder="Mời bạn tham gia thảo luận, vui lòng nhập tiếng Việt có dấu"
+                rows={4}
+              />
+            </Form.Item>
 
-        <Form.Item>
-          <Space>
-            {!isLoggedIn ? (
+            <Form.Item>
               <Button
                 type="primary"
+                htmlType="submit"
                 size="large"
-                style={{ backgroundColor: primaryColor }}
-                icon={<LoginOutlined />}
-                onClick={() => onToggleLogin(true)}
+                style={{ backgroundColor: "#fbbf24", color: "#000", fontWeight: "bold" }}
+                icon={<SendOutlined />}
               >
-                Đăng nhập để bình luận
+                Gửi bình luận
               </Button>
-            ) : (
-              <>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  size="large"
-                  style={{ backgroundColor: "#fbbf24", color: "#000", fontWeight: "bold" }}
-                  icon={<SendOutlined />}
-                >
-                  Gửi bình luận
-                </Button>
-                <Button size="large" icon={<LogoutOutlined />} onClick={() => onToggleLogin(false)}>
-                  Đăng xuất
-                </Button>
-              </>
-            )}
-          </Space>
-        </Form.Item>
-      </Form>
+            </Form.Item>
+          </Form>
+        </>
+      )}
     </Card>
   )
 }

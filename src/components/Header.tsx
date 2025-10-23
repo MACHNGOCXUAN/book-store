@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAppSelector, useAppDispatch } from "../store/hooks";
 import logo from "../assets/logo1.png";
-import type { Book } from "../types/Book";
+import { fetchBooks } from "../features/books/bookSlice";
+import { fetchCart } from "../features/cart/cartSlice";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
 
 // Icons
 import {
@@ -34,9 +35,9 @@ import {
 } from "antd";
 
 // Local
+import { toast } from "react-toastify";
 import { clearAuth } from "../features/auth/authSlice";
 import AuthModal from "../login_register/AuthModal";
-import { toast } from "react-toastify";
 
 const { useBreakpoint } = Grid;
 const { Title } = Typography;
@@ -44,21 +45,26 @@ const { Title } = Typography;
 const Header = () => {
   // -------------------- Redux auth --------------------
   const authUser = useAppSelector((s) => s.auth.user);
+  const bookData = useAppSelector((s) => s.books.books);
+  const cartItems = useAppSelector((s) => s.cart.items);
 
   const dispatch = useAppDispatch();
 
   // -------------------- Local states --------------------
-  const [books, setBooks] = useState<Book[]>([]);
   const [searchValue, setSearchValue] = useState("");
   const [openDrawer, setOpenDrawer] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const [hoveredCart, setHoveredCart] = useState(false);
-  const [cartCount, setCartCount] = useState<number>(0);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   // Fallback name khi vừa reload (trước khi Redux có user)
   const [fallbackFullName, setFallbackFullName] = useState<string>("");
+
+  // Get cartCount directly from Redux cart items
+  const cartCount = useMemo(() => {
+    return Array.isArray(cartItems) ? cartItems.length : 0;
+  }, [cartItems]);
 
   const screens = useBreakpoint();
   const navigate = useNavigate();
@@ -70,35 +76,22 @@ const Header = () => {
   // -------------------- Effects --------------------
   // 1) Lấy books cho menu danh mục
   useEffect(() => {
-    fetch("http://localhost:8080/api/books")
-      .then((res) => res.json())
-      .then((data: Book[]) => setBooks(data ?? []))
-      .catch(() => setBooks([]));
-  }, []);
+    dispatch(fetchBooks());
+  }, [dispatch]);
 
-  // 2) Khởi tạo cartCount + lắng nghe 'cart-updated'
+  // 2) Lấy cart items khi user đăng nhập
+  useEffect(() => {
+    if (!authUser) return;
+    dispatch(fetchCart());
+  }, [authUser, dispatch]);
+
+  // 3) Lắng nghe 'cart-updated' event để refetch cart
   useEffect(() => {
     let mounted = true;
 
-    const loadCart = async () => {
-      try {
-        const { getCartItems } = await import("../lib/api");
-        const items: any[] = await getCartItems();
-        if (!mounted) return;
-        setCartCount(Array.isArray(items) ? items.length : 0);
-      } catch {
-        /* ignore */
-      }
-    };
-    loadCart();
-
-    const handler = async () => {
-      try {
-        const { getCartItems } = await import("../lib/api");
-        const items: any[] = await getCartItems();
-        setCartCount(Array.isArray(items) ? items.length : 0);
-      } catch {
-        /* ignore */
+    const handler = () => {
+      if (mounted) {
+        dispatch(fetchCart());
       }
     };
 
@@ -107,9 +100,9 @@ const Header = () => {
       mounted = false;
       window.removeEventListener("cart-updated", handler as EventListener);
     };
-  }, []);
+  }, [dispatch]);
 
-  // 3) Fallback đọc tên từ localStorage lúc mount (chỉ 1 lần)
+  // 4) Fallback đọc tên từ localStorage lúc mount (chỉ 1 lần)
   useEffect(() => {
     try {
       const stored = localStorage.getItem("user_fullName");
@@ -119,7 +112,7 @@ const Header = () => {
     }
   }, []); // mount-only
 
-  // 4) Khi Redux user thay đổi, cập nhật fallbackName (đảm bảo hiển thị tức thì)
+  // 5) Khi Redux user thay đổi, cập nhật fallbackName (đảm bảo hiển thị tức thì)
   useEffect(() => {
     if (authUser?.fullName) {
       setFallbackFullName(authUser.fullName);
@@ -128,35 +121,12 @@ const Header = () => {
     }
   }, [authUser]);
 
-  // 5) Khi user thay đổi (ví dụ vừa đăng nhập), fetch cart items for that user and set cartCount
-  useEffect(() => {
-    if (!authUser) return;
-    let mounted = true;
-    (async () => {
-      try {
-        const { getCartItems } = await import("../lib/api");
-        const items: any[] = await getCartItems();
-        if (!mounted) return;
-        setCartCount(Array.isArray(items) ? items.length : 0);
-        // also emit event so any other listeners update
-        try {
-          window.dispatchEvent(new CustomEvent("cart-updated"));
-        } catch (e) {}
-      } catch {
-        // ignore
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [authUser]);
-
   // -------------------- Derived menus --------------------
   const categories = useMemo(() => {
     const set = new Set<string>();
-    books.forEach((b) => b.category && set.add(b.category));
+    bookData.forEach((b) => b.category && set.add(b.category));
     return Array.from(set).sort((a, b) => a.localeCompare(b, "vi"));
-  }, [books]);
+  }, [bookData]);
 
   const categoryMenuItems: MenuProps["items"] = useMemo(() => {
     if (!categories.length) {
@@ -205,10 +175,6 @@ const Header = () => {
   // Gọi toast ở đây
   const handleLogout = () => {
     dispatch(clearAuth());
-    // reset cart count immediately
-    try {
-      setCartCount(0);
-    } catch {}
     toast.error("Đã đăng xuất ☹️");
     // reload to clear any cached state and ensure header reflects logged-out state
     try {
@@ -216,7 +182,9 @@ const Header = () => {
     } catch {
       try {
         navigate("/");
-      } catch {}
+      } catch {
+        console.log("first");
+      }
     }
   };
 
@@ -367,7 +335,7 @@ const Header = () => {
                     <div
                       style={{
                         position: "absolute",
-                        top: "90%",
+                        top: "100%",
                         left: 0,
                         marginTop: 4,
                         backgroundColor: "white",

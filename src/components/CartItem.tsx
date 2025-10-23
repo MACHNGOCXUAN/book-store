@@ -7,7 +7,7 @@ import type { CheckboxChangeEvent } from 'antd/es/checkbox';
 
 const { Text } = Typography;
 
-// Định nghĩa kiểu dữ liệu cho một item trong giỏ hàng
+/* ===================== Cart Item Types ===================== */
 export interface CartItemType {
   id: string | number;
   bookId?: string | number;
@@ -20,7 +20,6 @@ export interface CartItemType {
   quantity: number;
 }
 
-// Định nghĩa props cho component
 interface CartItemProps {
   item: CartItemType;
   selected: boolean;
@@ -29,9 +28,16 @@ interface CartItemProps {
   onRemove: (id: string | number) => void;
 }
 
-// Hàm helper để định dạng tiền tệ
+// Hàm helper để định dạng tiền tệ - không làm tròn, giữ nguyên giá trị chính xác
 const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+  // Định dạng VND với 2 chữ số thập phân, không làm tròn
+  const formatter = new Intl.NumberFormat('vi-VN', { 
+    style: 'currency', 
+    currency: 'VND',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return formatter.format(amount);
 };
 
 export const CartItem: React.FC<CartItemProps> = ({ 

@@ -1,125 +1,229 @@
-// src/components/ChatPopoverWidget.tsx
-
 "use client";
-
-import React, { useState } from 'react';
-import chatIcon from '../assets/icon_chat.png'; 
-import chatIcon1 from '../assets/icon_chat_1.jpg'; 
-
-import { FloatButton, Popover, Input, Button, Flex, Avatar, Typography } from 'antd';
-import { SendOutlined, CloseOutlined } from '@ant-design/icons'; 
+import { CloseOutlined, SendOutlined } from "@ant-design/icons";
+import {
+  Avatar,
+  Button,
+  Flex,
+  FloatButton,
+  Input,
+  Popover,
+  Spin,
+  Typography,
+} from "antd";
+import { useEffect, useRef, useState } from "react";
+import chatIcon from "../assets/icon_chat.png";
+import chatIcon1 from "../assets/icon_chat_1.jpg";
 
 const { Text } = Typography;
 const { TextArea } = Input;
-
 const PRIMARY_RED = "#d70018";
+
+// Định nghĩa kiểu tin nhắn
+interface Message {
+  role: "user" | "bot";
+  text: string;
+}
 
 const ChatPopoverWidget = () => {
   const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([
+    { role: "bot", text: "Xin chào 👋! Tôi là trợ lý AI. Tôi có thể giúp gì cho bạn?" },
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const chatBodyRef = useRef<HTMLDivElement | null>(null);
 
-  const handleOpenChange = (newOpen: boolean) => {
-    setOpen(newOpen);
+  // --- Cuộn xuống cuối khi có tin nhắn mới ---
+  useEffect(() => {
+    chatBodyRef.current?.scrollTo({
+      top: chatBodyRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [messages, loading]);
+
+  // --- Gửi tin nhắn đến Spring Boot ---
+  const sendMessage = async () => {
+    if (!input.trim()) return;
+    const userMsg: Message = { role: "user", text: input };
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("http://localhost:8080/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: input }),
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const replyText = await res.text();
+
+      const botMsg: Message = { role: "bot", text: replyText };
+      setMessages((prev) => [...prev, botMsg]);
+    } catch (err) {
+      console.error("❌ Lỗi khi gọi API:", err);
+
+      let errorText = "⚠️ Xin lỗi, hệ thống đang bận.";
+
+      if (err instanceof TypeError) {
+        errorText = "⚠️ Không thể kết nối đến server. Vui lòng kiểm tra backend có chạy không.";
+      } else if (err instanceof Error && err.name === 'AbortError') {
+        errorText = "⚠️ Yêu cầu timeout. Vui lòng thử lại.";
+      }
+
+      setMessages((prev) => [...prev, { role: "bot", text: errorText }]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // --- Nội dung cửa sổ Chat ---
+  // --- Giao diện cửa sổ Chat ---
   const ChatWindow = (
-    <div style={{ width: 340, maxHeight: '70vh', height: 500 }}>
-      <Flex vertical justify="space-between" style={{ height: '100%' }}>
-        
+    <div style={{ width: 340, maxHeight: "70vh", height: 500 }}>
+      <Flex vertical justify="space-between" style={{ height: "100%" }}>
         {/* 1. Header */}
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0' }}>
+        <div style={{ padding: "12px 16px", borderBottom: "1px solid #f0f0f0" }}>
           <Flex align="center" justify="space-between">
-            <Text strong style={{ fontSize: 18 }}>Hỗ trợ trực tuyến</Text>
-            <Button 
-              type="text" 
-              shape="circle" 
-              icon={<CloseOutlined />} 
-              onClick={() => setOpen(false)} 
+            <Text strong style={{ fontSize: 18 }}>
+              Trợ lý AI
+            </Text>
+            <Button
+              type="text"
+              shape="circle"
+              icon={<CloseOutlined />}
+              onClick={() => setOpen(false)}
             />
           </Flex>
         </div>
 
-        {/* 2. Body (Khu vực tin nhắn có thể cuộn) */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-          <Flex vertical gap="middle">
-            {/* Tin nhắn từ bot */}
-            <Flex gap="small" align="flex-start">
-              {/* Sửa lại src để hiển thị ảnh */}
-              <Avatar src={chatIcon1} style={{ width: 32, height: 32 }} /> 
-              <div style={{ background: '#f0f2f5', padding: '8px 12px', borderRadius: '16px' }}>
-                <Text>Xin chào! Chúng tôi có thể giúp gì cho bạn?</Text>
-              </div>
-            </Flex>
-
-            {/* Tin nhắn từ người dùng */}
-            <Flex gap="small" align="flex-start" justify="flex-end">
-              <div style={{ background: PRIMARY_RED, padding: '8px 12px', borderRadius: '16px' }}>
-                <Text style={{ color: "white" }}>Tôi cần tư vấn về sản phẩm.</Text>
-              </div>
-            </Flex>
-            {/* Thêm tin nhắn giả để test scroll */}
-            <Flex gap="small" align="flex-start">
-              <Avatar src={chatIcon1} style={{ width: 32, height: 32 }} /> 
-              <div style={{ background: '#f0f2f5', padding: '8px 12px', borderRadius: '16px' }}>
-                <Text>Dạ, bạn vui lòng cho tôi biết bạn đang quan tâm sản phẩm nào ạ?</Text>
-              </div>
-            </Flex>
-             <Flex gap="small" align="flex-start" justify="flex-end">
-              <div style={{ background: PRIMARY_RED, padding: '8px 12px', borderRadius: '16px' }}>
-                <Text style={{ color: "white" }}>Tôi muốn hỏi về sách "Nhà Giả Kim".</Text>
-              </div>
-            </Flex>
+        {/* 2. Body */}
+        <div
+          ref={chatBodyRef}
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "16px",
+            background: "#fff",
+          }}
+        >
+          <Flex vertical gap="small">
+            {messages.map((msg, i) =>
+              msg.role === "bot" ? (
+                <Flex key={i} gap="small" align="flex-start">
+                  <Avatar src={chatIcon1} size={32} />
+                  <div
+                    style={{
+                      background: "#f0f2f5",
+                      padding: "8px 12px",
+                      borderRadius: 16,
+                      maxWidth: 240,
+                    }}
+                  >
+                    <Text style={{ whiteSpace: "pre-line" }}>
+                      {msg.text
+                        .split(/(?=\d+\.\s)/)
+                        .map((part, index) => (
+                          <span key={index}>
+                            {part.trim()}
+                            <br />
+                          </span>
+                        ))}
+                    </Text>
+                  </div>
+                </Flex>
+              ) : (
+                <Flex key={i} justify="flex-end" align="flex-start" gap="small">
+                  <div
+                    style={{
+                      background: PRIMARY_RED,
+                      padding: "8px 12px",
+                      borderRadius: 16,
+                      color: "white",
+                      maxWidth: 240,
+                    }}
+                  >
+                    <Text style={{ color: "white" }}>{msg.text}</Text>
+                  </div>
+                </Flex>
+              )
+            )}
+            {loading && (
+              <Flex gap="small" align="center">
+                <Avatar src={chatIcon1} size={32} />
+                <Spin size="small" />
+                <Text>Đang soạn phản hồi...</Text>
+              </Flex>
+            )}
           </Flex>
         </div>
 
-        {/* 3. Footer (Khu vực nhập liệu) */}
-        <div style={{ padding: '12px 16px', borderTop: '1px solid #f0f0f0' }}>
+        {/* 3. Footer */}
+        <div
+          style={{
+            padding: "12px 16px",
+            borderTop: "1px solid #f0f0f0",
+            background: "#fff",
+          }}
+        >
           <Flex gap="small">
             <TextArea
               autoSize={{ minRows: 1, maxRows: 3 }}
               placeholder="Nhập tin nhắn..."
-              style={{ resize: "none" }}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onPressEnter={(e) => {
+                e.preventDefault();
+                sendMessage();
+              }}
             />
-            <Button type="primary" icon={<SendOutlined />} style={{ backgroundColor: PRIMARY_RED }} /> 
+            <Button
+              type="primary"
+              icon={<SendOutlined />}
+              style={{ backgroundColor: PRIMARY_RED }}
+              onClick={sendMessage}
+              loading={loading}
+            />
           </Flex>
         </div>
-
       </Flex>
     </div>
   );
-  
+
   return (
     <Popover
       content={ChatWindow}
       trigger="click"
       open={open}
-      onOpenChange={handleOpenChange}
+      onOpenChange={setOpen}
       placement="topLeft"
-      overlayStyle={{ paddingTop: '16px' }}
-      // Bỏ title và innerStyle để content tự quản lý hoàn toàn
-      overlayInnerStyle={{ padding: 0, borderRadius: '12px', overflow: 'hidden' }}
+      overlayStyle={{ paddingTop: 16 }}
+      overlayInnerStyle={{
+        padding: 0,
+        borderRadius: 12,
+        overflow: "hidden",
+      }}
     >
       <FloatButton
         icon={
           <img
-            src={chatIcon} // <-- Sửa lại src để hiển thị ảnh
+            src={chatIcon}
             alt="Chat Icon"
-            style={{ 
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover', // Dùng 'cover' để ảnh lấp đầy nút tròn
-              borderRadius: '50%'
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              borderRadius: "50%",
             }}
           />
         }
-        style={{ 
-          right: 32, 
-          bottom: 32, 
-          width: 58, 
+        style={{
+          right: 32,
+          bottom: 32,
+          width: 58,
           height: 58,
-          // Bỏ màu nền để ảnh nền tự hiển thị
         }}
-        tooltip="Trò chuyện với chúng tôi"
+        tooltip="Trò chuyện với AI"
       />
     </Popover>
   );

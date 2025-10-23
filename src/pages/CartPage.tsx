@@ -11,9 +11,15 @@ import { fetchCart, addOrUpdateCartItem, removeCartItem } from '../features/cart
 const { Title, Text, Link } = Typography;
 
 
-// Hàm helper để định dạng tiền tệ
+// Hàm helper để định dạng tiền tệ - không làm tròn, giữ nguyên giá trị chính xác
 const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+  const formatter = new Intl.NumberFormat('vi-VN', { 
+    style: 'currency', 
+    currency: 'VND',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return formatter.format(amount);
 };
 
 export const CartPage = () => {
@@ -26,17 +32,25 @@ export const CartPage = () => {
   }, [dispatch]);
 
   // Map server items to UI shape expected by CartItem component
-  const cartItems: CartItemType[] = serverItems.map((it, idx) => ({
-    id: it.cartItemId || `${idx}`,
-    bookId: it.book?.bookId ?? it.book?.id,
-    title: it.book?.title ?? it.book?.name ?? 'Sản phẩm',
-    author: it.book?.author,
-    note: undefined,
-    imageUrl: it.book?.coverImage ?? '',
-    price: Number(it.unitPrice ?? it.book?.price ?? 0),
-    originalPrice: Number(it.book?.price ?? it.unitPrice ?? 0),
-    quantity: Number(it.quantity ?? 1),
-  }));
+  const cartItems: CartItemType[] = serverItems.map((it, idx) => {
+    // Calculate discounted price using: discountedPrice = price - (price * discountPercent) / 100
+    // No rounding - keep exact decimal value
+    const bookPrice = Number(it.book?.price ?? 0);
+    const discountPercent = Number(it.book?.discountPercent ?? 0);
+    const discountedPrice = bookPrice - (bookPrice * discountPercent) / 100;
+
+    return {
+      id: it.cartItemId || `${idx}`,
+      bookId: it.book?.bookId ?? it.book?.id,
+      title: it.book?.title ?? it.book?.name ?? 'Sản phẩm',
+      author: it.book?.author,
+      note: undefined,
+      imageUrl: it.book?.coverImage ?? '',
+      price: discountedPrice > 0 ? discountedPrice : Number(it.unitPrice ?? 0),
+      originalPrice: bookPrice > 0 ? bookPrice : Number(it.unitPrice ?? 0),
+      quantity: Number(it.quantity ?? 1),
+    };
+  });
 
   useEffect(() => {
     // select all by default when items load

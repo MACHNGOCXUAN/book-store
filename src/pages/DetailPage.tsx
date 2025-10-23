@@ -9,7 +9,9 @@ import {
   Card,
   Space,
   ConfigProvider,
-  Form
+  Form,
+  Spin,
+  message,
 } from "antd"
 import {
   ShoppingCartOutlined,
@@ -19,103 +21,69 @@ import {
   CheckCircleOutlined,
   FileTextOutlined,
 } from "@ant-design/icons"
-import { getBookById, addCartItem } from "../lib/api.ts"
+import { useAppDispatch, useAppSelector } from "../store/hooks"
+import { getBookById } from "../features/books/bookSlice"
+import { addOrUpdateCartItem } from "../features/cart/cartSlice"
 import ReviewSection from "../components/ReviewSection.tsx" 
 import { toast } from "react-toastify"
-
-interface Book {
-  bookId: string
-  title: string
-  author: string
-  publisher: string
-  category: string
-  price: number
-  stock: number
-  description: string
-  publishDate: string
-  coverImage: string
-  discount: number
-}
-
-interface Comment {
-  review_id: number
-  content: string
-  rating: number
-  rating_date: string
-  book_id: string
-  customer_id: number
-  customer_name: string
-}
-
-const fakeComments: Comment[] = [
-  {
-    review_id: 1,
-    content: "Sản phẩm rất tốt, nội dung chi tiết và dễ hiểu. Tôi rất hài lòng với chất lượng của bộ sách này.",
-    rating: 5,
-    rating_date: "2024-10-15",
-    book_id: "B001",
-    customer_id: 101,
-    customer_name: "Nguyễn Văn A",
-  },
-  {
-    review_id: 2,
-    content: "Bộ sách này giúp tôi cải thiện kỹ năng nghe nói rất nhiều.",
-    rating: 4,
-    rating_date: "2024-10-14",
-    book_id: "B001",
-    customer_id: 102,
-    customer_name: "Trần Thị B",
-  },
-]
+import type { Comment } from "../types"
+import { reviewApi } from "../features/reviews/reviewSlice.ts"
 
 function DetailPage() {
   const { id } = useParams<string>()
-  const [book, setBook] = useState<Book | null>(null)
-  const [comments, setComments] = useState<Comment[]>(fakeComments)
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const dispatch = useAppDispatch()
+  const reduxBook = useAppSelector((s) => {
+    const foundBook = s.books.books.find((b) => b.bookId === id)
+    return foundBook || null
+  })
+  
+  // Get user from auth store
+  const authUser = useAppSelector((s) => s.auth.user)
+  const token = useAppSelector((s) => s.auth.token)
+  
+  const [comments, setComments] = useState<Comment[]>([])
+  const [isLoggedIn, setIsLoggedIn] = useState(!!token && !!authUser)
   const [form] = Form.useForm()
-
-  // async function handleAddToCart() {
-  //   addCartItem(book.bookId)
-  //   try {
-  //       await dispatch(addOrUpdateCartItem({ bookId: String(book?.bookId), quantity: delta })).unwrap();
-  //       } catch (e) {
-  //         console.log(e)
-  //       }
-  //       }
-  //         await dispatch(fetchCart()).unwrap();
-  //       try { window.dispatchEvent(new CustomEvent('cart-updated')); } catch (e) {}
-  //       toast.success("Thêm vào giỏ hàng thành công")    
-  // }
+  const [loadingReviews, setLoadingReviews] = useState(false)
 
   const handleAddToCart = async () => {
-  try {
-    if(id) {
-      await addCartItem(id)
-      toast.success("Đã thêm vào giỏ hàng 🎉");
-      // 🔥 Gửi tín hiệu toàn cục cho Header biết là giỏ hàng đã thay đổi
-      window.dispatchEvent(new CustomEvent("cart-updated"));
-    }
-
-  } catch (error) {
-    console.log(error)
-    toast.error("Lỗi khi thêm sản phẩm 😢");
-  }
-};
- 
-  useEffect(() => {
-    async function fetchBook() {
-      try {
-        if(id) {
-          const res = await getBookById(id)
-          setBook(res)
-        }
-      } catch (error) {
-        console.log(error)
+    try {
+      if (id) {
+        await dispatch(addOrUpdateCartItem({ bookId: id, quantity: 1 })).unwrap()
+        toast.success("Đã thêm vào giỏ hàng 🎉")
+        window.dispatchEvent(new CustomEvent("cart-updated"))
       }
+    } catch (error) {
+      console.log(error)
+      toast.error("Lỗi khi thêm sản phẩm 😢")
     }
-    if (id) fetchBook()
-  }, [id])
+  }
+
+  useEffect(() => {
+    // Update login state when auth changes
+    setIsLoggedIn(!!token && !!authUser)
+  }, [token, authUser])
+
+  useEffect(() => {
+    if (id) {
+      dispatch(getBookById(id))
+      loadReviews()
+    }
+  }, [id, dispatch])
+
+  const loadReviews = async () => {
+    if (!id) return
+    try {
+      setLoadingReviews(true)
+      const reviews = await reviewApi.getReviewsByBookId(id)
+      setComments(reviews)
+    } catch (error) {
+      console.error("Error loading reviews:", error)
+      message.error("Không thể tải bình luận")
+    } finally {
+      setLoadingReviews(false)
+    }
+  }
 
   const ratingStats = {
     5: comments.filter((c) => c.rating === 5).length,
@@ -129,32 +97,107 @@ function DetailPage() {
   const averageRating =
     totalRatings > 0 ? (comments.reduce((sum, c) => sum + c.rating, 0) / totalRatings).toFixed(1) : "0"
 
-  const handleCommentSubmit = (values: any) => {
-    if (!isLoggedIn) return
-
-    const newComment: Comment = {
-      review_id: Math.max(...comments.map((c) => c.review_id), 0) + 1,
-      content: values.content || values.comment,
-      rating: values.rating || 0,
-      rating_date: new Date().toISOString().split("T")[0],
-      book_id: book?.bookId || "unknown",
-      customer_id: Math.floor(Math.random() * 10000),
-      customer_name: values.customer_name || "Khách hàng ẩn danh",
+  const handleCommentSubmit = async (values: any) => {
+    if (!isLoggedIn || !authUser) {
+      toast.warning("Vui lòng đăng nhập để bình luận")
+      return
     }
 
-    setComments([newComment, ...comments])
-    form.resetFields()
+    try {
+      // Call API to create review with actual user ID
+      const payload = {
+        bookId: id || "",
+        customerId: authUser.userId || "1",
+        rating: values.rating || 0,
+        content: values.content || "",
+      }
+
+      const newReview = await reviewApi.createReview(payload)
+
+      // Convert API response to Comment format
+      // Backend returns: reviewId, bookId, bookTitle, customerId, customerName, customerFullName, rating, content, ratingDate
+      const newComment: Comment = {
+        review_id: newReview.review_id || newReview.review_id || "",
+        content: newReview.content || "",
+        rating: newReview.rating || 0,
+        rating_date: newReview.ratingDate || newReview.rating_date || new Date().toISOString().split("T")[0],
+        customer_name: newReview.customerFullName || newReview.customerName || authUser.fullName || "Khách hàng",
+        bookId: newReview.bookId || id || "",
+        bookTitle: newReview.bookTitle || "",
+        customerId: newReview.customerId || authUser.userId || "",
+      }
+
+      setComments([newComment, ...comments])
+      form.resetFields()
+      toast.success("Bình luận của bạn đã được gửi ✅")
+    } catch (error: any) {
+      console.error("Error submitting comment:", error)
+      toast.error("Lỗi khi gửi bình luận 😢")
+    }
+  }
+
+  const handleEditComment = async (reviewId: string | number, rating: number, content: string) => {
+    try {
+      console.log("Updating review:", { reviewId, rating, content, userId: authUser?.userId })
+      const updateResult = await reviewApi.updateReview(String(reviewId), { rating, content }, authUser?.userId)
+      console.log("Update result:", updateResult)
+      
+      // Fetch lại reviews để cập nhật toàn bộ dữ liệu (bao gồm rating_date)
+      if (id) {
+        console.log("Fetching updated reviews for book:", id)
+        const updatedReviews = await reviewApi.getReviewsByBookId(id)
+        console.log("Updated reviews:", updatedReviews)
+        setComments(updatedReviews)
+      }
+      toast.success("Bình luận đã được cập nhật ✅")
+    } catch (error: any) {
+      console.error("Error updating comment:", error)
+      if (error.message.includes("does not belong")) {
+        toast.error("Bạn chỉ có thể chỉnh sửa bình luận của chính mình 😢")
+      } else {
+        toast.error("Lỗi khi cập nhật bình luận 😢")
+      }
+    }
+  }
+
+  const handleDeleteComment = async (reviewId: string | number) => {
+    try {
+      await reviewApi.deleteReview(String(reviewId), authUser?.userId)
+      
+      // Fetch lại reviews để cập nhật toàn bộ dữ liệu
+      if (id) {
+        const updatedReviews = await reviewApi.getReviewsByBookId(id)
+        setComments(updatedReviews)
+      }
+      toast.success("Bình luận đã được xóa ✅")
+    } catch (error: any) {
+      console.error("Error deleting comment:", error)
+      if (error.message.includes("does not belong")) {
+        toast.error("Bạn chỉ có thể xóa bình luận của chính mình 😢")
+      } else {
+        toast.error("Lỗi khi xóa bình luận 😢")
+      }
+    }
   }
 
   const handleToggleLogin = (status: boolean) => {
-    setIsLoggedIn(status)
-    form.resetFields()
+    if (status) {
+      // Open login modal - navigate to login or show modal
+      // For now, just set the state. In production, navigate to /login
+      toast.info("Vui lòng đăng nhập tài khoản của bạn")
+      window.location.href = "/login"
+    } else {
+      setIsLoggedIn(false)
+      form.resetFields()
+    }
   }
 
-  if (!book) return <div style={{ padding: "32px" }}>Đang tải...</div>
+  if (!reduxBook) return <div style={{ padding: "32px" }}>Đang tải...</div>
 
   const primaryColor = "rgb(207, 38, 45)"
-  const originalPrice = book.discount ? book.price / (1 - book.discount / 100) : book.price
+  const originalPrice = reduxBook.price
+  const discountAmount = (reduxBook.price * reduxBook.discountPercent) / 100
+  const discountedPrice = reduxBook.price - discountAmount
 
   return (
     <ConfigProvider
@@ -167,7 +210,7 @@ function DetailPage() {
     >
       <Layout style={{ minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
         <div style={{ backgroundColor: "#fff", borderBottom: "1px solid #f0f0f0", padding: "12px 24px" }}>
-          <p style={{ margin: 0, fontSize: "14px", color: "#666" }}>Trang chủ / {book.category} / {book.publisher}</p>
+          <p style={{ margin: 0, fontSize: "14px", color: "#666" }}>Trang chủ / {reduxBook.category} / {reduxBook.publisher}</p>
         </div>
 
         <Layout.Content style={{ padding: "32px 24px" }}>
@@ -176,8 +219,8 @@ function DetailPage() {
               <Col xs={24} lg={8}>
                 <Card style={{ position: "relative" }}>
                   <img
-                    src={book.coverImage || "/placeholder.svg"}
-                    alt={book.title}
+                    src={reduxBook.coverImage || "/placeholder.svg"}
+                    alt={reduxBook.title}
                     style={{ width: "100%", height: "auto", borderRadius: "8px" }}
                   />
                 </Card>
@@ -186,7 +229,7 @@ function DetailPage() {
               <Col xs={24} lg={8}>
                 <Card>
                   <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "24px", color: "#000" }}>
-                    {book.title}
+                    {reduxBook.title}
                   </h1>
 
                   <div style={{ marginBottom: "24px" }}>
@@ -195,7 +238,7 @@ function DetailPage() {
                         {originalPrice.toLocaleString()}₫
                       </span>
                       <span style={{ fontSize: "32px", fontWeight: "bold", color: primaryColor }}>
-                        {book.price.toLocaleString()}₫
+                        {discountedPrice.toLocaleString()}₫
                       </span>
                     </Space>
                   </div>
@@ -282,10 +325,10 @@ function DetailPage() {
                     ),
                     children: (
                       <div style={{ color: "#333", lineHeight: "1.6" }}>
-                        <p>{book.description}</p>
-                        <p><strong>Tác giả:</strong> {book.author}</p>
-                        <p><strong>Nhà xuất bản:</strong> {book.publisher}</p>
-                        <p><strong>Ngày xuất bản:</strong> {book.publishDate}</p>
+                        <p>{reduxBook.description}</p>
+                        <p><strong>Tác giả:</strong> {reduxBook.author}</p>
+                        <p><strong>Nhà xuất bản:</strong> {reduxBook.publisher}</p>
+                        <p><strong>Ngày xuất bản:</strong> {reduxBook.publishDate}</p>
                       </div>
                     ),
                   },
@@ -293,18 +336,23 @@ function DetailPage() {
               />
             </Card>
 
-            <ReviewSection
-              bookTitle={book.title}
-              ratingStats={ratingStats}
-              totalRatings={totalRatings}
-              averageRating={averageRating}
-              primaryColor={primaryColor}
-              comments={comments}
-              isLoggedIn={isLoggedIn}
-              form={form}
-              onCommentSubmit={handleCommentSubmit}
-              onToggleLogin={handleToggleLogin}
-            />
+            <Spin spinning={loadingReviews} tip="Đang tải bình luận...">
+              <ReviewSection
+                bookTitle={reduxBook.title}
+                ratingStats={ratingStats}
+                totalRatings={totalRatings}
+                averageRating={averageRating}
+                primaryColor={primaryColor}
+                comments={comments}
+                isLoggedIn={isLoggedIn}
+                form={form}
+                currentUserId={authUser?.userId}
+                onCommentSubmit={handleCommentSubmit}
+                onToggleLogin={handleToggleLogin}
+                onEditComment={handleEditComment}
+                onDeleteComment={handleDeleteComment}
+              />
+            </Spin>
           </div>
         </Layout.Content>
       </Layout>

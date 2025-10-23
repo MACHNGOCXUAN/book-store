@@ -6,19 +6,22 @@ import { EyeOutlined, ShoppingCartOutlined } from "@ant-design/icons"
 import { Button, Card, Tooltip, Typography } from "antd"
 import type React from "react"
 import { useNavigate } from "react-router-dom"
-import type { Book } from "../types/Book"
 import { toast } from "react-toastify"
-import { addCartItem } from "../lib/api"
+import { addOrUpdateCartItem } from "../features/cart/cartSlice"
+import { useAppDispatch } from "../store/hooks"
+import type { Book } from "../types"
 
+const { Text } = Typography
+
+/* ===================== ProductCard Props ===================== */
 interface ProductCardProps {
   book: Book
   onAddToCart?: (book: Book) => void
 }
 
-const { Text } = Typography
-
 const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
   const navigate = useNavigate()
+  const dispatch = useAppDispatch()
 
   // Hàm điều hướng đến trang chi tiết sản phẩm
   const handleViewDetails = () => {
@@ -27,19 +30,17 @@ const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
 
   const handleAddToCart = async () => {
     try {
-      const item = await addCartItem(book.bookId, 1);
+      await dispatch(addOrUpdateCartItem({ bookId: book.bookId, quantity: 1 })).unwrap();
       toast.success("Đã thêm vào giỏ hàng!");
-      // If backend returned the created item we can dispatch updated event
+      // Emit event so Header and other listeners update
       try {
-        // request latest cart items count by emitting event; header will react
         const ev = new CustomEvent('cart-updated', { detail: { added: true } });
         window.dispatchEvent(ev);
       } catch (e) {
         // ignore
       }
-      return item;
     } catch (err: any) {
-      toast.error(err?.message || 'Thêm giỏ hàng thất bại');
+      toast.error(err || 'Thêm giỏ hàng thất bại');
     }
   }
   return (
@@ -148,7 +149,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
               fontWeight: 700,
             }}
           >
-            {Number(book.price).toLocaleString("vi-VN")}₫
+            {(Number(book.price) - (Number(book.price) * Number(book.discountPercent) / 100)).toLocaleString("vi-VN")}₫
           </Text>
           <br />
           <Text
@@ -158,7 +159,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
               fontSize: "14px",
             }}
           >
-            {(Number(book.price) * 1.2).toLocaleString("vi-VN")}₫
+            {(Number(book.price)).toLocaleString("vi-VN")}₫
           </Text>
           <Text
             style={{
@@ -168,7 +169,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
               fontWeight: 600,
             }}
           >
-            -17%
+            {`-${book.discountPercent}%`}
           </Text>
         </div>
 
