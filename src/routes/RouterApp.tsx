@@ -5,6 +5,7 @@ import ContactPage from "../pages/ContactPage";
 import AboutPage from "../pages/AboutPage";
 import { CartPage } from "../pages/CartPage";
 import DetailPage from "../pages/DetailPage";
+import FilterCategory from "../pages/FilterCategory";
 const router = createBrowserRouter([
 
     {
@@ -30,6 +31,10 @@ const router = createBrowserRouter([
             {
                 path: "/books/:id",
                 element: <DetailPage/>
+            },
+            {
+                path: "/categories/:type",
+                element: <FilterCategory/>
             }
         ]
     }

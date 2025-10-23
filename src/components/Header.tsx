@@ -44,7 +44,7 @@ const { Title } = Typography;
 const Header = () => {
   // -------------------- Redux auth --------------------
   const authUser = useAppSelector((s) => s.auth.user);
-  
+
   const dispatch = useAppDispatch();
 
   // -------------------- Local states --------------------
@@ -62,7 +62,6 @@ const Header = () => {
 
   const screens = useBreakpoint();
   const navigate = useNavigate();
-  
 
   const isLoggedIn = !!authUser; // dựa hoàn toàn vào Redux
   const displayName =
@@ -135,17 +134,21 @@ const Header = () => {
     let mounted = true;
     (async () => {
       try {
-        const { getCartItems } = await import('../lib/api');
+        const { getCartItems } = await import("../lib/api");
         const items: any[] = await getCartItems();
         if (!mounted) return;
         setCartCount(Array.isArray(items) ? items.length : 0);
         // also emit event so any other listeners update
-        try { window.dispatchEvent(new CustomEvent('cart-updated')); } catch (e) {}
+        try {
+          window.dispatchEvent(new CustomEvent("cart-updated"));
+        } catch (e) {}
       } catch {
         // ignore
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [authUser]);
 
   // -------------------- Derived menus --------------------
@@ -162,7 +165,10 @@ const Header = () => {
     return categories.map((c) => ({
       key: `/categories/${encodeURIComponent(c)}`,
       label: (
-        <Link style={{ textDecoration: "none" }} to={`/categories/${encodeURIComponent(c)}`}>
+        <Link
+          style={{ textDecoration: "none" }}
+          to={`/categories/${encodeURIComponent(c)}`}
+        >
           {c}
         </Link>
       ),
@@ -172,12 +178,19 @@ const Header = () => {
 
   const userMenuItems: MenuProps["items"] = [
     { key: "profile", label: "Trang cá nhân", icon: <SolutionOutlined /> },
-    { key: "orders", label: "Đơn hàng của tôi", icon: <ShoppingCartOutlined /> },
+    {
+      key: "orders",
+      label: "Đơn hàng của tôi",
+      icon: <ShoppingCartOutlined />,
+    },
     { type: "divider" },
-    { key: "logout", label: "Đăng xuất", icon: <LogoutOutlined />, danger: true },
+    {
+      key: "logout",
+      label: "Đăng xuất",
+      icon: <LogoutOutlined />,
+      danger: true,
+    },
   ];
-
-  
 
   // -------------------- Handlers --------------------
   const handleSearch = (value?: string) => {
@@ -189,20 +202,23 @@ const Header = () => {
     setIsSearchModalOpen(false);
   };
 
-  
   // Gọi toast ở đây
   const handleLogout = () => {
     dispatch(clearAuth());
     // reset cart count immediately
-    try { setCartCount(0); } catch {}
+    try {
+      setCartCount(0);
+    } catch {}
     toast.error("Đã đăng xuất ☹️");
     // reload to clear any cached state and ensure header reflects logged-out state
-    try { window.location.reload(); } catch {
-      try { navigate('/'); } catch {}
+    try {
+      window.location.reload();
+    } catch {
+      try {
+        navigate("/");
+      } catch {}
     }
   };
-
-  
 
   const handleAuthSuccess = () => {
     // AuthModal đã dispatch setAuth({token, user})
@@ -215,9 +231,24 @@ const Header = () => {
     <>
       {/* Top Banner */}
       {screens.md && (
-        <div style={{ background: "linear-gradient(135deg, #C92127 0%, #E63946 100%)", padding: "8px 0" }}>
-          <div className="container" style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px" }}>
-            <div style={{ textAlign: "center", color: "white", fontSize: 14, fontWeight: 500 }}>
+        <div
+          style={{
+            background: "linear-gradient(135deg, #C92127 0%, #E63946 100%)",
+            padding: "8px 0",
+          }}
+        >
+          <div
+            className="container"
+            style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px" }}
+          >
+            <div
+              style={{
+                textAlign: "center",
+                color: "white",
+                fontSize: 14,
+                fontWeight: 500,
+              }}
+            >
               🎉 DOANH NHÂN NUÔI CHÍ - SÁCH HAY ĐƯỜNG TRÍ{" "}
               <span
                 style={{
@@ -261,20 +292,45 @@ const Header = () => {
           paddingBottom: 6,
         }}
       >
-        <div className="container" style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px" }}>
-          <div style={{ display: "flex", alignItems: "center", height: 64, gap: 16 }}>
+        <div
+          className="container"
+          style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px" }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              height: 64,
+              gap: 16,
+            }}
+          >
             {/* Mobile */}
             {!screens.md && (
               <>
-                <Button type="text" icon={<MenuOutlined style={{ fontSize: 20 }} />} onClick={() => setOpenDrawer(true)} />
+                <Button
+                  type="text"
+                  icon={<MenuOutlined style={{ fontSize: 20 }} />}
+                  onClick={() => setOpenDrawer(true)}
+                />
                 <Link to="/">
-                  <img src={logo} alt="logo" style={{ height: 50, width: 100 }} />
+                  <img
+                    src={logo}
+                    alt="logo"
+                    style={{ height: 50, width: 100 }}
+                  />
                 </Link>
                 <div style={{ flex: 1 }} />
-                <Button type="text" icon={<SearchOutlined style={{ fontSize: 20 }} />} onClick={() => setIsSearchModalOpen(true)} />
+                <Button
+                  type="text"
+                  icon={<SearchOutlined style={{ fontSize: 20 }} />}
+                  onClick={() => setIsSearchModalOpen(true)}
+                />
                 <Link to="/cart">
                   <Badge count={cartCount} size="small">
-                    <Button type="text" icon={<ShoppingCartOutlined style={{ fontSize: 20 }} />} />
+                    <Button
+                      type="text"
+                      icon={<ShoppingCartOutlined style={{ fontSize: 20 }} />}
+                    />
                   </Badge>
                 </Link>
               </>
@@ -311,7 +367,7 @@ const Header = () => {
                     <div
                       style={{
                         position: "absolute",
-                        top: "100%",
+                        top: "90%",
                         left: 0,
                         marginTop: 4,
                         backgroundColor: "white",
@@ -339,7 +395,15 @@ const Header = () => {
                           Danh mục sản phẩm
                         </div>
                         {categories.length === 0 ? (
-                          <div style={{ padding: "12px 16px", color: "#999", fontSize: 14 }}>Chưa có danh mục</div>
+                          <div
+                            style={{
+                              padding: "12px 16px",
+                              color: "#999",
+                              fontSize: 14,
+                            }}
+                          >
+                            Chưa có danh mục
+                          </div>
                         ) : (
                           categories.map((category) => (
                             <Link
@@ -356,12 +420,14 @@ const Header = () => {
                                 fontSize: 14,
                               }}
                               onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = "#FFF5F5";
+                                e.currentTarget.style.backgroundColor =
+                                  "#FFF5F5";
                                 e.currentTarget.style.color = "#C92127";
                                 e.currentTarget.style.paddingLeft = "20px";
                               }}
                               onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = "transparent";
+                                e.currentTarget.style.backgroundColor =
+                                  "transparent";
                                 e.currentTarget.style.color = "#333";
                                 e.currentTarget.style.paddingLeft = "16px";
                               }}
@@ -412,11 +478,15 @@ const Header = () => {
                       color: "#666",
                       transition: "color 0.3s",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = "#C92127")}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.color = "#C92127")
+                    }
                     onMouseLeave={(e) => (e.currentTarget.style.color = "#666")}
                   >
                     <BellOutlined style={{ fontSize: 24 }} />
-                    <span style={{ fontSize: 11, marginTop: 2 }}>Thông Báo</span>
+                    <span style={{ fontSize: 11, marginTop: 2 }}>
+                      Thông Báo
+                    </span>
                   </Button>
 
                   {/* Cart */}
@@ -444,7 +514,9 @@ const Header = () => {
                           }}
                         />
                       </Badge>
-                      <span style={{ fontSize: 11, marginTop: 2 }}>Giỏ Hàng</span>
+                      <span style={{ fontSize: 11, marginTop: 2 }}>
+                        Giỏ Hàng
+                      </span>
                     </Button>
                   </Link>
 
@@ -453,11 +525,14 @@ const Header = () => {
                     <Dropdown
                       placement="bottomRight"
                       trigger={["click"]}
-                      menu={{ items: userMenuItems, onClick: ({ key }) => {
-                        if (key === "logout") return handleLogout();
-                        if (key === "profile") return navigate("/profile");
-                        if (key === "orders")  return navigate("/orders");
-                      }}}
+                      menu={{
+                        items: userMenuItems,
+                        onClick: ({ key }) => {
+                          if (key === "logout") return handleLogout();
+                          if (key === "profile") return navigate("/profile");
+                          if (key === "orders") return navigate("/orders");
+                        },
+                      }}
                     >
                       <Button
                         type="text"
@@ -470,11 +545,17 @@ const Header = () => {
                           color: "#666",
                           transition: "color 0.3s",
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.color = "#C92127")}
-                        onMouseLeave={(e) => (e.currentTarget.style.color = "#666")}
+                        onMouseEnter={(e) =>
+                          (e.currentTarget.style.color = "#C92127")
+                        }
+                        onMouseLeave={(e) =>
+                          (e.currentTarget.style.color = "#666")
+                        }
                       >
                         <UserOutlined style={{ fontSize: 24 }} />
-                        <span style={{ fontSize: 11, marginTop: 2 }}>{displayName}</span>
+                        <span style={{ fontSize: 11, marginTop: 2 }}>
+                          {displayName}
+                        </span>
                       </Button>
                     </Dropdown>
                   ) : (
@@ -490,11 +571,17 @@ const Header = () => {
                         color: "#666",
                         transition: "color 0.3s",
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = "#C92127")}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = "#666")}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.color = "#C92127")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.color = "#666")
+                      }
                     >
                       <UserOutlined style={{ fontSize: 24 }} />
-                      <span style={{ fontSize: 11, marginTop: 2 }}>Tài khoản</span>
+                      <span style={{ fontSize: 11, marginTop: 2 }}>
+                        Tài khoản
+                      </span>
                     </Button>
                   )}
 
@@ -509,7 +596,9 @@ const Header = () => {
                       color: "#666",
                       transition: "color 0.3s",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = "#C92127")}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.color = "#C92127")
+                    }
                     onMouseLeave={(e) => (e.currentTarget.style.color = "#666")}
                   >
                     <img
@@ -529,7 +618,15 @@ const Header = () => {
       {/* Secondary nav bar (desktop) */}
       {screens.md && (
         <div style={{ backgroundColor: "#CF262D" }}>
-          <div className="container" style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px" , backgroundColor:"#CF262D"}}>
+          <div
+            className="container"
+            style={{
+              maxWidth: 1200,
+              margin: "0 auto",
+              padding: "0 16px",
+              backgroundColor: "#CF262D",
+            }}
+          >
             <div
               style={{
                 display: "flex",
@@ -634,14 +731,22 @@ const Header = () => {
 
       {/* Drawer (mobile) */}
       <Drawer
-        title={<Title level={4} style={{ margin: 0 }}>Menu</Title>}
+        title={
+          <Title level={4} style={{ margin: 0 }}>
+            Menu
+          </Title>
+        }
         placement="left"
         width={300}
         open={openDrawer}
         onClose={() => setOpenDrawer(false)}
       >
         <Space direction="vertical" style={{ width: "100%" }} size="large">
-          <Menu mode="inline" items={categoryMenuItems} style={{ border: "none" }} />
+          <Menu
+            mode="inline"
+            items={categoryMenuItems}
+            style={{ border: "none" }}
+          />
           {isLoggedIn ? (
             <Button
               block
@@ -691,7 +796,11 @@ const Header = () => {
       </Modal>
 
       {/* Auth Modal */}
-      <AuthModal open={isLoginModalOpen} onCancel={() => setIsLoginModalOpen(false)} onSuccess={handleAuthSuccess} />
+      <AuthModal
+        open={isLoginModalOpen}
+        onCancel={() => setIsLoginModalOpen(false)}
+        onSuccess={handleAuthSuccess}
+      />
     </>
   );
 };
