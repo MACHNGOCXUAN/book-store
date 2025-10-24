@@ -1,35 +1,40 @@
 import { createBrowserRouter } from "react-router-dom";
 import App from "../App";
-import HomePage from "../pages/HomePage";
-import ContactPage from "../pages/ContactPage";
 import AboutPage from "../pages/AboutPage";
+import AccountPage from "../pages/AccountPage";
 import { CartPage } from "../pages/CartPage";
+import ContactPage from "../pages/ContactPage";
 import DetailPage from "../pages/DetailPage";
+import HomePage from "../pages/HomePage";
 const router = createBrowserRouter([
 
     {
-        path:"",
-        element:<App/>,
-        children:[
+        path: "",
+        element: <App />,
+        children: [
             {
-                index:true,
-                element: <HomePage/>
+                index: true,
+                element: <HomePage />
             },
             {
                 path: "contact",
-                element: <ContactPage/>
+                element: <ContactPage />
             },
             {
                 path: "about",
-                element: <AboutPage/>
+                element: <AboutPage />
             },
             {
                 path: "cart",
-                element: <CartPage/>
+                element: <CartPage />
             },
             {
                 path: "/books/:id",
-                element: <DetailPage/>
+                element: <DetailPage />
+            },
+            {
+                path: "account",
+                element: <AccountPage />
             }
         ]
     }
