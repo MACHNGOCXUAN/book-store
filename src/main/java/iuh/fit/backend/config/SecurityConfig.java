@@ -53,11 +53,16 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers("/api/auth/**").permitAll()
-//                        .requestMatchers("/api/books").authenticated()
-//                        .anyRequest().authenticated()
-                                .requestMatchers("/ws/**").permitAll()
-                        .anyRequest().permitAll()
+                        .requestMatchers(
+                                "/api/auth/**",
+                                "/api/reports/admin/overview",
+                                "/api/reports/revenue",
+                                "/api/reports/orders",
+                                "/api/reports/books",
+                                "/api/reports/customers",
+                                "/ws/**"
+                        ).permitAll()
+                        .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(point))
                 .sessionManagement(session ->

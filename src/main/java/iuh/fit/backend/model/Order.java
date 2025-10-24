@@ -30,7 +30,9 @@ public class Order {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     private List<Payment> payments = new ArrayList<>();
-
+    @ManyToOne
+    @JoinColumn(name = "staff_id")
+    private Staff staff;
     /* ----------------- Helpers ----------------- */
 
     /** Tính lại tổng tiền từ các dòng chi tiết */
