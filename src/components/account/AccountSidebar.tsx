@@ -1,24 +1,20 @@
 import { HeartOutlined, ShoppingOutlined, UserOutlined, WalletOutlined } from '@ant-design/icons'
 import { Avatar, Badge, Menu } from 'antd'
 import { useState } from 'react'
+import { useAppSelector } from "../../store/hooks"
 
 interface AccountSidebarProps {
-    userName?: string
     userLevel?: string
-    fPoint?: number
-    fPointNextLevel?: number
     onMenuSelect?: (key: string) => void
     selectedKey?: string
 }
 
 const AccountSidebar = ({
-    userName = 'Người dùng',
-    userLevel = 'Thành viên Bạc',
-    fPoint = 0,
-    fPointNextLevel = 30000,
     onMenuSelect,
     selectedKey: externalSelectedKey,
 }: AccountSidebarProps) => {
+    const authUser = useAppSelector((s) => s.auth.user)
+    const [fullname, setFullname] = useState(authUser?.fullName || "")
     const [internalSelectedKey, setInternalSelectedKey] = useState('profile')
     const selectedKey = externalSelectedKey || internalSelectedKey
 
@@ -84,19 +80,9 @@ const AccountSidebar = ({
                         color: '#333',
                         marginBottom: 4
                     }}>
-                        {userName}
+                        {fullname}
                     </div>
-                    <div style={{
-                        display: 'inline-block',
-                        padding: '4px 12px',
-                        background: 'linear-gradient(135deg, #C0C0C0 0%, #E8E8E8 100%)',
-                        borderRadius: 12,
-                        fontSize: 12,
-                        fontWeight: 500,
-                        color: '#666'
-                    }}>
-                        {userLevel}
-                    </div>
+
                 </div>
 
             </div>

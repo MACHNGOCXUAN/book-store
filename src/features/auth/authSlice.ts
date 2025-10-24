@@ -1,7 +1,7 @@
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
-import type { User } from "../../types";
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { API_BASE } from "../../config/api";
+import type { User } from "../../types";
 
 /* ===================== Auth State Type ===================== */
 type AuthState = {
@@ -62,6 +62,7 @@ export const loginUser = createAsyncThunk<
         });
         if (profileRes.ok) {
           const user: any = await profileRes.json();
+          console.log("User: .............", user)
           return {
             token,
             user: {
@@ -69,6 +70,7 @@ export const loginUser = createAsyncThunk<
               userName: user?.userName,
               fullName: user?.fullName,
               email: user?.email,
+              phone: user?.phoneNumber
             },
           };
         }
@@ -181,7 +183,9 @@ const authSlice = createSlice({
       }
       try {
         localStorage.setItem("access_token", action.payload.token);
-      } catch {}
+      } catch (error) {
+        console.log(error)
+      }
       try {
         if (action.payload.user) {
           localStorage.setItem("user_profile", JSON.stringify(action.payload.user));
@@ -191,7 +195,7 @@ const authSlice = createSlice({
             localStorage.setItem("user_fullName", action.payload.user.userName);
           }
         }
-      } catch {}
+      } catch { }
     },
     clearAuth(state) {
       state.token = null;
@@ -201,7 +205,7 @@ const authSlice = createSlice({
         localStorage.removeItem("access_token");
         localStorage.removeItem("user_profile");
         localStorage.removeItem("user_fullName");
-      } catch {}
+      } catch { }
     },
   },
   extraReducers: (builder) => {
@@ -226,7 +230,7 @@ const authSlice = createSlice({
               localStorage.setItem("user_fullName", action.payload.user.userName);
             }
           }
-        } catch {}
+        } catch { }
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
@@ -266,7 +270,7 @@ const authSlice = createSlice({
               localStorage.setItem("user_fullName", action.payload.user.userName);
             }
           }
-        } catch {}
+        } catch { }
       })
       .addCase(googleLogin.rejected, (state, action) => {
         state.loading = false;
