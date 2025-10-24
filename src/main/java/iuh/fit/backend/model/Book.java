@@ -4,7 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @AllArgsConstructor @NoArgsConstructor
 @Getter @Setter @ToString
@@ -20,6 +22,7 @@ public class Book {
     private double price;
     private double importPrice;
     private int stock;
+    private int discountPercent;
     @Column(length = 2000)
     private String description;
     private LocalDate publishDate;
@@ -44,4 +47,8 @@ public class Book {
     @ToString.Exclude
     @JsonIgnore
     private List<Review> reviews;
+
+    @ManyToMany(mappedBy = "favoriteBooks")
+    @JsonIgnore
+    private Set<Customer> likedByCustomers = new HashSet<>();
 }
