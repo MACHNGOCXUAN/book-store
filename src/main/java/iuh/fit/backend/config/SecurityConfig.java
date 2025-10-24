@@ -1,8 +1,5 @@
 package iuh.fit.backend.config;
 
-import iuh.fit.backend.security.CustomUserDetailsService;
-import iuh.fit.backend.security.JWTAthenticationEntryPoint;
-import iuh.fit.backend.security.JWTAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -16,6 +13,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import iuh.fit.backend.security.CustomUserDetailsService;
+import iuh.fit.backend.security.JWTAthenticationEntryPoint;
+import iuh.fit.backend.security.JWTAuthenticationFilter;
 
 
 @Configuration
@@ -60,7 +61,8 @@ public class SecurityConfig {
                                 "/api/reports/orders",
                                 "/api/reports/books",
                                 "/api/reports/customers",
-                                "/ws/**"
+                                "/ws/**",
+                                "/api/books/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
