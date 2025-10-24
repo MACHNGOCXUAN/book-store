@@ -93,12 +93,7 @@ const AccountPage = () => {
             default:
                 return (
                     <>
-                        <UserStats
-                            fPoint={userData.stats.fPoint}
-                            freeship={userData.stats.freeship}
-                            orders={userData.stats.orders}
-                            paid={userData.stats.paid}
-                        />
+
                         <UserProfile
                             initialData={userData.profile}
                             onSave={handleSaveProfile}
