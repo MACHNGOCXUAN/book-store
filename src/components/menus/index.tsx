@@ -2,11 +2,13 @@
 import { Menu as MenuAnt } from "antd"
 import { MenuItems } from "./menu-list";
 import { usePathname, useRouter } from "next/navigation";
+import { useMenuItems } from "@/hooks/useMenuItems";
 
 
 export const Menu = () => {
   const router = useRouter();
   const pathname = usePathname(); 
+  const menuItems = useMenuItems();
 
   const handleClickPage = (path: string) => {
     router.push(path)
@@ -18,7 +20,7 @@ export const Menu = () => {
       mode="inline"
       defaultSelectedKeys={[pathname]}
       onClick={(k) => handleClickPage(k.key)}
-      items={MenuItems}
+      items={menuItems}
       style={{ height: "100%" }}
     />
   )

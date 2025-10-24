@@ -11,6 +11,9 @@ import { Menu } from "@/components/menus";
 import { useAppDispatch, useAppSelector } from "@/stores/hooks";
 import { getProfileUser, logout } from "@/stores/slices/auth.slice";
 import { useRouter } from "next/navigation";
+import AuthGuard from "@/components/auth/AuthGuard";
+import { Image as ImageLogo } from "@/assets/images";
+import Image from "next/image";
 
 const { Header, Sider, Content } = Layout;
 
@@ -38,23 +41,23 @@ export default function MainLayout({
     dispatch(getProfileUser());
   }, [dispatch]);
 
-  useEffect(() => {
-    if (!isAuth && !loading) {
-      router.push("/login");
-    }
-  }, [isAuth, loading, router]);
+  // useEffect(() => {
+  //   if (!isAuth && !loading) {
+  //     router.push("/login");
+  //   }
+  // }, [isAuth, loading, router]);
 
   if (loading) {
     return "loading";
   }
 
   const handleLogout = () => {
-    dispatch(logout())
+    dispatch(logout());
   };
 
   const handleProfile = () => {
-    router.push("/profile")
-  }
+    router.push("/profile");
+  };
 
   const items: MenuProps["items"] = [
     {
@@ -69,110 +72,116 @@ export default function MainLayout({
       key: "2",
       label: "Tài khoản",
       icon: <UserOutlined />,
-      onClick: handleProfile
+      onClick: handleProfile,
     },
     {
       key: "3",
       label: "Đăng xuất",
       icon: <LogoutOutlined />,
-      onClick: handleLogout
+      onClick: handleLogout,
     },
   ];
 
   return (
-    <Layout style={{ minHeight: "100vh" }}>
-      <Sider
-        trigger={null}
-        collapsible
-        collapsed={collapsed}
-        width={SIDER_WIDTH}
-        collapsedWidth={SIDER_COLLAPSED_WIDTH}
-        theme="light"
-        style={{
-          height: "100vh",
-          position: "fixed",
-          left: 0,
-          top: 0,
-          bottom: 0,
-          overflow: "hidden",
-          zIndex: 1001,
-        }}
-      >
-        <div
+    <AuthGuard requireAuth={true}>
+      <Layout style={{ minHeight: "100vh" }}>
+        <Sider
+          trigger={null}
+          collapsible
+          collapsed={collapsed}
+          width={SIDER_WIDTH}
+          collapsedWidth={SIDER_COLLAPSED_WIDTH}
+          theme="light"
           style={{
-            height: HEADER_HEIGHT,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            borderBottom: "1px solid #f0f0f0",
-          }}
-        >
-          <div className="text-2xl text-amber-900 font-bold">
-            {collapsed ? "B" : "Books"}
-          </div>
-        </div>
-        <div
-          style={{
-            height: `calc(100vh - ${HEADER_HEIGHT}px)`,
-            overflowY: "auto",
-            overflowX: "hidden",
-          }}
-          className="scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
-        >
-          <Menu />
-        </div>
-      </Sider>
-
-      <Layout
-        style={{
-          marginLeft: currentSiderWidth,
-          transition: "margin-left 0.2s ease",
-        }}
-      >
-        <Header
-          style={{
-            background: colorBgContainer,
+            height: "100vh",
             position: "fixed",
+            left: 0,
             top: 0,
-            right: 0,
-            left: currentSiderWidth,
-            zIndex: 1000,
-            height: HEADER_HEIGHT,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-            transition: "left 0.2s ease",
-            padding: 0,
+            bottom: 0,
+            overflow: "hidden",
+            zIndex: 1001,
           }}
         >
-          <Button
-            type="text"
-            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => setCollapsed(!collapsed)}
+          <div
             style={{
-              fontSize: "16px",
-              width: 64,
-              height: 64,
+              height: HEADER_HEIGHT,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderBottom: "1px solid #f0f0f0",
             }}
-          />
-          <Dropdown menu={{ items }} className="mr-10!">
-            <a onClick={(e) => e.preventDefault()}>
-              <Avatar icon={<UserOutlined />} />
-            </a>
-          </Dropdown>
-        </Header>
-        <Content
+          >
+            <div className="text-2xl text-amber-900 font-bold">
+              {collapsed ? (
+                <Image src={ImageLogo.LogoBook} alt="Books Logo" width={40} height={40} />
+              ) : (
+                "Books"
+              )}
+            </div>
+          </div>
+          <div
+            style={{
+              height: `calc(100vh - ${HEADER_HEIGHT}px)`,
+              overflowY: "auto",
+              overflowX: "hidden",
+            }}
+            className="scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
+          >
+            <Menu />
+          </div>
+        </Sider>
+
+        <Layout
           style={{
-            marginTop: HEADER_HEIGHT,
-            minHeight: `calc(100vh - ${HEADER_HEIGHT}px)`,
-            background: colorBgContainer,
-            borderRadius: borderRadiusLG,
+            marginLeft: currentSiderWidth,
+            transition: "margin-left 0.2s ease",
           }}
         >
-          {children}
-        </Content>
+          <Header
+            style={{
+              background: colorBgContainer,
+              position: "fixed",
+              top: 0,
+              right: 0,
+              left: currentSiderWidth,
+              zIndex: 1000,
+              height: HEADER_HEIGHT,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+              transition: "left 0.2s ease",
+              padding: 0,
+            }}
+          >
+            <Button
+              type="text"
+              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              onClick={() => setCollapsed(!collapsed)}
+              style={{
+                fontSize: "16px",
+                width: 64,
+                height: 64,
+              }}
+            />
+            <Dropdown menu={{ items }} className="mr-10!">
+              <a onClick={(e) => e.preventDefault()}>
+                <Avatar icon={<UserOutlined />} />
+              </a>
+            </Dropdown>
+          </Header>
+          <Content
+            style={{
+              marginTop: HEADER_HEIGHT,
+              minHeight: `calc(100vh - ${HEADER_HEIGHT}px)`,
+              background: colorBgContainer,
+              borderRadius: borderRadiusLG,
+            }}
+          >
+            {children}
+          </Content>
+        </Layout>
       </Layout>
-    </Layout>
+    </AuthGuard>
   );
 }

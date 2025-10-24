@@ -9,7 +9,7 @@ import { GoogleOutlined, FacebookFilled } from "@ant-design/icons";
 import { Image } from "@/assets/images";
 
 type FieldType = {
-  phone?: string;
+  username?: string;
   password?: string;
   remember?: string;
 };
@@ -20,9 +20,12 @@ const LoginPage = () => {
   const router = useRouter();
 
   const onFinish: FormProps<FieldType>["onFinish"] = async (values) => {
-    await dispatch(loginUser(values));
-    await dispatch(getProfileUser());
-    // router.push("/products");
+    try {
+      console.log("xuan: ", values);
+      await dispatch(loginUser(values)).unwrap();
+    } catch (error: any) {
+      console.log("Dang nhap that bai: ", error);
+    }
   };
 
   return (
@@ -42,9 +45,10 @@ const LoginPage = () => {
           onFinish={onFinish}
           autoComplete="off"
           layout="vertical"
+          onSubmitCapture={(e) => e.preventDefault()}
         >
           <Form.Item<FieldType>
-            name="phone"
+            name="username"
             rules={[
               {
                 required: true,
@@ -71,18 +75,18 @@ const LoginPage = () => {
             />
           </Form.Item>
 
-          <div className="flex justify-end my-5!">
+          {/* <div className="flex justify-end my-5!">
             <a
               href="#"
               className="text-sm text-blue-600 hover:text-blue-800 font-bold"
             >
               Quên mật khẩu?
             </a>
-          </div>
+          </div> */}
 
           <Form.Item className="mb-6">
             <Button
-              // loading={loading}
+              loading={loading}
               type="primary"
               htmlType="submit"
               size="large"
@@ -93,11 +97,11 @@ const LoginPage = () => {
           </Form.Item>
         </Form>
 
-        <Divider style={{ borderColor: '#7cb305' }}>Solid</Divider>
+        {/* <Divider style={{ borderColor: "#7cb305" }}>Solid</Divider>
 
         <div className="flex flex-col gap-4 my-2!">
           <Button
-            icon={<GoogleOutlined/>}
+            icon={<GoogleOutlined />}
             size="large"
             className="w-full mb-3 h-12 rounded-lg border-gray-300 flex items-center justify-center text-gray-700 font-medium hover:border-blue-500 hover:text-blue-600"
           >
@@ -125,7 +129,7 @@ const LoginPage = () => {
           >
             Đăng ký
           </a>
-        </p>
+        </p> */}
       </div>
     </div>
   );

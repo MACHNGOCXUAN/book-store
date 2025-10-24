@@ -10,6 +10,7 @@ export const MenuItems = [
         <Image src={ImageIcon.StatisticalIcon} alt="stat" width={20} height={20} />
       </span>
     ),
+    roles: ['ADMIN', 'STAFF']
   },
   {
     key: "/products",
@@ -19,6 +20,7 @@ export const MenuItems = [
         <Image src={ImageIcon.ProductIcon} alt="product" width={20} height={20} />
       </span>
     ),
+    roles: ['ADMIN', 'STAFF']
   },
   {
     key: "/categorys",
@@ -28,6 +30,7 @@ export const MenuItems = [
         <Image src={ImageIcon.CategoryIcon} alt="category" width={20} height={20} />
       </span>
     ),
+    roles: ['ADMIN', 'STAFF']
   },
   {
     key: "/orders",
@@ -37,6 +40,7 @@ export const MenuItems = [
         <Image src={ImageIcon.OrderProductIcon} alt="order" width={20} height={20} />
       </span>
     ),
+    roles: ['ADMIN', 'STAFF']
   },
   {
     key: "users",
@@ -47,8 +51,8 @@ export const MenuItems = [
       </span>
     ),
     children: [
-      { key: '/users/customers', label: 'Khách hàng' },
-      { key: '/users/staffs', label: 'Nhân viên' },
+      { key: '/users/customers', label: 'Khách hàng', roles: ['ADMIN', 'STAFF'] },
+      { key: '/users/staffs', label: 'Nhân viên', roles: ['ADMIN'] },
     ],
   },
   {
@@ -59,6 +63,7 @@ export const MenuItems = [
         <Image src={ImageIcon.MessageIcon} alt="message" width={20} height={20} />
       </span>
     ),
+    roles: ['ADMIN', 'STAFF']
   },
   {
     key: "/discounts",
@@ -68,5 +73,6 @@ export const MenuItems = [
         <Image src={ImageIcon.DiscountIcon} alt="discount" width={20} height={20} />
       </span>
     ),
+    roles: ['ADMIN', 'STAFF']
   },
 ];

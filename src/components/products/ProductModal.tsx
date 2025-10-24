@@ -100,7 +100,7 @@ const ProductViewModal = ({
       onCancel={handleCancel}
       footer={null}
       width={1000}
-      destroyOnClose
+      destroyOnHidden
       closeIcon={
         <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
           <CloseOutlined className="text-gray-600" />

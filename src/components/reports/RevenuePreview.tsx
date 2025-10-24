@@ -25,8 +25,13 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
+  Legend,
 } from "recharts";
-import { DollarOutlined, ShoppingCartOutlined } from "@ant-design/icons";
+import {
+  DollarOutlined,
+  ShoppingCartOutlined,
+  RiseOutlined,
+} from "@ant-design/icons";
 
 const { RangePicker } = DatePicker;
 
@@ -39,9 +44,9 @@ const RevenuePreview = () => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // ✅ đảm bảo không lỗi undefined
   const [summary, setSummary] = useState({
     totalRevenue: 0,
+    totalProfit: 0,
     completedOrders: 0,
   });
 
@@ -49,7 +54,7 @@ const RevenuePreview = () => {
   const [topDays, setTopDays] = useState<any[]>([]);
 
   // =============================
-  // 🔹 Gọi API doanh thu
+  // 🔹 Gọi API doanh thu & lợi nhuận
   // =============================
   const fetchRevenue = async () => {
     try {
@@ -66,11 +71,12 @@ const RevenuePreview = () => {
 
       const res = await http.get(url);
 
-      // ✅ Gán dữ liệu biểu đồ và tổng kết
       setData(res.chartData || []);
-      setSummary(res.summary || { totalRevenue: 0, completedOrders: 0 });
+      setSummary(
+        res.summary || { totalRevenue: 0, totalProfit: 0, completedOrders: 0 }
+      );
 
-      // ✅ Gọi thêm dữ liệu phụ (5 năm + top ngày)
+      // ✅ Dữ liệu phụ
       const five = await http.get("/reports/revenue?type=compare5years");
       const top = await http.get("/reports/revenue?type=topdays");
       setFiveYears(five.chartData || []);
@@ -94,6 +100,7 @@ const RevenuePreview = () => {
     new Intl.NumberFormat("vi-VN", {
       style: "currency",
       currency: "VND",
+      maximumFractionDigits: 0,
     }).format(value);
 
   // =============================
@@ -102,7 +109,7 @@ const RevenuePreview = () => {
   return (
     <div className="p-4">
       <Card
-        title="📊 Thống kê doanh thu"
+        title="📊 Thống kê doanh thu & lợi nhuận"
         extra={
           <Space wrap>
             {/* Loại thống kê */}
@@ -118,10 +125,8 @@ const RevenuePreview = () => {
               ]}
             />
 
-            {/* Chọn năm */}
-            {(type === "year" ||
-              type === "month" ||
-              type === "monthnumber") && (
+            {/* Năm */}
+            {["year", "month", "monthnumber"].includes(type) && (
               <Select
                 value={year}
                 onChange={setYear}
@@ -133,7 +138,7 @@ const RevenuePreview = () => {
               />
             )}
 
-            {/* Chọn tháng */}
+            {/* Tháng */}
             {type === "monthnumber" && (
               <Select
                 value={month}
@@ -161,10 +166,13 @@ const RevenuePreview = () => {
           </Space>
         }
       >
-        {/* ===== Tổng quan theo thời gian ===== */}
+        {/* ===== Tổng quan ===== */}
         <Row gutter={[16, 16]} className="mb-6">
           <Col xs={24} sm={12} md={8}>
-            <Card>
+            <Card
+              bordered={false}
+              className="!border !border-green-400 rounded-xl"
+            >
               <Statistic
                 title="Tổng doanh thu"
                 value={summary?.totalRevenue ?? 0}
@@ -176,7 +184,25 @@ const RevenuePreview = () => {
           </Col>
 
           <Col xs={24} sm={12} md={8}>
-            <Card>
+            <Card
+              bordered={false}
+              className="!border !border-yellow-400 rounded-xl"
+            >
+              <Statistic
+                title="Tổng lợi nhuận"
+                value={summary?.totalProfit ?? 0}
+                prefix={<RiseOutlined />}
+                formatter={(val) => formatCurrency(Number(val))}
+                valueStyle={{ color: "#faad14" }}
+              />
+            </Card>
+          </Col>
+
+          <Col xs={24} sm={12} md={8}>
+            <Card
+              bordered={false}
+              className="!border !border-blue-400 rounded-xl"
+            >
               <Statistic
                 title="Đơn hàng hoàn thành"
                 value={summary?.completedOrders ?? 0}
@@ -201,10 +227,19 @@ const RevenuePreview = () => {
               <XAxis dataKey="label" />
               <YAxis />
               <Tooltip formatter={(v) => formatCurrency(Number(v))} />
+              <Legend />
               <Line
                 type="monotone"
                 dataKey="revenue"
+                name="Doanh thu"
                 stroke="#1890ff"
+                strokeWidth={3}
+              />
+              <Line
+                type="monotone"
+                dataKey="profit"
+                name="Lợi nhuận"
+                stroke="#faad14"
                 strokeWidth={3}
               />
             </LineChart>
@@ -212,31 +247,42 @@ const RevenuePreview = () => {
         )}
       </Card>
 
-      {/* ===== 5 năm gần nhất ===== */}
-      <Card title="📈 Doanh thu 5 năm gần nhất" className="mt-8">
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={fiveYears}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="label" />
-            <YAxis />
-            <Tooltip formatter={(v) => formatCurrency(Number(v))} />
-            <Bar dataKey="revenue" fill="#3f8600" />
-          </BarChart>
-        </ResponsiveContainer>
-      </Card>
+      {/* ===== 2 Biểu đồ phụ ===== */}
+      <div style={{ marginTop: 10 }}>
+        <Row gutter={[16, 16]} className="mt-8">
+          <Col xs={24} md={12}>
+            <Card title="📈 Doanh thu & lợi nhuận 5 năm gần nhất">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={fiveYears}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="label" />
+                  <YAxis />
+                  <Tooltip formatter={(v) => formatCurrency(Number(v))} />
+                  <Legend />
+                  <Bar dataKey="revenue" fill="#3f8600" name="Doanh thu" />
+                  <Bar dataKey="profit" fill="#faad14" name="Lợi nhuận" />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+          </Col>
 
-      {/* ===== Top 10 ngày có doanh thu cao nhất ===== */}
-      <Card title="🔥 Top 10 ngày có doanh thu cao nhất" className="mt-8">
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={topDays}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="label" />
-            <YAxis />
-            <Tooltip formatter={(v) => formatCurrency(Number(v))} />
-            <Bar dataKey="revenue" fill="#cf1322" />
-          </BarChart>
-        </ResponsiveContainer>
-      </Card>
+          <Col xs={24} md={12}>
+            <Card title="🔥 Top 10 ngày có doanh thu & lợi nhuận cao nhất">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={topDays}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="label" />
+                  <YAxis />
+                  <Tooltip formatter={(v) => formatCurrency(Number(v))} />
+                  <Legend />
+                  <Bar dataKey="revenue" fill="#cf1322" name="Doanh thu" />
+                  <Bar dataKey="profit" fill="#faad14" name="Lợi nhuận" />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+          </Col>
+        </Row>
+      </div>
     </div>
   );
 };
