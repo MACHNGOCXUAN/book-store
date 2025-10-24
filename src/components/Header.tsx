@@ -428,7 +428,7 @@ const Header = () => {
                       menu={{
                         items: userMenuItems, onClick: ({ key }) => {
                           if (key === "logout") return handleLogout();
-                          if (key === "profile") return navigate("/profile");
+                          if (key === "profile") return navigate("/account");
                           if (key === "orders") return navigate("/orders");
                         }
                       }}
