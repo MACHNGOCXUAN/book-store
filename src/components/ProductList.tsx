@@ -3,8 +3,8 @@
 import { Col, Pagination, Row, Select, Spin, Typography } from 'antd';
 import React, { useEffect, useMemo, useState } from "react";
 import ProductCard from "../components/ProductCard";
-import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { fetchBooks } from "../features/books/bookSlice";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
 
 const { Text } = Typography;
 const BOOKS_PER_PAGE = 12;

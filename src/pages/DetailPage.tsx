@@ -1,46 +1,48 @@
-import { useEffect, useState } from "react"
-import { useParams } from "react-router-dom"
 import {
-  Layout,
-  Row,
-  Col,
+  CalendarOutlined,
+  CheckCircleOutlined,
+  CreditCardOutlined,
+  FileTextOutlined,
+  GiftOutlined,
+  ShoppingCartOutlined,
+} from "@ant-design/icons"
+import {
   Button,
-  Tabs,
   Card,
-  Space,
+  Col,
   ConfigProvider,
   Form,
+  Layout,
+  Row,
+  Space,
   Spin,
+  Tabs,
   message,
 } from "antd"
-import {
-  ShoppingCartOutlined,
-  CreditCardOutlined,
-  CalendarOutlined,
-  GiftOutlined,
-  CheckCircleOutlined,
-  FileTextOutlined,
-} from "@ant-design/icons"
-import { useAppDispatch, useAppSelector } from "../store/hooks"
+import { useEffect, useState } from "react"
+import { useParams } from "react-router-dom"
+import { toast } from "react-toastify"
+import ReviewSection from "../components/ReviewSection.tsx"
+import { API_BASE } from "../config/api.ts"
 import { getBookById } from "../features/books/bookSlice"
 import { addOrUpdateCartItem } from "../features/cart/cartSlice"
-import ReviewSection from "../components/ReviewSection.tsx" 
-import { toast } from "react-toastify"
-import type { Comment } from "../types"
 import { reviewApi } from "../features/reviews/reviewSlice.ts"
+import { useAppDispatch, useAppSelector } from "../store/hooks"
+import type { Comment } from "../types"
 
 function DetailPage() {
+
   const { id } = useParams<string>()
   const dispatch = useAppDispatch()
   const reduxBook = useAppSelector((s) => {
     const foundBook = s.books.books.find((b) => b.bookId === id)
     return foundBook || null
   })
-  
+
   // Get user from auth store
   const authUser = useAppSelector((s) => s.auth.user)
   const token = useAppSelector((s) => s.auth.token)
-  
+
   const [comments, setComments] = useState<Comment[]>([])
   const [isLoggedIn, setIsLoggedIn] = useState(!!token && !!authUser)
   const [form] = Form.useForm()
@@ -58,6 +60,29 @@ function DetailPage() {
       toast.error("Lỗi khi thêm sản phẩm 😢")
     }
   }
+  const handleAddFavorite = async () => {
+    try {
+      const token = localStorage.getItem("access_token"); // 🔹 Lấy token JWT đã lưu sau login
+
+      const res = await fetch(
+        `${API_BASE}/favorites/add?customerId=${authUser?.userId}&bookId=${id}`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const msg = await res.text();
+      toast.success(msg || "Đã thêm vào yêu thích ❤️");
+    } catch (err: any) {
+      toast.error(err.message || "Lỗi khi thêm vào yêu thích");
+    }
+  };
 
   useEffect(() => {
     // Update login state when auth changes
@@ -141,7 +166,7 @@ function DetailPage() {
       console.log("Updating review:", { reviewId, rating, content, userId: authUser?.userId })
       const updateResult = await reviewApi.updateReview(String(reviewId), { rating, content }, authUser?.userId)
       console.log("Update result:", updateResult)
-      
+
       // Fetch lại reviews để cập nhật toàn bộ dữ liệu (bao gồm rating_date)
       if (id) {
         console.log("Fetching updated reviews for book:", id)
@@ -163,7 +188,7 @@ function DetailPage() {
   const handleDeleteComment = async (reviewId: string | number) => {
     try {
       await reviewApi.deleteReview(String(reviewId), authUser?.userId)
-      
+
       // Fetch lại reviews để cập nhật toàn bộ dữ liệu
       if (id) {
         const updatedReviews = await reviewApi.getReviewsByBookId(id)
@@ -247,6 +272,17 @@ function DetailPage() {
                     <Button
                       type="primary"
                       size="large"
+                      block
+                      style={{ backgroundColor: primaryColor, height: "48px", fontSize: "16px", fontWeight: "bold" }}
+                      onClick={() => {
+                        handleAddFavorite()
+                      }}
+                    >
+                      Thêm vào yêu thích
+                    </Button>
+                    <Button
+                      type="primary"
+                      size="large"
                       icon={<ShoppingCartOutlined />}
                       block
                       style={{ backgroundColor: primaryColor, height: "48px", fontSize: "16px", fontWeight: "bold" }}
@@ -309,6 +345,7 @@ function DetailPage() {
                     ))}
                   </Space>
                 </Card>
+
               </Col>
             </Row>
 
