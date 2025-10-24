@@ -1,37 +1,18 @@
-import { Button, Card, Checkbox, Col, Form, Input, Row, Select } from 'antd'
+import { Button, Card, Form, Input } from 'antd'
 import { useState } from 'react'
 
 interface AddressProfileProps {
     initialData?: {
-        firstName?: string
-        lastName?: string
-        phone?: string
-        country?: string
-        province?: string
-        district?: string
-        ward?: string
         address?: string
-        postalCode?: string
-        isDefault?: boolean
     }
     onSave?: (data: AddressFormData) => void
-    onCancel?: () => void
 }
 
 interface AddressFormData {
-    firstName: string
-    lastName: string
-    phone: string
-    country: string
-    province: string
-    district: string
-    ward: string
     address: string
-    postalCode?: string
-    isDefault: boolean
 }
 
-const AddressProfile = ({ initialData, onSave, onCancel }: AddressProfileProps) => {
+const AddressProfile = ({ initialData, onSave }: AddressProfileProps) => {
     const [form] = Form.useForm()
     const [loading, setLoading] = useState(false)
 
@@ -52,19 +33,11 @@ const AddressProfile = ({ initialData, onSave, onCancel }: AddressProfileProps) 
         }
     }
 
-    const provinces = [
-        'Hà Nội',
-        'Hồ Chí Minh',
-        'Đà Nẵng',
-        'Hải Phòng',
-        'Cần Thơ',
-    ]
-
     return (
         <Card
             title={
                 <div style={{ fontSize: 18, fontWeight: 600 }}>
-                    Thêm địa chỉ mới
+                    Cập nhật địa chỉ
                 </div>
             }
             bordered={false}
@@ -77,181 +50,42 @@ const AddressProfile = ({ initialData, onSave, onCancel }: AddressProfileProps) 
                 form={form}
                 layout="vertical"
                 initialValues={{
-                    firstName: initialData?.firstName || '',
-                    lastName: initialData?.lastName || '',
-                    phone: initialData?.phone || '',
-                    country: initialData?.country || 'Việt Nam',
-                    province: initialData?.province || '',
-                    district: initialData?.district || '',
-                    ward: initialData?.ward || '',
                     address: initialData?.address || '',
-                    postalCode: initialData?.postalCode || '',
-                    isDefault: initialData?.isDefault || false,
                 }}
             >
-                <Row gutter={16}>
-                    <Col xs={24} md={12}>
-                        <Form.Item
-                            label={<span style={{ fontWeight: 500 }}>Họ<span style={{ color: '#ff4d4f' }}>*</span></span>}
-                            name="firstName"
-                            rules={[{ required: true, message: 'Vui lòng nhập họ!' }]}
-                        >
-                            <Input
-                                placeholder="Họ*"
-                                size="large"
-                                style={{ borderRadius: 8 }}
-                            />
-                        </Form.Item>
-                    </Col>
-                    <Col xs={24} md={12}>
-                        <Form.Item
-                            label={<span style={{ fontWeight: 500 }}>Tên<span style={{ color: '#ff4d4f' }}>*</span></span>}
-                            name="lastName"
-                            rules={[{ required: true, message: 'Vui lòng nhập tên!' }]}
-                        >
-                            <Input
-                                placeholder="Tên*"
-                                size="large"
-                                style={{ borderRadius: 8 }}
-                            />
-                        </Form.Item>
-                    </Col>
-                </Row>
-
                 <Form.Item
-                    label={<span style={{ fontWeight: 500 }}>Điện thoại<span style={{ color: '#ff4d4f' }}>*</span></span>}
-                    name="phone"
-                    rules={[
-                        { required: true, message: 'Vui lòng nhập số điện thoại!' },
-                        { pattern: /^[0-9]{10}$/, message: 'Số điện thoại không hợp lệ!' }
-                    ]}
-                >
-                    <Input
-                        placeholder="Ex: 09722xxxx"
-                        size="large"
-                        style={{ borderRadius: 8 }}
-                    />
-                </Form.Item>
-
-                <Form.Item
-                    label={<span style={{ fontWeight: 500 }}>Quốc gia<span style={{ color: '#ff4d4f' }}>*</span></span>}
-                    name="country"
-                    rules={[{ required: true, message: 'Vui lòng chọn quốc gia!' }]}
-                >
-                    <Select
-                        size="large"
-                        style={{ borderRadius: 8 }}
-                        placeholder="Việt Nam"
-                    >
-                        <Select.Option value="Việt Nam">Việt Nam</Select.Option>
-                    </Select>
-                </Form.Item>
-
-                <Form.Item
-                    label={<span style={{ fontWeight: 500 }}>Tỉnh/Thành phố<span style={{ color: '#ff4d4f' }}>*</span></span>}
-                    name="province"
-                    rules={[{ required: true, message: 'Vui lòng chọn tỉnh/thành phố!' }]}
-                >
-                    <Select
-                        size="large"
-                        style={{ borderRadius: 8 }}
-                        placeholder="Vui lòng chọn"
-                        showSearch
-                        filterOption={(input, option) =>
-                            (option?.children as string).toLowerCase().includes(input.toLowerCase())
-                        }
-                    >
-                        {provinces.map(province => (
-                            <Select.Option key={province} value={province}>
-                                {province}
-                            </Select.Option>
-                        ))}
-                    </Select>
-                </Form.Item>
-
-                <Row gutter={16}>
-                    <Col xs={24} md={12}>
-                        <Form.Item
-                            label={<span style={{ fontWeight: 500 }}>Quận/Huyện<span style={{ color: '#ff4d4f' }}>*</span></span>}
-                            name="district"
-                            rules={[{ required: true, message: 'Vui lòng nhập quận/huyện!' }]}
-                        >
-                            <Input
-                                placeholder="Quận/Huyện*"
-                                size="large"
-                                style={{ borderRadius: 8 }}
-                            />
-                        </Form.Item>
-                    </Col>
-                    <Col xs={24} md={12}>
-                        <Form.Item
-                            label={<span style={{ fontWeight: 500 }}>Xã/Phường<span style={{ color: '#ff4d4f' }}>*</span></span>}
-                            name="ward"
-                            rules={[{ required: true, message: 'Vui lòng nhập xã/phường!' }]}
-                        >
-                            <Input
-                                placeholder="Xã/Phường*"
-                                size="large"
-                                style={{ borderRadius: 8 }}
-                            />
-                        </Form.Item>
-                    </Col>
-                </Row>
-
-                <Form.Item
-                    label={<span style={{ fontWeight: 500 }}>Địa chỉ<span style={{ color: '#ff4d4f' }}>*</span></span>}
+                    label={<span style={{ fontWeight: 500 }}>Địa chỉ</span>}
                     name="address"
                     rules={[{ required: true, message: 'Vui lòng nhập địa chỉ!' }]}
                 >
-                    <Input
-                        placeholder="Địa chỉ"
+                    <Input.TextArea
+                        placeholder="Nhập địa chỉ đầy đủ của bạn (số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố)"
+                        rows={4}
                         size="large"
                         style={{ borderRadius: 8 }}
                     />
-                </Form.Item>
-
-                <Form.Item
-                    label={<span style={{ fontWeight: 500 }}>Mã bưu điện</span>}
-                    name="postalCode"
-                >
-                    <Input
-                        placeholder="Mã bưu điện VN: 700000"
-                        size="large"
-                        style={{ borderRadius: 8 }}
-                    />
-                </Form.Item>
-
-                <Form.Item
-                    name="isDefault"
-                    valuePropName="checked"
-                    style={{ marginBottom: 24 }}
-                >
-                    <Checkbox>
-                        Đặt làm địa chỉ mặc định
-                    </Checkbox>
                 </Form.Item>
 
                 <div style={{
-                    display: 'flex',
-                    gap: 12,
-                    justifyContent: 'flex-start',
-                    paddingTop: 12,
-                    borderTop: '1px solid #f0f0f0'
+                    marginTop: 24,
+                    padding: 16,
+                    background: '#FFF5F5',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    color: '#666',
+                    marginBottom: 24
                 }}>
-                    {onCancel && (
-                        <Button
-                            size="large"
-                            onClick={onCancel}
-                            style={{
-                                borderRadius: 8,
-                                fontWeight: 500,
-                                height: 48,
-                                minWidth: 120
-                            }}
-                        >
-                            ← Quay lại
-                        </Button>
-                    )}
+                    <div style={{ fontWeight: 600, marginBottom: 8, color: '#C92127' }}>
+                        💡 Gợi ý:
+                    </div>
+                    <div>
+                        Hãy nhập địa chỉ đầy đủ để việc giao hàng được thuận tiện nhất.
+                        <br />
+                        Ví dụ: 123 Nguyễn Văn Linh, Phường Tân Phú, Quận 7, TP. Hồ Chí Minh
+                    </div>
+                </div>
+
+                <Form.Item style={{ marginBottom: 0 }}>
                     <Button
                         type="primary"
                         size="large"
@@ -268,16 +102,7 @@ const AddressProfile = ({ initialData, onSave, onCancel }: AddressProfileProps) 
                     >
                         LƯU ĐỊA CHỈ
                     </Button>
-                </div>
-
-                <div style={{
-                    marginTop: 16,
-                    fontSize: 12,
-                    color: '#999',
-                    textAlign: 'right'
-                }}>
-                    (*): Bắt buộc
-                </div>
+                </Form.Item>
             </Form>
         </Card>
     )

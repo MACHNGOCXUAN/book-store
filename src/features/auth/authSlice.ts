@@ -62,6 +62,7 @@ export const loginUser = createAsyncThunk<
         });
         if (profileRes.ok) {
           const user: any = await profileRes.json();
+          console.log("User: .............", user)
           return {
             token,
             user: {
@@ -69,6 +70,7 @@ export const loginUser = createAsyncThunk<
               userName: user?.userName,
               fullName: user?.fullName,
               email: user?.email,
+              phone: user?.phoneNumber
             },
           };
         }
