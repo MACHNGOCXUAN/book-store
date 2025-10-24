@@ -1,5 +1,6 @@
 package iuh.fit.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
@@ -29,14 +30,18 @@ public class Book {
 
     // Relations
     @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
+    // ngăn lặp vô hạn
+    @JsonIgnore
     @ToString.Exclude
     private List<OrderDetail> orderDetails;
 
     @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
+    @JsonIgnore
     private List<CartItem> cartItems;
 
     @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
+    @JsonIgnore
     private List<Review> reviews;
 }

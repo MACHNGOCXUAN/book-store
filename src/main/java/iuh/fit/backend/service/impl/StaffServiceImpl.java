@@ -6,9 +6,10 @@ import iuh.fit.backend.model.Staff;
 import iuh.fit.backend.model.enums.Role;
 import iuh.fit.backend.repository.ChatSessionRepository;
 import iuh.fit.backend.repository.StaffRepository;
-import iuh.fit.backend.requests.StaffCreateDto;
-import iuh.fit.backend.requests.UserUpdateStatusDto;
-import iuh.fit.backend.requests.UserFilter;
+import iuh.fit.backend.repository.UserRepository;
+import iuh.fit.backend.dto.requests.StaffCreateDto;
+import iuh.fit.backend.dto.requests.UserUpdateStatusDto;
+import iuh.fit.backend.dto.requests.UserFilter;
 import iuh.fit.backend.service.StaffService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -27,6 +28,7 @@ import java.util.List;
 public class StaffServiceImpl implements StaffService {
 
     private final StaffRepository staffRepository;
+    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final ChatSessionRepository chatSessionRepository;
 
@@ -71,9 +73,23 @@ public class StaffServiceImpl implements StaffService {
     public boolean addStaff(StaffCreateDto staffInput) {
         try {
             Staff staff = new Staff();
-            staff.setUserId("USER" + System.currentTimeMillis());
-            System.out.println("dong usser: "+ staff.getUserId());
+            if (staff.getUserId() == null || staff.getUserId().isEmpty()) {
+                // Lấy mã lớn nhất hiện có trong DB
+                String lastId = userRepository.findMaxUserId(); // Sẽ viết hàm này trong repository
+                System.out.println("Last id" + lastId);
+                int nextNum = 1; // mặc định nếu chưa có dữ liệu nào
+                if (lastId != null && lastId.startsWith("USER")) {
+                    try {
+                        nextNum = Integer.parseInt(lastId.substring(4)) + 1;
+                    } catch (NumberFormatException e) {
+                        // fallback nếu format lỗi
+                        nextNum = 1;
+                    }
+                }
 
+                String newId = "USER" + String.format("%03d", nextNum);
+                staff.setUserId(newId);
+            }
             staff.setUserName(staffInput.getUserName());
             staff.setEmail(staffInput.getEmail());
             staff.setPhoneNumber(staffInput.getPhoneNumber());

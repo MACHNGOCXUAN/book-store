@@ -19,7 +19,7 @@ public class Review {
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 
-    private int rating;             // 1..5
+    private int rating;
     @Column(length = 2000)
     private String content;
     private LocalDate ratingDate;

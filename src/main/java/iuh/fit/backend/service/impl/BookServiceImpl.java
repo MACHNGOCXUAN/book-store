@@ -1,18 +1,21 @@
 package iuh.fit.backend.service.impl;
 
-import iuh.fit.backend.model.Book;
-import iuh.fit.backend.repository.BookRepository;
-import iuh.fit.backend.requests.ProductFilterDto;
-import lombok.RequiredArgsConstructor;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import iuh.fit.backend.dto.requests.ProductFilterDto;
+import iuh.fit.backend.model.Book;
+import iuh.fit.backend.repository.BookRepository;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -87,5 +90,34 @@ public class BookServiceImpl implements iuh.fit.backend.service.BookService {
 
         return repo.findAll(spec, PageRequest.of(page, limit, Sort.by("title").ascending()));
     }
+
+
+    @Override
+    public List<Book> getTop20BestsellerBooks() {
+        PageRequest pageRequest = PageRequest.of(0, 20);
+        return repo.findTop20BestsellerBooks(pageRequest);
+    }
+
+    @Override
+    public List<Book> getTop20BestsellerBooksByWeek() {
+        LocalDateTime startDate = LocalDateTime.now().minusDays(7);
+        PageRequest pageRequest = PageRequest.of(0, 20);
+        return repo.findTop20BestsellerBooksByWeek(startDate, pageRequest);
+    }
+
+    @Override
+    public List<Book> getTop20BestsellerBooksByMonth() {
+        LocalDateTime startDate = LocalDateTime.now().minusDays(30);
+        PageRequest pageRequest = PageRequest.of(0, 20);
+        return repo.findTop20BestsellerBooksByMonth(startDate, pageRequest);
+    }
+
+    @Override
+    public List<Book> getTop20BestsellerBooksByYear() {
+        LocalDateTime startDate = LocalDateTime.now().minusDays(365);
+        PageRequest pageRequest = PageRequest.of(0, 20);
+        return repo.findTop20BestsellerBooksByYear(startDate, pageRequest);
+    }
+
 
 }

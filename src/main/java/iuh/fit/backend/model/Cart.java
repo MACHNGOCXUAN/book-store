@@ -18,6 +18,8 @@ public class Cart {
 
     @OneToOne
     @JoinColumn(name = "customer_id", unique = true, nullable = false)
+    @ToString.Exclude
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Customer customer;
 
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)

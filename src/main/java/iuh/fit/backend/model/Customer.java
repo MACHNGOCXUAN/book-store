@@ -1,7 +1,6 @@
 package iuh.fit.backend.model;
 
-import jakarta.persistence.DiscriminatorValue;
-import jakarta.persistence.Entity;
+import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -18,4 +17,9 @@ public class Customer extends User {
     private String address;
     private LocalDate dateOfBirth;
     private Integer loyaltyPoints;
+
+    @OneToOne(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    private Cart cart;   // KHÔNG dùng @JoinColumn ở đây
+
 }

@@ -1,19 +1,27 @@
 package iuh.fit.backend.controller;
 
-import iuh.fit.backend.model.Book;
-import iuh.fit.backend.requests.ProductFilterDto;
-import iuh.fit.backend.requests.UserFilter;
-import iuh.fit.backend.service.BookService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import iuh.fit.backend.dto.requests.ProductFilterDto;
+import iuh.fit.backend.model.Book;
+import iuh.fit.backend.service.BookService;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/books")
@@ -37,6 +45,28 @@ public class BookController {
         return service.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/bestsellers/top20")
+    public ResponseEntity<List<Book>> getTop20Bestsellers() {
+        return ResponseEntity.ok(service.getTop20BestsellerBooks());
+    }
+
+
+    @GetMapping("/bestsellers/week")
+    public ResponseEntity<List<Book>> getTop20BestsellersWeek() {
+        return ResponseEntity.ok(service.getTop20BestsellerBooksByWeek());
+    }
+
+    @GetMapping("/bestsellers/month")
+    public ResponseEntity<List<Book>> getTop20BestsellersMonth() {
+        return ResponseEntity.ok(service.getTop20BestsellerBooksByMonth());
+    }
+
+
+    @GetMapping("/bestsellers/year")
+    public ResponseEntity<List<Book>> getTop20BestsellersYear() {
+        return ResponseEntity.ok(service.getTop20BestsellerBooksByYear());
     }
 
     // Tạo 1 cuốn

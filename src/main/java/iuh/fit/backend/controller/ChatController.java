@@ -1,7 +1,6 @@
 package iuh.fit.backend.controller;
 
-import iuh.fit.backend.model.Message;
-import iuh.fit.backend.requests.MessageDTO;
+import iuh.fit.backend.dto.requests.MessageDTO;
 import iuh.fit.backend.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.*;

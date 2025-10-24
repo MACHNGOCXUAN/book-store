@@ -44,4 +44,44 @@ public interface ReportOrderRepository extends JpaRepository<Order, String> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
+
+    // ✅ 4️⃣ Thống kê theo thể loại sách (ăn theo bộ lọc thời gian)
+    // 🔸 4.1. Theo Năm
+    @Query("""
+        SELECT b.category AS category, SUM(od.quantity) AS totalSold
+        FROM OrderDetail od
+        JOIN od.order o
+        JOIN od.book b
+        WHERE YEAR(o.orderDate) = :year
+        GROUP BY b.category
+        ORDER BY totalSold DESC
+    """)
+    List<Object[]> sumBooksByCategoryInYear(@Param("year") int year);
+
+    // 🔸 4.2. Theo Tháng trong Năm
+    @Query("""
+        SELECT b.category AS category, SUM(od.quantity) AS totalSold
+        FROM OrderDetail od
+        JOIN od.order o
+        JOIN od.book b
+        WHERE YEAR(o.orderDate) = :year AND MONTH(o.orderDate) = :month
+        GROUP BY b.category
+        ORDER BY totalSold DESC
+    """)
+    List<Object[]> sumBooksByCategoryInMonth(@Param("year") int year, @Param("month") int month);
+
+    // 🔸 4.3. Theo Khoảng thời gian cụ thể
+    @Query("""
+        SELECT b.category AS category, SUM(od.quantity) AS totalSold
+        FROM OrderDetail od
+        JOIN od.order o
+        JOIN od.book b
+        WHERE o.orderDate BETWEEN :startDate AND :endDate
+        GROUP BY b.category
+        ORDER BY totalSold DESC
+    """)
+    List<Object[]> sumBooksByCategoryInRange(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
 }

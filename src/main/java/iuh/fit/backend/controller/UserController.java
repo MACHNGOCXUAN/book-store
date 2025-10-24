@@ -4,9 +4,9 @@ import iuh.fit.backend.model.ChatSession;
 import iuh.fit.backend.model.Customer;
 import iuh.fit.backend.model.Staff;
 import iuh.fit.backend.model.User;
-import iuh.fit.backend.requests.StaffCreateDto;
-import iuh.fit.backend.requests.UserUpdateStatusDto;
-import iuh.fit.backend.requests.UserFilter;
+import iuh.fit.backend.dto.requests.StaffCreateDto;
+import iuh.fit.backend.dto.requests.UserUpdateStatusDto;
+import iuh.fit.backend.dto.requests.UserFilter;
 import iuh.fit.backend.service.CustomerService;
 import iuh.fit.backend.service.StaffService;
 import iuh.fit.backend.service.UserService;
@@ -36,15 +36,8 @@ public class UserController {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.badRequest().body("Missing Authorization header");
         }
-
-        System.out.println("xua: " + authHeader);
-
         String token = authHeader.substring(7);
-        System.out.println("xua5: " + token);
         String userId = jwtUtils.getUserIdFromToken(token);
-
-        System.out.println("xua6: " + userId);
-
         User user = userService.findUserById(userId);
 
         return ResponseEntity.ok(user);
@@ -195,4 +188,6 @@ public class UserController {
         response.put("data", user);
         return ResponseEntity.ok(response);
     }
+
+
 }

@@ -58,7 +58,8 @@ public class SecurityConfig {
                                 "/api/reports/admin/overview",
                                 "/api/reports/revenue",
                                 "/api/reports/orders",
-
+                                "/api/reports/books",
+                                "/api/reports/customers",
                                 "/ws/**"
                         ).permitAll()
                         .anyRequest().authenticated()

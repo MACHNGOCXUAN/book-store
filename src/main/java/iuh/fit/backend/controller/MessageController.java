@@ -1,8 +1,7 @@
 package iuh.fit.backend.controller;
 
 import iuh.fit.backend.model.ChatSession;
-import iuh.fit.backend.model.Customer;
-import iuh.fit.backend.requests.MessageDTO;
+import iuh.fit.backend.dto.requests.MessageDTO;
 import iuh.fit.backend.service.MessageService;
 import iuh.fit.backend.service.StaffService;
 import iuh.fit.backend.utils.JwtUtils;
