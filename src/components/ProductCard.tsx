@@ -1,48 +1,50 @@
-"use client"
+"use client";
 
 // src/components/ProductCard.tsx
 
-import { EyeOutlined, ShoppingCartOutlined } from "@ant-design/icons"
-import { Button, Card, Tooltip, Typography } from "antd"
-import type React from "react"
-import { useNavigate } from "react-router-dom"
-import { toast } from "react-toastify"
-import { addOrUpdateCartItem } from "../features/cart/cartSlice"
-import { useAppDispatch } from "../store/hooks"
-import type { Book } from "../types"
+import { EyeOutlined, ShoppingCartOutlined } from "@ant-design/icons";
+import { Button, Card, Tooltip, Typography } from "antd";
+import type React from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import { addOrUpdateCartItem } from "../features/cart/cartSlice";
+import { useAppDispatch } from "../store/hooks";
+import type { Book } from "../types";
 
-const { Text } = Typography
+const { Text } = Typography;
 
 /* ===================== ProductCard Props ===================== */
 interface ProductCardProps {
-  book: Book
-  onAddToCart?: (book: Book) => void
+  book: Book;
+  onAddToCart?: (book: Book) => void;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
-  const navigate = useNavigate()
-  const dispatch = useAppDispatch()
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
 
   // Hàm điều hướng đến trang chi tiết sản phẩm
   const handleViewDetails = () => {
-    navigate(`/books/${book.bookId}`)
-  }
+    navigate(`/books/${book.bookId}`);
+  };
 
   const handleAddToCart = async () => {
     try {
-      await dispatch(addOrUpdateCartItem({ bookId: book.bookId, quantity: 1 })).unwrap();
+      await dispatch(
+        addOrUpdateCartItem({ bookId: book.bookId, quantity: 1 })
+      ).unwrap();
       toast.success("Đã thêm vào giỏ hàng!");
       // Emit event so Header and other listeners update
       try {
-        const ev = new CustomEvent('cart-updated', { detail: { added: true } });
+        const ev = new CustomEvent("cart-updated", { detail: { added: true } });
         window.dispatchEvent(ev);
       } catch (e) {
         // ignore
       }
     } catch (err: any) {
-      toast.error(err || 'Thêm giỏ hàng thất bại');
+      toast.error(err || "Thêm giỏ hàng thất bại");
     }
-  }
+  };
   return (
     <Card
       hoverable
@@ -70,12 +72,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
               objectFit: "contain",
               transition: "transform 0.3s ease",
             }}
-            onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
+            onMouseOver={(e) =>
+              (e.currentTarget.style.transform = "scale(1.05)")
+            }
             onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
           />
         </div>
       }
-
       style={{
         borderRadius: 12,
         overflow: "hidden",
@@ -95,14 +98,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
         justifyContent: "space-between",
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = "0 8px 20px rgba(201,33,39,0.2)"
-        e.currentTarget.style.transform = "translateY(-4px)"
-        e.currentTarget.style.borderColor = "#C92127"
+        e.currentTarget.style.boxShadow = "0 8px 20px rgba(201,33,39,0.2)";
+        e.currentTarget.style.transform = "translateY(-4px)";
+        e.currentTarget.style.borderColor = "#C92127";
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)"
-        e.currentTarget.style.transform = "translateY(0)"
-        e.currentTarget.style.borderColor = "#f0f0f0"
+        e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+        e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.borderColor = "#f0f0f0";
       }}
     >
       <div>
@@ -149,7 +152,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
               fontWeight: 700,
             }}
           >
-            {(Number(book.price) - (Number(book.price) * Number(book.discountPercent) / 100)).toLocaleString("vi-VN")}₫
+            {(
+              Number(book.price) -
+              (Number(book.price) * Number(book.discountPercent)) / 100
+            ).toLocaleString("vi-VN")}
+            ₫
           </Text>
           <br />
           <Text
@@ -159,7 +166,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
               fontSize: "14px",
             }}
           >
-            {(Number(book.price)).toLocaleString("vi-VN")}₫
+            {Number(book.price).toLocaleString("vi-VN")}₫
           </Text>
           <Text
             style={{
@@ -218,7 +225,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
         </div>
       </div>
     </Card>
-  )
-}
+  );
+};
 
-export default ProductCard
+export default ProductCard;
