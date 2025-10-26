@@ -52,7 +52,6 @@ public class BookController {
         return ResponseEntity.ok(service.getTop20BestsellerBooks());
     }
 
-
     @GetMapping("/bestsellers/week")
     public ResponseEntity<List<Book>> getTop20BestsellersWeek() {
         return ResponseEntity.ok(service.getTop20BestsellerBooksByWeek());
@@ -62,7 +61,6 @@ public class BookController {
     public ResponseEntity<List<Book>> getTop20BestsellersMonth() {
         return ResponseEntity.ok(service.getTop20BestsellerBooksByMonth());
     }
-
 
     @GetMapping("/bestsellers/year")
     public ResponseEntity<List<Book>> getTop20BestsellersYear() {
@@ -103,15 +101,13 @@ public class BookController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable String id) {
         boolean isDeletedBook = service.delete(id);
-        if(isDeletedBook) {
+        if (isDeletedBook) {
             return ResponseEntity.ok(Map.of("message", "Xóa sản phẩm thành công!"));
         } else {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Xóa sản phẩm thất bại"));
         }
     }
-
-
 
     // admin
     @PostMapping("/filter")
@@ -135,6 +131,6 @@ public class BookController {
 
     @GetMapping("/categories/{category}")
     public ResponseEntity<List<Book>> getBooksByCategory(@PathVariable String category) {
-        return ResponseEntity.ok(service.getBooksByCategory(category));
+        return ResponseEntity.ok(service.findByCategory(category));
     }
 }

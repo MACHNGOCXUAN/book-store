@@ -47,7 +47,8 @@ public class CustomerServiceImpl implements CustomerService {
         return customerRepository.findAll();
     }
 
-    // ======================= SAVE (PHÁT SINH USER### + ENCODE PW) =======================
+    // ======================= SAVE (PHÁT SINH USER### + ENCODE PW)
+    // =======================
     @Override
     @Transactional
     public Customer saveCustomer(Customer customer) {
@@ -70,7 +71,10 @@ public class CustomerServiceImpl implements CustomerService {
             String lastId = cartRepository.findMaxCartId();
             int nextNum = 1;
             if (lastId != null && lastId.startsWith("CART")) {
-                try { nextNum = Integer.parseInt(lastId.substring(4)) + 1; } catch (NumberFormatException ignored) {}
+                try {
+                    nextNum = Integer.parseInt(lastId.substring(4)) + 1;
+                } catch (NumberFormatException ignored) {
+                }
             }
             cart.setCartId("CART" + String.format("%03d", nextNum));
             cart.setCustomer(saved);
@@ -80,11 +84,11 @@ public class CustomerServiceImpl implements CustomerService {
         });
 
         // (tuỳ) đồng bộ 2 chiều trong Persistence Context
-        // saved.setCart(cart); // Không bắt buộc vì mappedBy, chỉ để đồng bộ object đang ở context
+        // saved.setCart(cart); // Không bắt buộc vì mappedBy, chỉ để đồng bộ object
+        // đang ở context
 
         return saved;
     }
-
 
     // Tạo mã mới dạng USER### dựa trên MAX(userId) hiện có
     private String nextUserId() {
@@ -134,7 +138,8 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     @Transactional
     public boolean deleteCustomerById(String id) {
-        if (!customerRepository.existsById(id)) return false;
+        if (!customerRepository.existsById(id))
+            return false;
         customerRepository.deleteById(id);
         return true;
     }
@@ -161,6 +166,35 @@ public class CustomerServiceImpl implements CustomerService {
         } catch (Exception e) {
             log.error("updateCustomerStatus failed", e);
             return false;
+        }
+    }
+
+    // ======================= UPDATE PROFILE =======================
+    @Override
+    @Transactional
+    public Customer updateCustomerProfile(String userId, String fullName, String email, String phone) {
+        try {
+            Customer customer = customerRepository.findById(userId).orElse(null);
+            if (customer == null) {
+                log.warn("Không tìm thấy khách hàng với userId={}", userId);
+                return null;
+            }
+
+            if (fullName != null && !fullName.isBlank()) {
+                customer.setFullName(fullName);
+                customer.setUserName(fullName);
+            }
+            if (email != null && !email.isBlank()) {
+                customer.setEmail(email);
+            }
+            if (phone != null && !phone.isBlank()) {
+                customer.setPhoneNumber(phone);
+            }
+
+            return customerRepository.save(customer);
+        } catch (Exception e) {
+            log.error("updateCustomerProfile failed", e);
+            return null;
         }
     }
 }

@@ -151,8 +151,24 @@ public class AuthController {
 
             CustomUserDetail cud = new CustomUserDetail(user);
             String token = jwtUtils.generateToken(cud);
-            JwtAuthResponse jwtAuthResponse = new JwtAuthResponse();
-            jwtAuthResponse.setAccess_token(token);
+
+            // Tạo response object với token và user info
+            Map<String, Object> jwtAuthResponse = new java.util.HashMap<>();
+            jwtAuthResponse.put("access_token", token);
+
+            Map<String, Object> userInfo = new java.util.HashMap<>();
+            userInfo.put("userId", user.getUserId());
+            userInfo.put("userName", user.getUserName());
+            userInfo.put("email", user.getEmail());
+            userInfo.put("phoneNumber", user.getPhoneNumber());
+
+            // fullName chỉ có trong Customer
+            if (user instanceof Customer) {
+                userInfo.put("fullName", ((Customer) user).getFullName());
+            }
+
+            jwtAuthResponse.put("user", userInfo);
+
             return ResponseEntity.ok(jwtAuthResponse);
         } catch (Exception e) {
             log.error("Google login failed", e);
