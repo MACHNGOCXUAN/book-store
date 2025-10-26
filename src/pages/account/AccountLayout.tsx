@@ -1,29 +1,15 @@
 import { ExclamationCircleOutlined } from "@ant-design/icons";
 import { Alert, Col, Row } from "antd";
 import { useState } from "react";
-import { useLocation, Outlet } from "react-router-dom";
-import AccountSidebar from "../components/AccountSidebar";
-import AccountInfoPage from "./account/AccountInfoPage";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import AccountSidebar from "../../components/AccountSidebar";
 
-const AccountPage = () => {
-  const location = useLocation();
+const AccountLayout = () => {
   const [showAlert, setShowAlert] = useState(true);
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const userData = {
-    profile: {
-      firstName: "",
-      lastName: "",
-      phone: "0974122850",
-      email: "",
-      gender: "male" as const,
-      birthday: {
-        day: "",
-        month: "",
-        year: "",
-      },
-    },
-  };
-
+  // Determine current selected menu based on route
   const getSelectedMenu = () => {
     const pathname = location.pathname;
     if (pathname === "/account") return "profile";
@@ -37,9 +23,29 @@ const AccountPage = () => {
 
   const selectedMenu = getSelectedMenu();
 
-  const handleSaveProfile = (data: any) => {
-    console.log("Profile saved:", data);
-    // Here you would typically call an API to save the data
+  const handleMenuSelect = (key: string) => {
+    switch (key) {
+      case "profile":
+        navigate("/account");
+        break;
+      case "address":
+        navigate("/account/address");
+        break;
+      case "change-password":
+        navigate("/account/password");
+        break;
+      case "vouchers":
+        navigate("/account/vouchers");
+        break;
+      case "favorites":
+        navigate("/account/favorites");
+        break;
+      case "orders":
+        navigate("/account/orders");
+        break;
+      default:
+        break;
+    }
   };
 
   return (
@@ -97,19 +103,15 @@ const AccountPage = () => {
         <Row gutter={[24, 24]}>
           {/* Sidebar */}
           <Col xs={24} lg={6}>
-            <AccountSidebar selectedKey={selectedMenu} />
+            <AccountSidebar
+              selectedKey={selectedMenu}
+              onMenuSelect={handleMenuSelect}
+            />
           </Col>
 
           {/* Main Content Area */}
           <Col xs={24} lg={18}>
-            {selectedMenu === "profile" ? (
-              <AccountInfoPage
-                initialData={userData.profile}
-                onSave={handleSaveProfile}
-              />
-            ) : (
-              <Outlet />
-            )}
+            <Outlet />
           </Col>
         </Row>
       </div>
@@ -117,4 +119,4 @@ const AccountPage = () => {
   );
 };
 
-export default AccountPage;
+export default AccountLayout;

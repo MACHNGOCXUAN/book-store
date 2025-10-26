@@ -2,7 +2,6 @@ import { Outlet } from "react-router-dom";
 import "./App.css";
 import Footer from "./components/Footer";
 import Header from "./components/Header";
-import ScrollToTop from "./utils/ScrollToTop";
 import ChatPopoverWidget from "./components/LiveChatWidget";
 import RouteLoadingOverlay from "./components/RouteLoadingOverlay";
 

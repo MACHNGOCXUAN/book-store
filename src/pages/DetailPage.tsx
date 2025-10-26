@@ -62,7 +62,7 @@ function DetailPage() {
   }
   const handleAddFavorite = async () => {
     try {
-      const token = localStorage.getItem("access_token"); // 🔹 Lấy token JWT đã lưu sau login
+      const token = localStorage.getItem("access_token");
 
       const res = await fetch(
         `${API_BASE}/favorites/add?customerId=${authUser?.userId}&bookId=${id}`,
