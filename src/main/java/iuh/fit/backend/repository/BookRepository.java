@@ -61,4 +61,6 @@ public interface BookRepository extends JpaRepository<Book, String>, JpaSpecific
     ORDER BY SUM(od.quantity) DESC
     """)
     List<Book> findTop20BestsellerBooksByYear(@Param("startDate") LocalDateTime startDate, Pageable pageable);
+
+    List<Book> getBooksByCategory(String category);
 }

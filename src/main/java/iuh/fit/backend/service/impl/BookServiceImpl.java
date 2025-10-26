@@ -119,5 +119,8 @@ public class BookServiceImpl implements iuh.fit.backend.service.BookService {
         return repo.findTop20BestsellerBooksByYear(startDate, pageRequest);
     }
 
-
+    @Override
+    public List<Book> getBooksByCategory(String category) {
+        return repo.getBooksByCategory(category);
+    }
 }
