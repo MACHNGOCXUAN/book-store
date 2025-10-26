@@ -17,11 +17,6 @@ import ProductCard from "../components/ProductCard";
 import { API_BASE } from "../config/api"; // Updated import path
 
 // --- Dummy Interfaces for Missing Imports ---
-interface FilterOption {
-  id: string;
-  label: string;
-  count: number;
-}
 interface PriceRange {
   id: string;
   label: string;
@@ -65,7 +60,10 @@ export default function FilterCategory() {
   useEffect(() => {
     async function doFecth() {
       try {
-        const response = await fetch(`${API_BASE}/books/categories/${type}`);
+        const encodedType = encodeURIComponent(type ?? "");
+        const response = await fetch(
+          `${API_BASE}/books/categories/${encodedType}`
+        );
         // Kiểm tra lỗi HTTP (ví dụ: 404)
         if (!response.ok) {
           throw new Error(`Failed to fetch: ${response.status}`);
@@ -112,15 +110,8 @@ export default function FilterCategory() {
     }
   };
 
-  const toggleCategory = (id: string) => {
-    const newSelected = new Set(selectedCategories);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedCategories(newSelected);
-  };
+  // toggleCategory was removed because categories are not rendered as a checkbox list
+  // and the state is currently managed elsewhere (keeps code clean and avoids TS unused warnings).
 
   const resetAllFilters = () => {
     setSelectedCategories(new Set());

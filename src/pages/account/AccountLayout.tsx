@@ -12,7 +12,7 @@ const AccountLayout = () => {
   // Determine current selected menu based on route
   const getSelectedMenu = () => {
     const pathname = location.pathname;
-    if (pathname === "/account") return "profile";
+    if (pathname === "/account" || pathname === "account") return "profile";
     if (pathname.includes("orders")) return "orders";
     if (pathname.includes("address")) return "address";
     if (pathname.includes("password")) return "change-password";
@@ -26,22 +26,22 @@ const AccountLayout = () => {
   const handleMenuSelect = (key: string) => {
     switch (key) {
       case "profile":
-        navigate("/account");
+        navigate(".");
         break;
       case "address":
-        navigate("/account/address");
+        navigate("address");
         break;
       case "change-password":
-        navigate("/account/password");
+        navigate("change-password");
         break;
       case "vouchers":
-        navigate("/account/vouchers");
+        navigate("voucher");
         break;
       case "favorites":
-        navigate("/account/favorites");
+        navigate("favorites");
         break;
       case "orders":
-        navigate("/account/orders");
+        navigate("orders");
         break;
       default:
         break;

@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import ProductCard from "../components/ProductCard";
 import { fetchBooks } from "../features/books/bookSlice";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 
 const { Text } = Typography;
 const BOOKS_PER_PAGE = 12;
@@ -15,7 +15,6 @@ const ProductList: React.FC = () => {
   const books = useAppSelector((s) => s.books.books);
   const loading = useAppSelector((s) => s.books.loading);
 
-  const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
 

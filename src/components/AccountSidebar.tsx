@@ -63,22 +63,24 @@ const AccountSidebar = ({
     // Navigate to the appropriate route
     switch (key) {
       case "profile":
-        navigate("/account");
+        navigate(".");
         break;
       case "address":
-        navigate("/account/address");
+        navigate("address");
         break;
       case "change-password":
-        navigate("/account/password");
+        // menu key is "change-password" but route path is "password"
+        navigate("password");
         break;
       case "vouchers":
-        navigate("/account/vouchers");
+        // route path is "vouchers"
+        navigate("vouchers");
         break;
       case "favorites":
-        navigate("/account/favorites");
+        navigate("favorites");
         break;
       case "orders":
-        navigate("/account/orders");
+        navigate("orders");
         break;
       default:
         break;

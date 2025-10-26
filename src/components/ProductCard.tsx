@@ -25,7 +25,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
 
   // Hàm điều hướng đến trang chi tiết sản phẩm
   const handleViewDetails = () => {
-    navigate(`/books/${book.bookId}`);
+    navigate(`books/${book.bookId}`);
   };
 
   const handleAddToCart = async () => {

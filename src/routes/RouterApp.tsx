@@ -11,6 +11,7 @@ import ChangePasswordPage from "../pages/account/ChangePasswordPage";
 import VoucherPage from "../pages/account/VoucherPage";
 import FavoritePage from "../pages/account/FavoritePage";
 import { OrdersPage } from "../pages/account/OrdersPage";
+import FilterCategory from "../pages/FilterCategory";
 
 const router = createBrowserRouter([
   {
@@ -34,7 +35,7 @@ const router = createBrowserRouter([
         element: <CartPage />,
       },
       {
-        path: "/books/:id",
+        path: "books/:id",
         element: <DetailPage />,
       },
       {
@@ -62,6 +63,10 @@ const router = createBrowserRouter([
             element: <OrdersPage />,
           },
         ],
+      },
+      {
+        path: "categories/:type",
+        element: <FilterCategory />,
       },
     ],
   },

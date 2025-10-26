@@ -501,7 +501,7 @@ const Header = () => {
                           if (key === "logout") return handleLogout();
                           if (key === "profile") return navigate("/account");
                           if (key === "orders")
-                            return navigate("account/orders");
+                            return navigate("/account/orders");
                         },
                       }}
                     >
@@ -623,7 +623,7 @@ const Header = () => {
                 Trang chủ
               </Link>
               <Link
-                to="/about"
+                to="about"
                 style={{
                   color: "white",
                   textDecoration: "none",
@@ -682,7 +682,7 @@ const Header = () => {
                 Review sách
               </a>
               <Link
-                to="/contact"
+                to="contact"
                 style={{
                   color: "white",
                   textDecoration: "none",
@@ -724,7 +724,7 @@ const Header = () => {
               icon={<UserOutlined />}
               onClick={() => {
                 setOpenDrawer(false);
-                navigate("/profile");
+                navigate("/account");
               }}
             >
               {displayName}
