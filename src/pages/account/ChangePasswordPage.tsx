@@ -21,7 +21,20 @@ const ChangePasswordPage = ({ onSave }: ChangePasswordProps) => {
 
   const handleSave = async () => {
     try {
+      // Validate form fields
       const values = await form.validateFields();
+
+      // Additional validation
+      if (!user?.userId) {
+        toast.error("Không thể xác định người dùng");
+        return;
+      }
+
+      if (!token) {
+        toast.error("Vui lòng đăng nhập lại");
+        return;
+      }
+
       setLoading(true);
 
       const res = await fetch(
@@ -39,21 +52,30 @@ const ChangePasswordPage = ({ onSave }: ChangePasswordProps) => {
         }
       );
 
+      if (!res.ok) {
+        const result = await res.json();
+        toast.error(result.message || "Đổi mật khẩu thất bại");
+        return;
+      }
+
       const result = await res.json();
 
-      if (
-        result.message?.includes("không đúng") ||
-        result.message?.includes("không tồn tại")
-      ) {
-        toast.warning(result.message);
-      } else {
-        toast.success(result.message);
+      if (result.message?.includes("thành công")) {
+        toast.success(result.message || "Đổi mật khẩu thành công");
         form.resetFields();
         if (onSave) onSave(values);
+      } else if (result.message?.includes("không đúng")) {
+        toast.warning(result.message || "Mật khẩu hiện tại không đúng");
+      } else {
+        toast.info(result.message || "Đã xử lý yêu cầu");
       }
     } catch (error: any) {
       console.error("Error changing password:", error);
-      toast.error("Có lỗi xảy ra khi đổi mật khẩu 😢");
+      if (error.message === "Failed to fetch") {
+        toast.error("Không thể kết nối tới máy chủ");
+      } else {
+        toast.error("Có lỗi xảy ra khi đổi mật khẩu 😢");
+      }
     } finally {
       setLoading(false);
     }

@@ -1,7 +1,9 @@
-import { DeleteOutlined, HeartOutlined } from "@ant-design/icons";
-import { Button, Card, Col, Empty, Row, message } from "antd";
-import { useState } from "react";
+import { HeartOutlined, HeartFilled } from "@ant-design/icons";
+import { Button, Card, Col, Empty, Row, message, Spin } from "antd";
+import { useEffect, useState } from "react";
 import type { Book } from "../../types/Book";
+import { useAppSelector } from "../../store/hooks";
+import { API_BASE } from "../../config/api";
 import ProductCard from "../../components/ProductCard";
 
 interface FavoriteProductProps {
@@ -10,79 +12,66 @@ interface FavoriteProductProps {
 }
 
 const FavoritePage = ({ favorites, onRemove }: FavoriteProductProps) => {
-  const [favoriteBooks, setFavoriteBooks] = useState<Book[]>(
-    favorites || [
-      // Mock data
-      {
-        bookId: "1",
-        title: "Đắc Nhân Tâm",
-        author: "Dale Carnegie",
-        publisher: "NXB Tổng Hợp",
-        category: "Kỹ Năng Sống",
-        price: 86000,
-        stockQuantity: 100,
-        soldQuantity: 250,
-        discountPercent: 25,
-        description: "Cuốn sách kinh điển về nghệ thuật giao tiếp và ứng xử",
-        publishDate: "2020-01-01",
-        coverImage:
-          "https://cdn0.fahasa.com/media/catalog/product/i/m/image_195509_1_36793.jpg",
-      },
-      {
-        bookId: "2",
-        title: "Nhà Giả Kim",
-        author: "Paulo Coelho",
-        publisher: "NXB Hội Nhà Văn",
-        category: "Tiểu Thuyết",
-        price: 79000,
-        stockQuantity: 150,
-        soldQuantity: 320,
-        discountPercent: 20,
-        description: "Câu chuyện về hành trình đi tìm kho báu và ước mơ",
-        publishDate: "2019-05-15",
-        coverImage:
-          "https://cdn0.fahasa.com/media/catalog/product/i/m/image_195509_1_44706.jpg",
-      },
-      {
-        bookId: "3",
-        title: "Tuổi Trẻ Đáng Giá Bao Nhiêu",
-        author: "Rosie Nguyễn",
-        publisher: "NXB Hội Nhà Văn",
-        category: "Kỹ Năng Sống",
-        price: 80000,
-        stockQuantity: 200,
-        soldQuantity: 180,
-        discountPercent: 15,
-        description: "Những bài học về cuộc sống và trưởng thành",
-        publishDate: "2021-03-20",
-        coverImage:
-          "https://cdn0.fahasa.com/media/catalog/product/t/u/tuoi-tre-dang-gia-bao-nhieu.jpg",
-      },
-      {
-        bookId: "4",
-        title: "Càng Kỷ Luật Càng Tự Do",
-        author: "Jocko Willink",
-        publisher: "NXB Thế Giới",
-        category: "Kỹ Năng Sống",
-        price: 108000,
-        stockQuantity: 120,
-        soldQuantity: 210,
-        discountPercent: 30,
-        description: "Hướng dẫn xây dựng kỷ luật để đạt được tự do",
-        publishDate: "2020-08-10",
-        coverImage:
-          "https://cdn0.fahasa.com/media/catalog/product/c/a/cang-ky-luat-cang-tu-do.jpg",
-      },
-    ]
-  );
+  const authUser = useAppSelector((s) => s.auth.user);
+  const [favoriteBooks, setFavoriteBooks] = useState<Book[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [removing, setRemoving] = useState<string | null>(null);
 
-  const handleRemoveFromFavorites = (bookId: string) => {
-    setFavoriteBooks(favoriteBooks.filter((book) => book.bookId !== bookId));
-    if (onRemove) {
-      onRemove(bookId);
+  useEffect(() => {
+    const fetchBooksFavorite = async () => {
+      if (!authUser?.userId) return;
+      try {
+        setLoading(true);
+        const res = await fetch(`${API_BASE}/favorites/${authUser?.userId}`);
+        if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+        const data = await res.json();
+        setFavoriteBooks(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBooksFavorite();
+  }, []);
+
+  console.log(favoriteBooks);
+
+  const handleRemoveFromFavorites = async (bookId: string) => {
+    try {
+      setRemoving(bookId);
+      const res = await fetch(
+        `${API_BASE}/favorites/remove?customerId=${authUser.userId}&bookId=${bookId}`,
+        { method: "DELETE" }
+      );
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("Lỗi xóa yêu thích:", errorText);
+        message.error(errorText || "Không thể xóa khỏi danh sách yêu thích");
+        return;
+      }
+
+      // Cập nhật lại danh sách yêu thích
+      setFavoriteBooks((prev) => prev.filter((item) => item.bookId !== bookId));
+
+      message.success("Đã xóa khỏi danh sách yêu thích!");
+    } catch (error) {
+      console.error("Lỗi khi gọi API xóa yêu thích:", error);
+      message.error("Không thể kết nối đến máy chủ");
+    } finally {
+      setRemoving(null);
     }
-    message.success("Đã xóa khỏi danh sách yêu thích!");
   };
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: "center", padding: "60px 0" }}>
+        <Spin tip="Đang tải danh sách yêu thích..." size="large" />
+      </div>
+    );
+  }
 
   return (
     <Card
@@ -122,24 +111,32 @@ const FavoritePage = ({ favorites, onRemove }: FavoriteProductProps) => {
               <div style={{ position: "relative" }}>
                 <ProductCard book={book} />
 
-                {/* Remove Button */}
+                {/* Remove Button - Heart Icon */}
                 <Button
-                  type="primary"
-                  danger
-                  icon={<DeleteOutlined />}
-                  size="small"
+                  type="text"
+                  icon={
+                    <HeartFilled style={{ fontSize: 24, color: "#C92127" }} />
+                  }
+                  loading={removing === book.bookId}
                   onClick={() => handleRemoveFromFavorites(book.bookId)}
                   style={{
                     position: "absolute",
                     top: 8,
                     right: 8,
                     zIndex: 10,
-                    borderRadius: 8,
+                    padding: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 40,
+                    height: 40,
+                    borderRadius: "50%",
+                    background: "rgba(255, 255, 255, 0.9)",
                     boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                    border: "none",
                   }}
-                >
-                  Xóa
-                </Button>
+                  title="Xóa khỏi danh sách yêu thích"
+                />
               </div>
             </Col>
           ))}
