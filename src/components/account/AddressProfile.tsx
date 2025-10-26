@@ -1,89 +1,121 @@
-import { Button, Card, Form, Input } from 'antd'
-import { useState } from 'react'
+import { Button, Card, Form, Input, Select } from 'antd'
+import { useState, useEffect } from 'react'
+import { API_BASE } from '../../config/api'
+import { useSelector } from "react-redux";
+import type { RootState } from "../../store";
+import { toast } from "react-toastify";
+
+const { Option } = Select;
 
 interface AddressProfileProps {
-    initialData?: {
-        address?: string
-    }
-    onSave?: (data: AddressFormData) => void
+    onSave?: (data: { address: string, city: string }) => void
 }
 
-interface AddressFormData {
-    address: string
-}
-
-const AddressProfile = ({ initialData, onSave }: AddressProfileProps) => {
+const AddressProfile = ({ onSave }: AddressProfileProps) => {
     const [form] = Form.useForm()
     const [loading, setLoading] = useState(false)
+    const { token, user } = useSelector((state: RootState) => state.auth);
+
+    const cities = [
+        "Hồ Chí Minh",
+        "Hà Nội",
+        "Đà Nẵng",
+        "Hải Phòng",
+        "Cần Thơ",
+        "Khác"
+    ]
+
+    useEffect(() => {
+        const fetchAddress = async () => {
+            if (!user?.userId) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/customer/${user.userId}/address`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (!res.ok) throw new Error("Không thể tải địa chỉ");
+                const data = await res.json();
+
+                // ✅ Điền giá trị lên form: address + city
+                form.setFieldsValue({ 
+                    address: data.address || "",
+                    city: data.city || ""
+                });
+            } catch (error) {
+                console.error("Lỗi khi lấy địa chỉ:", error);
+                toast.error("Lấy thông tin địa chỉ thất bại!");
+            }
+        };
+
+        fetchAddress();
+    }, [user?.userId, token, form]);
 
     const handleSave = async () => {
         try {
-            const values = await form.validateFields()
-            setLoading(true)
+            const values = await form.validateFields();
+            setLoading(true);
 
-            setTimeout(() => {
-                setLoading(false)
-                if (onSave) {
-                    onSave(values)
-                }
-                console.log('Address saved:', values)
-            }, 1000)
+            const res = await fetch(`${API_BASE}/customer/${user?.userId}/update-address`, { 
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ 
+                    address: values.address, 
+                    city: values.city 
+                }),
+            });
+
+            const result = await res.json();
+
+            if (!res.ok) {
+                toast.error(result.message || "Cập nhật thất bại!");
+            } else {
+                toast.success(result.message || "Cập nhật địa chỉ thành công!");
+                if (onSave) onSave(values);
+            }
+
         } catch (error) {
-            console.error('Validation failed:', error)
+            console.error("Lỗi khi cập nhật địa chỉ:", error);
+            toast.error("Có lỗi xảy ra khi lưu địa chỉ!");
+        } finally {
+            setLoading(false);
         }
     }
 
     return (
         <Card
-            title={
-                <div style={{ fontSize: 18, fontWeight: 600 }}>
-                    Cập nhật địa chỉ
-                </div>
-            }
+            title={<div style={{ fontSize: 18, fontWeight: 600 }}>Cập nhật địa chỉ</div>}
             bordered={false}
-            style={{
-                borderRadius: 8,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-            }}
+            style={{ borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
         >
             <Form
                 form={form}
                 layout="vertical"
-                initialValues={{
-                    address: initialData?.address || '',
-                }}
             >
                 <Form.Item
-                    label={<span style={{ fontWeight: 500 }}>Địa chỉ</span>}
+                    label="Tỉnh / Thành phố"
+                    name="city"
+                    rules={[{ required: true, message: 'Vui lòng chọn tỉnh/thành!' }]}
+                >
+                    <Select placeholder="Chọn tỉnh/thành" size="large" style={{ borderRadius: 8 }}>
+                        {cities.map(city => <Option key={city} value={city}>{city}</Option>)}
+                    </Select>
+                </Form.Item>
+
+                <Form.Item
+                    label="Địa chỉ chi tiết"
                     name="address"
                     rules={[{ required: true, message: 'Vui lòng nhập địa chỉ!' }]}
                 >
                     <Input.TextArea
-                        placeholder="Nhập địa chỉ đầy đủ của bạn (số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố)"
+                        placeholder="Nhập địa chỉ đầy đủ"
                         rows={4}
                         size="large"
                         style={{ borderRadius: 8 }}
                     />
                 </Form.Item>
-
-                <div style={{
-                    marginTop: 24,
-                    padding: 16,
-                    background: '#FFF5F5',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    color: '#666',
-                    marginBottom: 24
-                }}>
-                    <div style={{ fontWeight: 600, marginBottom: 8, color: '#C92127' }}>
-                        💡 Gợi ý:
-                    </div>
-                    <div>
-                        Hãy nhập địa chỉ đầy đủ để việc giao hàng được thuận tiện nhất.
-                        <br />
-                        Ví dụ: 123 Nguyễn Văn Linh, Phường Tân Phú, Quận 7, TP. Hồ Chí Minh
-                    </div>
-                </div>
 
                 <Form.Item style={{ marginBottom: 0 }}>
                     <Button
@@ -91,6 +123,7 @@ const AddressProfile = ({ initialData, onSave }: AddressProfileProps) => {
                         size="large"
                         onClick={handleSave}
                         loading={loading}
+                        htmlType="button"
                         style={{
                             background: '#C92127',
                             borderColor: '#C92127',

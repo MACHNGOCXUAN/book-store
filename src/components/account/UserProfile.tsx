@@ -1,6 +1,8 @@
 import { Button, Card, Col, Form, Input, Row } from 'antd'
 import { useEffect, useState } from 'react'
 import { useAppSelector } from "../../store/hooks"
+import { toast } from "react-toastify"
+import { API_BASE } from '../../config/api'
 interface UserProfileProps {
     initialData?: {
         firstName?: string
@@ -21,39 +23,83 @@ const UserProfile = ({ initialData, onSave }: UserProfileProps) => {
     const [form] = Form.useForm()
     const [loading, setLoading] = useState(false)
     const authUser = useAppSelector((s) => s.auth.user)
-    const [fullname, setFullname] = useState(authUser?.fullName || "")
-    const [phone, setPhone] = useState(authUser?.phone || "")
-    const [email, setEmail] = useState(authUser?.email || "")
+    const token = useAppSelector((s) => s.auth.token)
 
 
-    console.log("Fullname:  ", fullname)
-    console.log("PhoneNumber:  ", phone)
     useEffect(() => {
-        form.setFieldsValue({
-            fullname: authUser?.fullName,
-            phone: authUser?.phone,
-            email: authUser?.email,
-        });
+        if (authUser) {
+            form.setFieldsValue({
+                fullname: authUser.fullName,
+                phone: authUser.phone,
+                email: authUser.email,
+            });
+        }
     }, [authUser, form]);
+
+    const fetchUserData = async () => {
+        try {
+            const res = await fetch(`${API_BASE}/admin/me`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            const result = await res.json();
+            if (res.ok) {
+                return result;
+            } else {
+                toast.error(result.message || "Lấy thông tin user thất bại");
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("Lấy thông tin user thất bại");
+        }
+    };
 
     const handleSave = async () => {
         try {
-            const values = await form.validateFields()
-            setLoading(true)
+            const values = await form.validateFields();
+            setLoading(true);
 
-            // Simulate API call
-            setTimeout(() => {
-                setLoading(false)
-                if (onSave) {
-                    onSave(values)
+            const res = await fetch(`${API_BASE}/customer/${authUser?.userId}/update-info`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    fullname: values.fullname,
+                    phone: values.phone,
+                    email: values.email
+                }),
+            });
+
+            const result = await res.json();
+
+            if (!res.ok) {
+                toast.error(result.message || "Cập nhật thất bại!");
+            } else {
+                toast.success(result.message || "Cập nhật thành công!");
+
+                const updatedUser = result.data;
+                if (updatedUser) {
+
+                    form.setFieldsValue({
+                        fullname: updatedUser.fullName,
+                        phone: updatedUser.phoneNumber || updatedUser.phone,
+                        email: updatedUser.email
+                    });
+
+                    if (onSave) onSave(updatedUser);
                 }
-                console.log('Saved data:', values)
-            }, 1000)
-        } catch (error) {
-            console.error('Validation failed:', error)
-        }
-    }
+            }
 
+        } catch (error) {
+            console.error('Validation or API failed:', error);
+            toast.error("Có lỗi xảy ra khi cập nhật!");
+        } finally {
+            setLoading(false);
+        }
+    };
     return (
         <Card
             title={
@@ -73,8 +119,8 @@ const UserProfile = ({ initialData, onSave }: UserProfileProps) => {
                 initialValues={{
                     firstName: initialData?.firstName || '',
                     lastName: initialData?.lastName || '',
-                    phone: initialData?.phone || '',
-                    email: initialData?.email || '',
+                    // phone: initialData?.phone || '',
+                    // email: initialData?.email || '',
                     gender: initialData?.gender || 'male',
                     day: initialData?.birthday?.day || '',
                     month: initialData?.birthday?.month || '',
