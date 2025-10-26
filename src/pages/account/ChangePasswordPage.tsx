@@ -1,7 +1,9 @@
 import { Button, Card, Form, Input } from "antd";
 import { useState } from "react";
+import { API_BASE } from "../../config/api";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../store";
 import { toast } from "react-toastify";
-
 interface ChangePasswordProps {
   onSave?: (data: PasswordFormData) => void;
 }
@@ -15,24 +17,45 @@ interface PasswordFormData {
 const ChangePasswordPage = ({ onSave }: ChangePasswordProps) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const { token, user } = useSelector((state: RootState) => state.auth);
 
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
       setLoading(true);
 
-      setTimeout(() => {
-        setLoading(false);
-        if (onSave) {
-          onSave(values);
+      const res = await fetch(
+        `${API_BASE}/customer/${user?.userId}/change-password`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            currentPassword: values.currentPassword,
+            newPassword: values.newPassword,
+          }),
         }
-        console.log("Password changed:", values);
-        toast.success("Đổi mật khẩu thành công!");
+      );
+
+      const result = await res.json();
+
+      if (
+        result.message?.includes("không đúng") ||
+        result.message?.includes("không tồn tại")
+      ) {
+        toast.warning(result.message);
+      } else {
+        toast.success(result.message);
         form.resetFields();
-      }, 1000);
-    } catch (error) {
-      console.error("Validation failed:", error);
-      toast.error("Vui lòng kiểm tra lại thông tin nhập!");
+        if (onSave) onSave(values);
+      }
+    } catch (error: any) {
+      console.error("Error changing password:", error);
+      toast.error("Có lỗi xảy ra khi đổi mật khẩu 😢");
+    } finally {
+      setLoading(false);
     }
   };
 
