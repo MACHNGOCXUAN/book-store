@@ -189,5 +189,111 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    // update address customer
+    @PutMapping("/customer/{id}/update-address")
+    public ResponseEntity<?> updateCustomerAddress(
+            @PathVariable String id,
+            @RequestBody Map<String, String> request
+    ) {
+        String addressDetail = request.get("addressDetail"); // chi tiết
+        String city = request.get("city"); // thành phố
+
+        if ((addressDetail == null || addressDetail.isBlank()) &&
+                (city == null || city.isBlank())) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Vui lòng cung cấp địa chỉ hoặc thành phố"));
+        }
+
+        String message = customerService.updateAddressOnly(id, addressDetail, city); // ⚡ gọi version mới của service
+
+        Customer updatedCustomer = customerService.findCustomerById(id);
+        return ResponseEntity.ok(Map.of(
+                "message", message,
+                "data", updatedCustomer
+        ));
+    }
+
+
+
+
+
+
+    @GetMapping("/customer/{id}/address")
+    public ResponseEntity<?> getCustomerAddress(@PathVariable String id) {
+        Customer customer = customerService.findCustomerById(id);
+        if (customer == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "Không tìm thấy khách hàng"));
+        }
+
+        String address = customer.getAddress() != null ? customer.getAddress() : "";
+
+        // Tách city: lấy phần sau dấu phẩy cuối nếu có
+        String city = "";
+        if (!address.isBlank() && address.contains(",")) {
+            String[] parts = address.split(",");
+            city = parts[parts.length - 1].trim();
+            // xóa city ra khỏi address
+            address = String.join(",", java.util.Arrays.copyOf(parts, parts.length - 1)).trim();
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "address", address,
+                "city", city
+        ));
+    }
+
+
+    //update password
+    @PutMapping("/customer/{id}/change-password")
+    public ResponseEntity<?> changeCustomerPassword(
+            @PathVariable String id,
+            @RequestBody Map<String, String> request
+    ) {
+        String currentPassword = request.get("currentPassword");
+        String newPassword = request.get("newPassword");
+
+        if (currentPassword == null || currentPassword.isBlank() ||
+                newPassword == null || newPassword.isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Cần cung cấp mật khẩu hiện tại và mật khẩu mới"));
+        }
+
+        String msg = customerService.updatePassword(id, currentPassword, newPassword);
+
+        // Trả 200 cho tất cả message, frontend sẽ tự chọn loại toast
+        return ResponseEntity.ok(Map.of("message", msg));
+    }
+
+    //  Update info
+    @PutMapping("/customer/{id}/update-info")
+    public ResponseEntity<?> updateCustomerInfo(
+            @PathVariable String id,
+            @RequestBody Map<String, String> request
+    ) {
+        String fullname = request.get("fullname");
+        String phone = request.get("phone");
+        String email = request.get("email");
+
+        if ((fullname == null || fullname.isBlank()) &&
+                (phone == null || phone.isBlank()) &&
+                (email == null || email.isBlank())) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Cần cung cấp ít nhất một thông tin để cập nhật"));
+        }
+
+        boolean success = customerService.updateCustomerInfo(id, fullname, phone, email);
+
+        if (success) {
+            Customer updatedCustomer = customerService.findCustomerById(id);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Cập nhật thông tin thành công",
+                    "data", updatedCustomer
+            ));
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "Không tìm thấy khách hàng"));
+        }
+    }
 
 }

@@ -163,4 +163,62 @@ public class CustomerServiceImpl implements CustomerService {
             return false;
         }
     }
+    //update address
+    @Transactional
+    @Override
+    public String updateAddressOnly(String customerId, String addressDetail, String city) {
+        Customer customer = customerRepository.findById(customerId).orElse(null);
+        if (customer == null) return "Không tìm thấy khách hàng";
+
+        String fullAddress = "";
+        if (addressDetail != null && !addressDetail.isBlank()) fullAddress += addressDetail.trim();
+        if (city != null && !city.isBlank()) {
+            if (!fullAddress.isEmpty()) fullAddress += ", ";
+            fullAddress += city.trim();
+        }
+
+        customer.setAddress(fullAddress);
+        customerRepository.save(customer);
+
+        return "Cập nhật địa chỉ thành công";
+    }
+
+
+
+
+    //update password
+    @Override
+    @Transactional
+    public String updatePassword(String customerId, String currentPassword, String newPassword) {
+        Customer customer = customerRepository.findById(customerId).orElse(null);
+        if (customer == null) {
+            log.warn("Không tìm thấy khách hàng với userId={}", customerId);
+            return "User không tồn tại"; // ⚠️ message trả về
+        }
+
+        if (!passwordEncoder.matches(currentPassword, customer.getPassword())) {
+            log.warn("Mật khẩu hiện tại không đúng cho userId={}", customerId);
+            return "Mật khẩu hiện tại không đúng"; // ⚠ message trả về
+        }
+
+        customer.setPassword(passwordEncoder.encode(newPassword));
+        customerRepository.save(customer);
+        return "Cập nhật mật khẩu thành công"; //  message thành công
+    }
+
+    //update info
+    @Override
+    @Transactional
+    public boolean updateCustomerInfo(String customerId, String fullname, String phone, String email) {
+        Customer customer = customerRepository.findById(customerId).orElse(null);
+        if (customer == null) return false;
+
+        if (fullname != null && !fullname.isBlank()) customer.setFullName(fullname);
+        if (phone != null && !phone.isBlank()) customer.setPhoneNumber(phone);
+        if (email != null && !email.isBlank()) customer.setEmail(email);
+
+        customerRepository.save(customer);
+        return true;
+    }
+
 }

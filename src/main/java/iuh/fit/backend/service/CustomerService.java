@@ -15,4 +15,7 @@ public interface CustomerService {
     boolean deleteCustomerById(String id);
     List<Customer> findCustomerByPhone(String phone);
     boolean updateCustomerStatus(UserUpdateStatusDto customerUpdateStatusDto);
+    String updateAddressOnly(String customerId, String addressDetail, String city);
+    String updatePassword(String customerId, String currentPassword, String newPassword);
+    boolean updateCustomerInfo(String customerId, String fullname, String phone, String email);
 }
