@@ -219,4 +219,41 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/customer/{customerId}/change-password")
+    public ResponseEntity<?> changePassword(
+            @PathVariable String customerId,
+            @RequestBody Map<String, String> request) {
+        try {
+            String currentPassword = request.get("currentPassword");
+            String newPassword = request.get("newPassword");
+
+            if (currentPassword == null || currentPassword.isBlank()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "Vui lòng nhập mật khẩu hiện tại"));
+            }
+
+            if (newPassword == null || newPassword.isBlank()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "Vui lòng nhập mật khẩu mới"));
+            }
+
+            if (newPassword.length() < 6) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "Mật khẩu mới phải có ít nhất 6 ký tự"));
+            }
+
+            boolean success = customerService.changePassword(customerId, currentPassword, newPassword);
+
+            if (success) {
+                return ResponseEntity.ok(Map.of("message", "Đổi mật khẩu thành công"));
+            } else {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "Mật khẩu hiện tại không đúng"));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Lỗi khi đổi mật khẩu: " + e.getMessage()));
+        }
+    }
+
 }

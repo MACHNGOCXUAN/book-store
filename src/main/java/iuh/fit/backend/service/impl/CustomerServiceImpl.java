@@ -197,4 +197,32 @@ public class CustomerServiceImpl implements CustomerService {
             return null;
         }
     }
+
+    // ======================= CHANGE PASSWORD =======================
+    @Override
+    @Transactional
+    public boolean changePassword(String customerId, String currentPassword, String newPassword) {
+        try {
+            Customer customer = customerRepository.findById(customerId).orElse(null);
+            if (customer == null) {
+                log.warn("Không tìm thấy khách hàng với userId={}", customerId);
+                return false;
+            }
+
+            // Kiểm tra mật khẩu hiện tại
+            if (!passwordEncoder.matches(currentPassword, customer.getPassword())) {
+                log.warn("Mật khẩu hiện tại không đúng cho userId={}", customerId);
+                return false;
+            }
+
+            // Cập nhật mật khẩu mới
+            customer.setPassword(passwordEncoder.encode(newPassword));
+            customerRepository.save(customer);
+            log.info("Đổi mật khẩu thành công cho userId={}", customerId);
+            return true;
+        } catch (Exception e) {
+            log.error("changePassword failed", e);
+            return false;
+        }
+    }
 }
