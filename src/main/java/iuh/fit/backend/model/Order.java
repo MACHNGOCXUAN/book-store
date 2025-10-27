@@ -30,6 +30,11 @@ public class Order {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     private List<Payment> payments = new ArrayList<>();
+
+    @ManyToOne
+    @JoinColumn(name = "discount_code_id", nullable = false)
+    private DiscountCode discountCode;
+
     @ManyToOne
     @JoinColumn(name = "staff_id")
     private Staff staff;

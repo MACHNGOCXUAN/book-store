@@ -26,10 +26,9 @@ public class BookServiceImpl implements iuh.fit.backend.service.BookService {
     public Book save(Book book) {
         // Nếu muốn phát sinh ID B001, B002 thì viết thêm logic ở đây
         if (book.getBookId() == null || book.getBookId().isBlank()) {
-            // String prefix = "B";
-            // int nextNum = (int) (repo.count() + 1);
-            // book.setBookId(prefix + String.format("%03d", nextNum));
-            book.setBookId("B" + System.currentTimeMillis());
+            String prefix = "B";
+            int nextNum = (int) (repo.count() + 1);
+            book.setBookId(prefix + String.format("%03d", nextNum));
         }
         return repo.save(book);
     }

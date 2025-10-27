@@ -1,13 +1,14 @@
 package iuh.fit.backend.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import iuh.fit.backend.model.enums.DiscountType;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @AllArgsConstructor @NoArgsConstructor
 @Data
@@ -15,10 +16,20 @@ import java.time.LocalDate;
 @Table(name = "discount_codes")
 public class DiscountCode {
     @Id
-    private String discountId;
+    private String discountCodeId;
     private String name;
     private int percent;
     private LocalDate startDate;
     private LocalDate endDate;
     private String description;
+    private int quantity;
+    private double minPriceToApply;
+
+    @Enumerated(EnumType.STRING)
+    private DiscountType discountType;
+    private int maxQuantityCanUse;
+
+    @OneToMany(mappedBy = "discountCode", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    private List<Order> order;
 }
