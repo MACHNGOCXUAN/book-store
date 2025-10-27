@@ -12,7 +12,7 @@ import {
   Typography,
   Divider,
 } from "antd";
-import { toast } from 'react-toastify';
+import { toast } from "react-toastify";
 import type { TabsProps } from "antd";
 import {
   UserOutlined,
@@ -21,8 +21,13 @@ import {
   PhoneOutlined,
 } from "@ant-design/icons";
 import { GoogleLogin } from "@react-oauth/google";
+import { useNavigate } from "react-router-dom";
 import { useAppDispatch } from "../store/hooks";
-import { loginUser, registerUser, googleLogin } from "../features/auth/authSlice";
+import {
+  loginUser,
+  registerUser,
+  googleLogin,
+} from "../features/auth/authSlice";
 import { GoogleIcon } from "../components/icons/GoogleIcon";
 
 const { Title, Text, Link: TextLink } = Typography;
@@ -46,6 +51,7 @@ interface AuthModalProps {
 const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   const [loginError, setLoginError] = useState<string | null>(null);
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
 
   const onFinish = async (values: any) => {
     setLoginError(null);
@@ -55,7 +61,12 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     try {
       await dispatch(loginUser({ username, password })).unwrap();
       toast.success("Đăng nhập thành công!");
-      onSuccess(); // đóng modal (Header tự cập nhật qua Redux)
+      onSuccess(); // đóng modal
+      // Delay để đóng modal trước khi reload
+      setTimeout(() => {
+        navigate("/");
+        window.location.reload();
+      }, 500);
     } catch (err: any) {
       const msg = err || "Đăng nhập thất bại";
       setLoginError(msg.toString());
@@ -65,7 +76,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   /* ---------- Google Sign-In Handler ---------- */
   const handleGoogleSuccess = async (credentialResponse: any) => {
     setLoginError(null);
-    
+
     const idToken = credentialResponse?.credential;
     if (!idToken) {
       setLoginError("Google sign-in failed: no credential returned");
@@ -76,6 +87,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
       await dispatch(googleLogin({ idToken })).unwrap();
       toast.success("Đăng nhập bằng Google thành công");
       onSuccess();
+      // Delay để đóng modal trước khi reload
+      setTimeout(() => {
+        navigate("/");
+        window.location.reload();
+      }, 500);
     } catch (e: any) {
       const errorMsg = e || "Google đăng nhập thất bại";
       setLoginError(errorMsg.toString());
@@ -108,9 +124,17 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
 
       <Form.Item
         name="username"
-        rules={[{ required: true, message: "Vui lòng nhập email hoặc số điện thoại!" }]}
+        rules={[
+          {
+            required: true,
+            message: "Vui lòng nhập email hoặc số điện thoại!",
+          },
+        ]}
       >
-        <Input prefix={<UserOutlined />} placeholder="Email hoặc Số điện thoại" />
+        <Input
+          prefix={<UserOutlined />}
+          placeholder="Email hoặc Số điện thoại"
+        />
       </Form.Item>
 
       <Form.Item
@@ -193,9 +217,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
           </div>
         </div>
       </Form.Item>
-
-
-
     </Form>
   );
 };
@@ -210,7 +231,9 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
     const { fullName, email, phone, password } = values;
     setRegError(null);
     try {
-      await dispatch(registerUser({ fullName, email, phone, password })).unwrap();
+      await dispatch(
+        registerUser({ fullName, email, phone, password })
+      ).unwrap();
       toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
       form.resetFields();
       onSwitchToLogin();
@@ -221,7 +244,13 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
   };
 
   return (
-    <Form form={form} name="register" onFinish={onFinish} layout="vertical" size="large">
+    <Form
+      form={form}
+      name="register"
+      onFinish={onFinish}
+      layout="vertical"
+      size="large"
+    >
       {regError && (
         <Form.Item>
           <div
@@ -237,7 +266,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
           </div>
         </Form.Item>
       )}
-      <Form.Item name="fullName" rules={[{ required: true, message: "Vui lòng nhập họ và tên!" }]}>
+      <Form.Item
+        name="fullName"
+        rules={[{ required: true, message: "Vui lòng nhập họ và tên!" }]}
+      >
         <Input prefix={<UserOutlined />} placeholder="Họ và tên" />
       </Form.Item>
 
@@ -253,7 +285,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
 
       <Form.Item
         name="phone"
-        rules={[{ required: true, message: "Vui lòng nhập số điện thoại!" }]}>
+        rules={[{ required: true, message: "Vui lòng nhập số điện thoại!" }]}
+      >
         <Input prefix={<PhoneOutlined />} placeholder="Số điện thoại" />
       </Form.Item>
 
@@ -271,13 +304,17 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
           { required: true, message: "Vui lòng xác nhận mật khẩu!" },
           ({ getFieldValue }) => ({
             validator(_, value) {
-              if (!value || getFieldValue("password") === value) return Promise.resolve();
+              if (!value || getFieldValue("password") === value)
+                return Promise.resolve();
               return Promise.reject(new Error("Mật khẩu xác nhận không khớp!"));
             },
           }),
         ]}
       >
-        <Input.Password prefix={<LockOutlined />} placeholder="Xác nhận mật khẩu" />
+        <Input.Password
+          prefix={<LockOutlined />}
+          placeholder="Xác nhận mật khẩu"
+        />
       </Form.Item>
 
       <Form.Item>
@@ -294,12 +331,22 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onCancel, onSuccess }) => {
   const [activeTab, setActiveTab] = useState("login");
 
   const items: TabsProps["items"] = [
-    { key: "login", label: "Đăng nhập", children: <LoginForm onSuccess={onSuccess} /> },
-    { key: "register", label: "Đăng ký", children: <RegisterForm onSwitchToLogin={() => setActiveTab("login")} /> },
+    {
+      key: "login",
+      label: "Đăng nhập",
+      children: <LoginForm onSuccess={onSuccess} />,
+    },
+    {
+      key: "register",
+      label: "Đăng ký",
+      children: <RegisterForm onSwitchToLogin={() => setActiveTab("login")} />,
+    },
   ];
 
   const modalTitle = (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+    <div
+      style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
+    >
       <Title level={3} style={{ textAlign: "center", margin: 0 }}>
         Chào mừng bạn
       </Title>
@@ -308,8 +355,20 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onCancel, onSuccess }) => {
   );
 
   return (
-    <Modal open={open} onCancel={onCancel} title={modalTitle} footer={null} centered width={420}>
-      <Tabs activeKey={activeTab} onChange={setActiveTab} items={items} centered />
+    <Modal
+      open={open}
+      onCancel={onCancel}
+      title={modalTitle}
+      footer={null}
+      centered
+      width={420}
+    >
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={items}
+        centered
+      />
     </Modal>
   );
 };

@@ -1,3 +1,4 @@
+// src/components/Header.tsx
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "../assets/logo1.png";
@@ -7,70 +8,54 @@ import { useAppDispatch, useAppSelector } from "../store/hooks";
 
 // Icons
 import {
-  AppstoreOutlined,
-  BellOutlined,
   BookOutlined,
-  GlobalOutlined,
-  LogoutOutlined,
   MenuOutlined,
   SearchOutlined,
   ShoppingCartOutlined,
-  SolutionOutlined,
-  UserOutlined,
 } from "@ant-design/icons";
 
 // Ant Design
 import type { MenuProps } from "antd";
-import {
-  Badge,
-  Button,
-  Drawer,
-  Dropdown,
-  Grid,
-  Input,
-  Menu,
-  Modal,
-  Space,
-  Typography,
-} from "antd";
+import { Badge, Button, Grid, Input } from "antd";
 
 // Local
 import { toast } from "react-toastify";
 import { clearAuth } from "../features/auth/authSlice";
-import AuthModal from "../login_register/AuthModal";
+import AuthModal from "./AuthModal";
+
+// Import các component con
+import HeaderTopBanner from "./header/HeaderTopBanner";
+import HeaderSecondaryNav from "./header/HeaderSecondaryNav";
+import HeaderCategoryMenu from "./header/HeaderCategoryMenu";
+import HeaderActions from "./header/HeaderActions";
+import HeaderMobileDrawer from "./header/HeaderMobileDrawer";
+import HeaderSearchModal from "./header/HeaderSearchModal";
 
 const { useBreakpoint } = Grid;
-const { Title } = Typography;
 
 const Header = () => {
-  // -------------------- Redux auth --------------------
+  // -------------------- Redux --------------------
   const authUser = useAppSelector((s) => s.auth.user);
   const bookData = useAppSelector((s) => s.books.books);
   const cartItems = useAppSelector((s) => s.cart.items);
-
   const dispatch = useAppDispatch();
 
   // -------------------- Local states --------------------
   const [searchValue, setSearchValue] = useState("");
   const [openDrawer, setOpenDrawer] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
-  const [hoveredCart, setHoveredCart] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-
-  // Fallback name khi vừa reload (trước khi Redux có user)
   const [fallbackFullName, setFallbackFullName] = useState<string>("");
-
-  // Get cartCount directly from Redux cart items
-  const cartCount = useMemo(() => {
-    return Array.isArray(cartItems) ? cartItems.length : 0;
-  }, [cartItems]);
 
   const screens = useBreakpoint();
   const navigate = useNavigate();
 
+  // -------------------- Derived data --------------------
+  const cartCount = useMemo(() => {
+    return Array.isArray(cartItems) ? cartItems.length : 0;
+  }, [cartItems]);
 
-  const isLoggedIn = !!authUser; // dựa hoàn toàn vào Redux
+  const isLoggedIn = !!authUser;
   const displayName =
     authUser?.fullName || authUser?.userName || fallbackFullName || "Tài khoản";
 
@@ -89,13 +74,11 @@ const Header = () => {
   // 3) Lắng nghe 'cart-updated' event để refetch cart
   useEffect(() => {
     let mounted = true;
-
     const handler = () => {
       if (mounted) {
         dispatch(fetchCart());
       }
     };
-
     window.addEventListener("cart-updated", handler as EventListener);
     return () => {
       mounted = false;
@@ -113,7 +96,7 @@ const Header = () => {
     }
   }, []); // mount-only
 
-  // 5) Khi Redux user thay đổi, cập nhật fallbackName (đảm bảo hiển thị tức thì)
+  // 5) Khi Redux user thay đổi, cập nhật fallbackName
   useEffect(() => {
     if (authUser?.fullName) {
       setFallbackFullName(authUser.fullName);
@@ -129,6 +112,7 @@ const Header = () => {
     return Array.from(set).sort((a, b) => a.localeCompare(b, "vi"));
   }, [bookData]);
 
+  // Menu items cho cả desktop và mobile
   const categoryMenuItems: MenuProps["items"] = useMemo(() => {
     if (!categories.length) {
       return [{ key: "no-cat", disabled: true, label: "Chưa có danh mục." }];
@@ -136,22 +120,16 @@ const Header = () => {
     return categories.map((c) => ({
       key: `/categories/${encodeURIComponent(c)}`,
       label: (
-        <Link style={{ textDecoration: "none" }} to={`/categories/${encodeURIComponent(c)}`}>
+        <Link
+          style={{ textDecoration: "none" }}
+          to={`/categories/${encodeURIComponent(c)}`}
+        >
           {c}
         </Link>
       ),
       icon: <BookOutlined />,
     }));
   }, [categories]);
-
-  const userMenuItems: MenuProps["items"] = [
-    { key: "profile", label: "Trang cá nhân", icon: <SolutionOutlined /> },
-    { key: "orders", label: "Đơn hàng của tôi", icon: <ShoppingCartOutlined /> },
-    { type: "divider" },
-    { key: "logout", label: "Đăng xuất", icon: <LogoutOutlined />, danger: true },
-  ];
-
-
 
   // -------------------- Handlers --------------------
   const handleSearch = (value?: string) => {
@@ -163,62 +141,27 @@ const Header = () => {
     setIsSearchModalOpen(false);
   };
 
-
-  // Gọi toast ở đây
   const handleLogout = () => {
     dispatch(clearAuth());
     toast.error("Đã đăng xuất ☹️");
-    // reload to clear any cached state and ensure header reflects logged-out state
-    try { window.location.reload(); } catch {
-      try { navigate('/'); } catch { }
+    navigate("/");
+    try {
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } catch {
+      /* ignore */
     }
   };
 
-
-
   const handleAuthSuccess = () => {
-    // AuthModal đã dispatch setAuth({token, user})
     setIsLoginModalOpen(false);
-    // KHÔNG reload – Header tự cập nhật qua Redux selector
   };
 
   // -------------------- Render --------------------
   return (
     <>
-      {/* Top Banner */}
-      {screens.md && (
-        <div style={{ background: "linear-gradient(135deg, #C92127 0%, #E63946 100%)", padding: "8px 0" }}>
-          <div className="container" style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px" }}>
-            <div style={{ textAlign: "center", color: "white", fontSize: 14, fontWeight: 500 }}>
-              🎉 DOANH NHÂN NUÔI CHÍ - SÁCH HAY ĐƯỜNG TRÍ{" "}
-              <span
-                style={{
-                  background: "white",
-                  color: "#C92127",
-                  padding: "2px 12px",
-                  borderRadius: 20,
-                  marginLeft: 8,
-                  fontWeight: 700,
-                }}
-              >
-                Giảm đến 50%
-              </span>{" "}
-              <span
-                style={{
-                  background: "rgba(255,255,255,0.2)",
-                  padding: "2px 12px",
-                  borderRadius: 20,
-                  marginLeft: 8,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                MUA NGAY
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
+      <HeaderTopBanner />
 
       {/* Sticky Header */}
       <div
@@ -233,26 +176,51 @@ const Header = () => {
           paddingBottom: 6,
         }}
       >
-        <div className="container" style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px" }}>
-          <div style={{ display: "flex", alignItems: "center", height: 64, gap: 16 }}>
-            {/* Mobile */}
+        <div
+          className="container"
+          style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px" }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              height: 64,
+              gap: 16,
+            }}
+          >
+            {/* Mobile Layout */}
             {!screens.md && (
               <>
-                <Button type="text" icon={<MenuOutlined style={{ fontSize: 20 }} />} onClick={() => setOpenDrawer(true)} />
+                <Button
+                  type="text"
+                  icon={<MenuOutlined style={{ fontSize: 20 }} />}
+                  onClick={() => setOpenDrawer(true)}
+                />
                 <Link to="/">
-                  <img src={logo} alt="logo" style={{ height: 50, width: 100 }} />
+                  <img
+                    src={logo}
+                    alt="logo"
+                    style={{ height: 50, width: 100 }}
+                  />
                 </Link>
                 <div style={{ flex: 1 }} />
-                <Button type="text" icon={<SearchOutlined style={{ fontSize: 20 }} />} onClick={() => setIsSearchModalOpen(true)} />
+                <Button
+                  type="text"
+                  icon={<SearchOutlined style={{ fontSize: 20 }} />}
+                  onClick={() => setIsSearchModalOpen(true)}
+                />
                 <Link to="/cart">
                   <Badge count={cartCount} size="small">
-                    <Button type="text" icon={<ShoppingCartOutlined style={{ fontSize: 20 }} />} />
+                    <Button
+                      type="text"
+                      icon={<ShoppingCartOutlined style={{ fontSize: 20 }} />}
+                    />
                   </Badge>
                 </Link>
               </>
             )}
 
-            {/* Desktop */}
+            {/* Desktop Layout */}
             {screens.md && (
               <>
                 {/* Logo */}
@@ -261,92 +229,7 @@ const Header = () => {
                 </Link>
 
                 {/* Category Menu */}
-                <div
-                  style={{ position: "relative" }}
-                  onMouseEnter={() => setIsCategoryMenuOpen(true)}
-                  onMouseLeave={() => setIsCategoryMenuOpen(false)}
-                >
-                  <Button
-                    type="text"
-                    icon={<AppstoreOutlined style={{ fontSize: 18 }} />}
-                    style={{
-                      height: 40,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 4,
-                      color: "#333",
-                      border: "1px solid #E5E5E5",
-                      borderRadius: 4,
-                    }}
-                  />
-                  {isCategoryMenuOpen && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: "100%",
-                        left: 0,
-                        marginTop: 4,
-                        backgroundColor: "white",
-                        borderRadius: 8,
-                        boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
-                        minWidth: 250,
-                        maxHeight: 400,
-                        overflowY: "auto",
-                        zIndex: 1001,
-                      }}
-                      onMouseEnter={() => setIsCategoryMenuOpen(true)}
-                      onMouseLeave={() => setIsCategoryMenuOpen(false)}
-                    >
-                      <div style={{ padding: "8px 0" }}>
-                        <div
-                          style={{
-                            padding: "8px 16px",
-                            fontWeight: 600,
-                            color: "#C92127",
-                            borderBottom: "1px solid #f0f0f0",
-                            marginBottom: 4,
-                            fontSize: 14,
-                          }}
-                        >
-                          Danh mục sản phẩm
-                        </div>
-                        {categories.length === 0 ? (
-                          <div style={{ padding: "12px 16px", color: "#999", fontSize: 14 }}>Chưa có danh mục</div>
-                        ) : (
-                          categories.map((category) => (
-                            <Link
-                              key={category}
-                              to={`/categories/${encodeURIComponent(category)}`}
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                padding: "10px 16px",
-                                color: "#333",
-                                textDecoration: "none",
-                                transition: "all 0.2s",
-                                gap: 8,
-                                fontSize: 14,
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = "#FFF5F5";
-                                e.currentTarget.style.color = "#C92127";
-                                e.currentTarget.style.paddingLeft = "20px";
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = "transparent";
-                                e.currentTarget.style.color = "#333";
-                                e.currentTarget.style.paddingLeft = "16px";
-                              }}
-                            >
-                              <BookOutlined />
-                              <span>{category}</span>
-                            </Link>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <HeaderCategoryMenu categories={categories} />
 
                 {/* Search */}
                 <div style={{ flex: 1, maxWidth: 600 }}>
@@ -370,302 +253,43 @@ const Header = () => {
                   />
                 </div>
 
-                {/* Right side */}
-                <Space size="middle">
-                  {/* Notifications */}
-                  <Button
-                    type="text"
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      height: "auto",
-                      padding: "4px 8px",
-                      color: "#666",
-                      transition: "color 0.3s",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = "#C92127")}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = "#666")}
-                  >
-                    <BellOutlined style={{ fontSize: 24 }} />
-                    <span style={{ fontSize: 11, marginTop: 2 }}>Thông Báo</span>
-                  </Button>
-
-                  {/* Cart */}
-                  <Link to="/cart">
-                    <Button
-                      type="text"
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        height: "auto",
-                        padding: "4px 8px",
-                        color: hoveredCart ? "#C92127" : "#666",
-                        transition: "color 0.3s",
-                      }}
-                      onMouseEnter={() => setHoveredCart(true)}
-                      onMouseLeave={() => setHoveredCart(false)}
-                    >
-                      <Badge count={cartCount} offset={[-8, 2]}>
-                        <ShoppingCartOutlined
-                          style={{
-                            fontSize: 24,
-                            color: hoveredCart ? "#C92127" : "#666", // icon đổi màu cùng button
-                            transition: "color 0.3s",
-                          }}
-                        />
-                      </Badge>
-                      <span style={{ fontSize: 11, marginTop: 2 }}>Giỏ Hàng</span>
-                    </Button>
-                  </Link>
-
-                  {/* Account */}
-                  {isLoggedIn ? (
-                    <Dropdown
-                      placement="bottomRight"
-                      trigger={["click"]}
-                      menu={{
-                        items: userMenuItems, onClick: ({ key }) => {
-                          if (key === "logout") return handleLogout();
-                          if (key === "profile") return navigate("/account");
-                          if (key === "orders") return navigate("/orders");
-                        }
-                      }}
-                    >
-                      <Button
-                        type="text"
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "center",
-                          height: "auto",
-                          padding: "4px 8px",
-                          color: "#666",
-                          transition: "color 0.3s",
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.color = "#C92127")}
-                        onMouseLeave={(e) => (e.currentTarget.style.color = "#666")}
-                      >
-                        <UserOutlined style={{ fontSize: 24 }} />
-                        <span style={{ fontSize: 11, marginTop: 2 }}>{displayName}</span>
-                      </Button>
-                    </Dropdown>
-                  ) : (
-                    <Button
-                      type="text"
-                      onClick={() => setIsLoginModalOpen(true)}
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        height: "auto",
-                        padding: "4px 8px",
-                        color: "#666",
-                        transition: "color 0.3s",
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = "#C92127")}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = "#666")}
-                    >
-                      <UserOutlined style={{ fontSize: 24 }} />
-                      <span style={{ fontSize: 11, marginTop: 2 }}>Tài khoản</span>
-                    </Button>
-                  )}
-
-                  {/* Language */}
-                  <Button
-                    type="text"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 4,
-                      padding: "4px 8px",
-                      color: "#666",
-                      transition: "color 0.3s",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = "#C92127")}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = "#666")}
-                  >
-                    <img
-                      src="https://upload.wikimedia.org/wikipedia/commons/2/21/Flag_of_Vietnam.svg"
-                      alt="VN"
-                      style={{ width: 20, height: 14, borderRadius: 2 }}
-                    />
-                    <GlobalOutlined style={{ fontSize: 14 }} />
-                  </Button>
-                </Space>
+                {/* Right side actions */}
+                <HeaderActions
+                  isLoggedIn={isLoggedIn}
+                  displayName={displayName}
+                  cartCount={cartCount}
+                  onLogout={handleLogout}
+                  onLoginClick={() => setIsLoginModalOpen(true)}
+                />
               </>
             )}
           </div>
         </div>
       </div>
 
-      {/* Secondary nav bar (desktop) */}
-      {screens.md && (
-        <div style={{ backgroundColor: "#CF262D" }}>
-          <div className="container" style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px", backgroundColor: "#CF262D" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 40,
-                padding: "12px 0",
-                background: "#CF262D",
-              }}
-            >
-              <Link
-                to="/"
-                style={{
-                  color: "white",
-                  textDecoration: "none",
-                  fontSize: 15,
-                  fontWeight: 500,
-                  transition: "color 0.3s",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#000")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "white")}
-              >
-                Trang chủ
-              </Link>
-              <Link
-                to="/about"
-                style={{
-                  color: "white",
-                  textDecoration: "none",
-                  fontSize: 15,
-                  fontWeight: 500,
-                  transition: "color 0.3s",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#000")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "white")}
-              >
-                Giới thiệu
-              </Link>
-              <a
-                href="#"
-                style={{
-                  color: "white",
-                  textDecoration: "none",
-                  fontSize: 15,
-                  fontWeight: 500,
-                  position: "relative",
-                  transition: "color 0.3s",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#000")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "white")}
-              >
-                Membership
-                <span
-                  style={{
-                    position: "absolute",
-                    top: -8,
-                    right: -35,
-                    background: "#FF3B5C",
-                    color: "white",
-                    fontSize: 10,
-                    fontWeight: 600,
-                    padding: "2px 8px",
-                    borderRadius: 12,
-                    border: "1px solid white",
-                  }}
-                >
-                  HOT
-                </span>
-              </a>
-              <a
-                href="#"
-                style={{
-                  color: "white",
-                  textDecoration: "none",
-                  fontSize: 15,
-                  fontWeight: 500,
-                  transition: "color 0.3s",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#000")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "white")}
-              >
-                Review sách
-              </a>
-              <Link
-                to="/contact"
-                style={{
-                  color: "white",
-                  textDecoration: "none",
-                  fontSize: 15,
-                  fontWeight: 500,
-                  transition: "color 0.3s",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#000")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "white")}
-              >
-                Liên hệ
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
+      <HeaderSecondaryNav />
 
-      {/* Drawer (mobile) */}
-      <Drawer
-        title={<Title level={4} style={{ margin: 0 }}>Menu</Title>}
-        placement="left"
-        width={300}
+      {/* Modals & Drawers (Quản lý bởi component cha) */}
+      <HeaderMobileDrawer
         open={openDrawer}
         onClose={() => setOpenDrawer(false)}
-      >
-        <Space direction="vertical" style={{ width: "100%" }} size="large">
-          <Menu mode="inline" items={categoryMenuItems} style={{ border: "none" }} />
-          {isLoggedIn ? (
-            <Button
-              block
-              icon={<UserOutlined />}
-              onClick={() => {
-                setOpenDrawer(false);
-                navigate("/profile");
-              }}
-            >
-              {displayName}
-            </Button>
-          ) : (
-            <Button
-              block
-              type="primary"
-              icon={<UserOutlined />}
-              onClick={() => {
-                setOpenDrawer(false);
-                setIsLoginModalOpen(true);
-              }}
-              style={{ background: "#C92127", borderColor: "#C92127" }}
-            >
-              Đăng nhập
-            </Button>
-          )}
-        </Space>
-      </Drawer>
+        categoryMenuItems={categoryMenuItems}
+        isLoggedIn={isLoggedIn}
+        displayName={displayName}
+        onLoginClick={() => setIsLoginModalOpen(true)}
+      />
 
-      {/* Search Modal */}
-      <Modal
-        title="Tìm kiếm sản phẩm"
+      <HeaderSearchModal
         open={isSearchModalOpen}
-        onCancel={() => setIsSearchModalOpen(false)}
-        footer={null}
-        destroyOnClose
-      >
-        <Input.Search
-          placeholder="Nhập tên sách bạn muốn tìm..."
-          allowClear
-          enterButton="Tìm"
-          size="large"
-          value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
-          onSearch={handleSearch}
-          autoFocus
-        />
-      </Modal>
+        onClose={() => setIsSearchModalOpen(false)}
+        onSearch={handleSearch}
+      />
 
-      {/* Auth Modal */}
-      <AuthModal open={isLoginModalOpen} onCancel={() => setIsLoginModalOpen(false)} onSuccess={handleAuthSuccess} />
+      <AuthModal
+        open={isLoginModalOpen}
+        onCancel={() => setIsLoginModalOpen(false)}
+        onSuccess={handleAuthSuccess}
+      />
     </>
   );
 };

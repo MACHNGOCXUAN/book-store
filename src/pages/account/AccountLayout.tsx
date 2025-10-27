@@ -1,32 +1,35 @@
 import { ExclamationCircleOutlined } from "@ant-design/icons";
-import { Alert, Col, Row } from "antd";
+import { Alert, Col, Row, Modal } from "antd";
 import { useState } from "react";
-import { useLocation, Outlet } from "react-router-dom";
-import AccountSidebar from "../components/AccountSidebar";
-import AccountInfoPage from "./account/AccountInfoPage";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import AccountSidebar from "../../components/AccountSidebar";
+import ForgotPasswordForm from "../../components/auth/ForgotPasswordForm";
+import {
+  AccountProvider,
+  useAccountContext,
+} from "../../context/AccountContext";
 
-const AccountPage = () => {
-  const location = useLocation();
+const AccountLayout = () => {
+  // Wrap the inner layout with AccountProvider so children and the modal
+  // can consume the same context state used by pages (like ChangePasswordPage).
+  return (
+    <AccountProvider>
+      <AccountLayoutInner />
+    </AccountProvider>
+  );
+};
+
+const AccountLayoutInner = () => {
   const [showAlert, setShowAlert] = useState(true);
+  const location = useLocation();
+  const navigate = useNavigate();
+  // consume context inside this inner component
+  const { showForgotPassword, setShowForgotPassword } = useAccountContext();
 
-  const userData = {
-    profile: {
-      firstName: "",
-      lastName: "",
-      phone: "0974122850",
-      email: "",
-      gender: "male" as const,
-      birthday: {
-        day: "",
-        month: "",
-        year: "",
-      },
-    },
-  };
-
+  // Determine current selected menu based on route
   const getSelectedMenu = () => {
     const pathname = location.pathname;
-    if (pathname === "/account") return "profile";
+    if (pathname === "/account" || pathname === "account") return "profile";
     if (pathname.includes("orders")) return "orders";
     if (pathname.includes("address")) return "address";
     if (pathname.includes("password")) return "change-password";
@@ -37,9 +40,29 @@ const AccountPage = () => {
 
   const selectedMenu = getSelectedMenu();
 
-  const handleSaveProfile = (data: any) => {
-    console.log("Profile saved:", data);
-    // Here you would typically call an API to save the data
+  const handleMenuSelect = (key: string) => {
+    switch (key) {
+      case "profile":
+        navigate(".");
+        break;
+      case "address":
+        navigate("address");
+        break;
+      case "change-password":
+        navigate("change-password");
+        break;
+      case "vouchers":
+        navigate("voucher");
+        break;
+      case "favorites":
+        navigate("favorites");
+        break;
+      case "orders":
+        navigate("orders");
+        break;
+      default:
+        break;
+    }
   };
 
   return (
@@ -97,24 +120,35 @@ const AccountPage = () => {
         <Row gutter={[24, 24]}>
           {/* Sidebar */}
           <Col xs={24} lg={6}>
-            <AccountSidebar selectedKey={selectedMenu} />
+            <AccountSidebar
+              selectedKey={selectedMenu}
+              onMenuSelect={handleMenuSelect}
+            />
           </Col>
 
           {/* Main Content Area */}
           <Col xs={24} lg={18}>
-            {selectedMenu === "profile" ? (
-              <AccountInfoPage
-                initialData={userData.profile}
-                onSave={handleSaveProfile}
-              />
-            ) : (
-              <Outlet />
-            )}
+            <Outlet />
           </Col>
         </Row>
+
+        {/* Forgot Password Modal */}
+        <Modal
+          open={showForgotPassword}
+          onCancel={() => setShowForgotPassword(false)}
+          title="Quên mật khẩu"
+          footer={null}
+          centered
+          width={420}
+          destroyOnHidden
+        >
+          <ForgotPasswordForm
+            onSwitchToLogin={() => setShowForgotPassword(false)}
+          />
+        </Modal>
       </div>
     </div>
   );
 };
 
-export default AccountPage;
+export default AccountLayout;
