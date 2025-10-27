@@ -31,6 +31,10 @@ public class Order {
     @ToString.Exclude
     private List<Payment> payments = new ArrayList<>();
 
+    @ManyToOne
+    @JoinColumn(name = "discount_code_id", nullable = false)
+    private DiscountCode discountCode;
+
     /* ----------------- Helpers ----------------- */
 
     /** Tính lại tổng tiền từ các dòng chi tiết */
