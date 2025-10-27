@@ -241,6 +241,7 @@ export default function StaffPage() {
         <Table<UserDataType>
           columns={columns}
           data={listStaff}
+          rowKey="userId"
           pagination={{
             showQuickJumper: false,
             showSizeChanger: true,
