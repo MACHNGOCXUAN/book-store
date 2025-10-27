@@ -1,17 +1,18 @@
 import { createBrowserRouter } from "react-router-dom";
 import App from "../App";
 import AboutPage from "../pages/AboutPage";
-import AccountPage from "../pages/AccountPage";
+import AccountLayout from "../pages/account/AccountLayout";
 import { CartPage } from "../pages/CartPage";
 import ContactPage from "../pages/ContactPage";
 import DetailPage from "../pages/DetailPage";
 import HomePage from "../pages/HomePage";
 import AddressPage from "../pages/account/AddressPage";
-import ChangePasswordPage from "../pages/account/ChangePasswordPage";
 import VoucherPage from "../pages/account/VoucherPage";
 import FavoritePage from "../pages/account/FavoritePage";
 import { OrdersPage } from "../pages/account/OrdersPage";
 import FilterCategory from "../pages/FilterCategory";
+import AccountInfoPage from "../pages/account/AccountInfoPage";
+import ChangePasswordPage from "../pages/account/ChangePasswordPage";
 
 const router = createBrowserRouter([
   {
@@ -40,14 +41,18 @@ const router = createBrowserRouter([
       },
       {
         path: "account",
-        element: <AccountPage />,
+        element: <AccountLayout />,
         children: [
+          {
+            index: true,
+            element: <AccountInfoPage />,
+          },
           {
             path: "address",
             element: <AddressPage />,
           },
           {
-            path: "password",
+            path: "change-password",
             element: <ChangePasswordPage />,
           },
           {

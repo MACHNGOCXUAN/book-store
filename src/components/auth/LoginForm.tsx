@@ -1,6 +1,3 @@
-// src/components/auth/LoginForm.tsx
-"use client";
-
 import React, { useState } from "react";
 // Thêm Form.useForm hook
 import { Form, Input, Button, Checkbox, Typography, Divider } from "antd";

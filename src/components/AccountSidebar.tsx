@@ -69,8 +69,8 @@ const AccountSidebar = ({
         navigate("address");
         break;
       case "change-password":
-        // menu key is "change-password" but route path is "password"
-        navigate("password");
+        // Navigate to the change-password route (match route config)
+        navigate("change-password");
         break;
       case "vouchers":
         // route path is "vouchers"

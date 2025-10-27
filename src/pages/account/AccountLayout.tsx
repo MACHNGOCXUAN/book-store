@@ -1,13 +1,30 @@
 import { ExclamationCircleOutlined } from "@ant-design/icons";
-import { Alert, Col, Row } from "antd";
+import { Alert, Col, Row, Modal } from "antd";
 import { useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import AccountSidebar from "../../components/AccountSidebar";
+import ForgotPasswordForm from "../../components/auth/ForgotPasswordForm";
+import {
+  AccountProvider,
+  useAccountContext,
+} from "../../context/AccountContext";
 
 const AccountLayout = () => {
+  // Wrap the inner layout with AccountProvider so children and the modal
+  // can consume the same context state used by pages (like ChangePasswordPage).
+  return (
+    <AccountProvider>
+      <AccountLayoutInner />
+    </AccountProvider>
+  );
+};
+
+const AccountLayoutInner = () => {
   const [showAlert, setShowAlert] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
+  // consume context inside this inner component
+  const { showForgotPassword, setShowForgotPassword } = useAccountContext();
 
   // Determine current selected menu based on route
   const getSelectedMenu = () => {
@@ -114,6 +131,21 @@ const AccountLayout = () => {
             <Outlet />
           </Col>
         </Row>
+
+        {/* Forgot Password Modal */}
+        <Modal
+          open={showForgotPassword}
+          onCancel={() => setShowForgotPassword(false)}
+          title="Quên mật khẩu"
+          footer={null}
+          centered
+          width={420}
+          destroyOnHidden
+        >
+          <ForgotPasswordForm
+            onSwitchToLogin={() => setShowForgotPassword(false)}
+          />
+        </Modal>
       </div>
     </div>
   );

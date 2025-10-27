@@ -1,9 +1,13 @@
-import { Button, Card, Form, Input } from "antd";
+import { Button, Card, Form, Input, Typography } from "antd";
 import { useState } from "react";
 import { API_BASE } from "../../config/api";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store";
 import { toast } from "react-toastify";
+import { useAccountContext } from "../../context/AccountContext";
+
+const { Link: TextLink } = Typography;
+
 interface ChangePasswordProps {
   onSave?: (data: PasswordFormData) => void;
 }
@@ -18,6 +22,9 @@ const ChangePasswordPage = ({ onSave }: ChangePasswordProps) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const { token, user } = useSelector((state: RootState) => state.auth);
+
+  // Lấy context từ AccountLayout
+  const { setShowForgotPassword } = useAccountContext();
 
   const handleSave = async () => {
     try {
@@ -84,13 +91,20 @@ const ChangePasswordPage = ({ onSave }: ChangePasswordProps) => {
   return (
     <Card
       title={<div style={{ fontSize: 18, fontWeight: 600 }}>Đổi mật khẩu</div>}
-      bordered={false}
+      variant="outlined"
       style={{
         borderRadius: 8,
         boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
       }}
     >
       <Form form={form} layout="vertical" autoComplete="off">
+        {/* Hidden username field for accessibility */}
+        <input
+          type="text"
+          style={{ display: "none" }}
+          autoComplete="username"
+        />
+
         <Form.Item
           label={
             <span style={{ fontWeight: 500 }}>
@@ -160,24 +174,46 @@ const ChangePasswordPage = ({ onSave }: ChangePasswordProps) => {
           />
         </Form.Item>
 
-        <Form.Item style={{ marginBottom: 0, marginTop: 32 }}>
-          <Button
-            type="primary"
-            size="large"
-            onClick={handleSave}
-            loading={loading}
+        <Form.Item
+          style={{
+            marginBottom: 0,
+            marginTop: 32,
+          }}
+        >
+          <div
             style={{
-              background: "#C92127",
-              borderColor: "#C92127",
-              borderRadius: 8,
-              fontWeight: 600,
-              height: 48,
-              width: "100%",
-              maxWidth: 200,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
             }}
           >
-            Lưu thay đổi
-          </Button>
+            <Button
+              type="primary"
+              size="large"
+              onClick={handleSave}
+              loading={loading}
+              style={{
+                background: "#C92127",
+                borderColor: "#C92127",
+                borderRadius: 8,
+                fontWeight: 600,
+                height: 48,
+                maxWidth: 200, // Giữ lại max-width
+              }}
+            >
+              Lưu thay đổi
+            </Button>
+            <TextLink
+              onClick={() => setShowForgotPassword(true)}
+              style={{
+                display: "block",
+                textAlign: "center",
+                // marginTop: 16, <-- XÓA DÒNG NÀY
+              }}
+            >
+              Bạn quên mật khẩu ư?
+            </TextLink>
+          </div>
         </Form.Item>
       </Form>
 

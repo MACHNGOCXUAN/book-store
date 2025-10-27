@@ -27,7 +27,7 @@ const HeaderSearchModal: React.FC<HeaderSearchModalProps> = ({
       open={open}
       onCancel={onClose}
       footer={null}
-      destroyOnClose
+      destroyOnHidden
     >
       <Input.Search
         placeholder="Nhập tên sách bạn muốn tìm..."
