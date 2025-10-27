@@ -1,160 +1,235 @@
 "use client";
 import React from "react";
 import { TableProps } from "antd";
-import { Tag, Space, Button, Dropdown, Menu } from "antd";
-import { EyeOutlined, MoreOutlined, DeleteOutlined } from "@ant-design/icons";
-import type { OrderDataType, OrderStatus } from "@/types/order.type";
+import { Tag, Space, Button, Dropdown } from "antd";
+import { EyeOutlined, DeleteOutlined } from "@ant-design/icons";
+import { OrderDataType, OrderStatus } from "@/types/order.type";
+import { formatCurrency, formatDate } from "@/lib/utils/format";
+
+// const dataMau = {
+//   orderId: "ORD-001",
+//   orderDate: "2025-10-26T08:30:00",
+//   status: "PENDING",
+//   totalAmount: 450000,
+//   customer: {
+//     userId: "USER001",
+//     fullName: "Nguyễn Văn An",
+//     phoneNumber: "0901234567",
+//     email: "nguyenvanan@email.com",
+//     address: "123 Lê Lợi, Quận 1, TP.HCM",
+//   },
+//   payments: [
+//     {
+//       paymentId: "PAY-001",
+//       amount: 450000,
+//       method: "COD",
+//     },
+//   ],
+//   orderDetails: [
+//     {
+//       orderDetailId: "OD-001",
+//       quantity: 2,
+//       unitPrice: 150000,
+//       totalPrice: 300000,
+//       book: {
+//         bookId: "B001",
+//         title: "Đắc Nhân Tâm",
+//         author: "Dale Carnegie",
+//         publisher: "NXB Tổng Hợp",
+//         price: 150000,
+//         category: "Kỹ năng sống",
+//         coverImage: "https://batansach.com/wp-content/uploads/2024/11/kara.jpg",
+//       },
+//     },
+//     {
+//       orderDetailId: "OD-002",
+//       quantity: 1,
+//       unitPrice: 150000,
+//       totalPrice: 150000,
+//       book: {
+//         bookId: "B002",
+//         title: "Nhà Giả Kim",
+//         author: "Paulo Coelho",
+//         publisher: "NXB Hội Nhà Văn",
+//         price: 150000,
+//         category: "Tiểu thuyết",
+//         coverImage: "https://batansach.com/wp-content/uploads/2024/11/kara.jpg",
+//       },
+//     },
+//   ],
+// };
 
 const statusLabel: Record<OrderStatus, string> = {
-  CHỜ_XU_LÝ: "Chờ xử lý",
-  DANG_XU_LY: "Đang xử lý",
-  DANG_GIAO_HANG: "Đang giao hàng",
-  HOAN_TAT: "Hoàn tất",
-  HUY: "Hủy",
+  PENDING: "Vừa tạo",
+  PROCESSING: "Đang xử lý",
+  COMPLETED: "Đã giao",
+  CANCELLED: "Đã hủy",
 };
 
 const statusColor: Record<OrderStatus, string> = {
-  CHỜ_XU_LÝ: "gold",
-  DANG_XU_LY: "blue",
-  DANG_GIAO_HANG: "purple",
-  HOAN_TAT: "green",
-  HUY: "volcano",
+  PENDING: "gold",
+  PROCESSING: "blue",
+  COMPLETED: "green",
+  CANCELLED: "red",
 };
 
-export const orderData: OrderDataType[] = [
-  {
-    id: "ORD-1001",
-    customerId: "CUS-001",
-    bookId: "BOOK-101",
-    status: "CHỜ_XU_LÝ",
-    total: "120.000 VND",
-    dateOrder: "2025-10-18",
-  },
-  {
-    id: "ORD-1002",
-    customerId: "CUS-002",
-    bookId: "BOOK-203",
-    status: "DANG_XU_LY",
-    total: "250.000 VND",
-    dateOrder: "2025-10-19",
-  },
-  {
-    id: "ORD-1003",
-    customerId: "CUS-003",
-    bookId: "BOOK-305",
-    status: "DANG_GIAO_HANG",
-    total: "75.000 VND",
-    dateOrder: "2025-10-20",
-  },
-  {
-    id: "ORD-1004",
-    customerId: "CUS-004",
-    bookId: "BOOK-410",
-    status: "HOAN_TAT",
-    total: "320.000 VND",
-    dateOrder: "2025-09-30",
-  },
-  {
-    id: "ORD-1005",
-    customerId: "CUS-005",
-    bookId: "BOOK-512",
-    status: "HUY",
-    total: "0 VND",
-    dateOrder: "2025-08-12",
-  },
-];
+const getAvailableStatuses = (currentStatus: OrderStatus): OrderStatus[] => {
+  switch (currentStatus) {
+    case "PENDING":
+      return ["PROCESSING", "CANCELLED"];
+    case "PROCESSING":
+      return ["COMPLETED", "CANCELLED"];
+    case "COMPLETED":
+      return [];
+    case "CANCELLED":
+      return [];
+    default:
+      return [];
+  }
+};
 
-export const orderColumns: TableProps<OrderDataType>["columns"] = [
+export const orderColumns = (
+  onViewDetail: (orderId: string) => void,
+  onUpdateStatus: (orderId: string, newStatus: OrderStatus) => void,
+  // onCancelOrder: (orderId: string) => void
+): TableProps<OrderDataType>["columns"] => [
   {
     title: "Mã đơn",
-    dataIndex: "id",
-    key: "id",
+    dataIndex: "orderId",
+    key: "orderId",
+    width: 120,
     render: (text: string) => <a>{text}</a>,
   },
   {
-    title: "Mã khách hàng",
-    dataIndex: "customerId",
-    key: "customerId",
+    title: "Khách hàng",
+    key: "customer",
+    width: 200,
+    render: (_, record: OrderDataType) => (
+      <div>
+        <div style={{ fontWeight: 500 }}>
+          {record.customer.fullName || "Chưa có tên"}
+        </div>
+        <div style={{ fontSize: "12px", color: "#666" }}>
+          {record.customer.phoneNumber}
+        </div>
+        <div style={{ fontSize: "12px", color: "#666" }}>
+          {record.customer.email}
+        </div>
+      </div>
+    ),
   },
   {
-    title: "Mã sách",
-    dataIndex: "bookId",
-    key: "bookId",
+    title: "Sản phẩm",
+    key: "products",
+    width: 150,
+    render: (_, record: OrderDataType) => (
+      <div>
+        <div style={{ fontWeight: 500 }}>
+          {record.orderDetails.length} sản phẩm
+        </div>
+        <div style={{ fontSize: "12px", color: "#666" }}>
+          Tổng SL:{" "}
+          {record.orderDetails.reduce((sum, item) => sum + item.quantity, 0)}
+        </div>
+      </div>
+    ),
+  },
+  {
+    title: "Thanh toán",
+    key: "payment",
+    width: 120,
+    render: (_, record: OrderDataType) => (
+      <div>
+        {record.payments.map((payment) => (
+          <Tag
+            key={payment.paymentId}
+            color={payment.method === "ONLINE" ? "blue" : "orange"}
+          >
+            {payment.method}
+          </Tag>
+        ))}
+      </div>
+    ),
   },
   {
     title: "Tổng tiền",
-    dataIndex: "total",
-    key: "total",
+    dataIndex: "totalAmount",
+    key: "totalAmount",
+    width: 130,
+    render: (amount: number) => (
+      <span style={{ fontWeight: 600, color: "#1890ff" }}>
+        {formatCurrency(amount)}
+      </span>
+    ),
   },
   {
     title: "Ngày đặt",
-    dataIndex: "dateOrder",
-    key: "dateOrder",
+    dataIndex: "orderDate",
+    key: "orderDate",
+    width: 150,
+    render: (date: string) => formatDate(date),
   },
   {
     title: "Trạng thái",
     dataIndex: "status",
     key: "status",
-    render: (status: OrderStatus, record: OrderDataType) => (
+    width: 120,
+    render: (status: OrderStatus) => (
       <Tag color={statusColor[status]}>{statusLabel[status]}</Tag>
     ),
   },
   {
     title: "Thao tác",
     key: "action",
-    width: 220,
+    width: 280,
+    fixed: "right",
     render: (_: any, record: OrderDataType) => {
-      const menu = (
-        <Menu
-          onClick={({ key }) => {
-            console.log("change status", record.id, key);
-          }}
-        >
-          <Menu.Item key="CHỜ_XU_LÝ">Chờ xử lý</Menu.Item>
-          <Menu.Item key="DANG_XU_LY">Đang xử lý</Menu.Item>
-          <Menu.Item key="DANG_GIAO_HANG">Đang giao hàng</Menu.Item>
-          <Menu.Item key="HOAN_TAT">Hoàn tất</Menu.Item>
-          <Menu.Item key="HUY">Hủy</Menu.Item>
-        </Menu>
-      );
+      const availableStatuses = getAvailableStatuses(record.status);
+      const statusMenuItems = availableStatuses.map((status) => ({
+        key: status,
+        label: statusLabel[status],
+      }));
 
       return (
-        <Space size="middle">
+        <Space size="small">
           <Button
             type="link"
             icon={<EyeOutlined />}
-            onClick={() => {
-              console.log("view order", record.id);
-            }}
+            onClick={() => onViewDetail(record.orderId)}
           >
-            Xem chi tiết
+            Chi tiết
           </Button>
 
-          <Dropdown
-            menu={{
-              items: [
-                { key: "CHỜ_XU_LÝ", label: "Chờ xử lý" },
-                { key: "DANG_XU_LY", label: "Đang xử lý" },
-                { key: "DANG_GIAO_HANG", label: "Đang giao hàng" },
-                { key: "HOAN_TAT", label: "Hoàn tất" },
-                { key: "HUY", label: "Hủy" },
-              ],
-              onClick: ({ key }) => {
-                console.log("Đổi trạng thái:", record.id, key);
-              },
-            }}
-            trigger={["click"]}
-          >
-            <Button icon={<MoreOutlined />}>Thay đổi trạng thái</Button>
-          </Dropdown>
+          {availableStatuses.length > 0 && (
+            <Dropdown
+              menu={{
+                items: statusMenuItems,
+                onClick: ({ key }: any) => {
+                  // console.log("xuan:", {
+                  //   orderId: record.orderId,
+                  //   fromStatus: record.status,
+                  //   toStatus: key,
+                  // });
+                  onUpdateStatus(record.orderId, key)
+                },
+              }}
+              trigger={["click"]}
+            >
+              <Button type="primary">Cập nhật trạng thái</Button>
+            </Dropdown>
+          )}
 
-          <Button
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => {
-              console.log("delete order", record.id);
-            }}
-          />
+          {(record.status === "PENDING" || record.status === "PROCESSING") && (
+            <Button
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => {
+                console.log("Hủy đơn hàng:", record.orderId);
+              }}
+            >
+              Hủy
+            </Button>
+          )}
         </Space>
       );
     },
