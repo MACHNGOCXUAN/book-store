@@ -1,15 +1,19 @@
 package iuh.fit.backend.service.impl;
 
 import iuh.fit.backend.dto.requests.OrderFilter;
+import iuh.fit.backend.dto.requests.UpdateStatusOrderDTO;
 import iuh.fit.backend.dto.responses.OrderFullDetailDTO;
 import iuh.fit.backend.model.*;
+import iuh.fit.backend.repository.OrderHistoryRepository;
 import iuh.fit.backend.repository.OrderRepository;
 import iuh.fit.backend.repository.PaymentRepository;
 import iuh.fit.backend.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -18,6 +22,7 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
+    private final OrderHistoryRepository orderHistoryRepository;
 
     private OrderFullDetailDTO convertToOrderFullDetailDTO(Order order) {
         OrderFullDetailDTO dto = new OrderFullDetailDTO();
@@ -48,6 +53,20 @@ public class OrderServiceImpl implements OrderService {
                         return pd;
                     }).toList();
             dto.setPayments(paymentDTOs);
+        }
+
+        if (order.getOrderHistories() != null && !order.getOrderHistories().isEmpty()) {
+            List<OrderFullDetailDTO.OrderHistoryDTO> historyDTOS = order.getOrderHistories().stream()
+                    .sorted((h1, h2) -> h2.getTimestamp().compareTo(h1.getTimestamp()))
+                    .map(orderHistory -> {
+                        OrderFullDetailDTO.OrderHistoryDTO historyDTO = new OrderFullDetailDTO.OrderHistoryDTO();
+                        historyDTO.setId(orderHistory.getId());
+                        historyDTO.setOrderId(orderHistory.getOrder().getOrderId());
+                        historyDTO.setTimestamp(orderHistory.getTimestamp());
+                        historyDTO.setStatus(orderHistory.getStatus());
+                        return historyDTO;
+                    }).toList();
+            dto.setOrderHistories(historyDTOS);
         }
 
         // ---------------- Order Details ----------------
@@ -94,7 +113,17 @@ public class OrderServiceImpl implements OrderService {
 
         Pageable pageable = PageRequest.of(page, limit, Sort.by("orderDate").descending());
 
-        Page<Order> ordersPage = orderRepository.findAll(pageable);
+        String text = orderFilter.getTextSearch();
+        LocalDateTime startDate = orderFilter.getStartTime();
+        LocalDateTime endDate = orderFilter.getEndTime();
+
+        Page<Order> ordersPage = orderRepository.findByFilter(
+                orderFilter.getStatus(),
+                orderFilter.getStartTime(),
+                orderFilter.getEndTime(),
+                orderFilter.getTextSearch(),
+                pageable
+        );
         List<OrderFullDetailDTO> dtoList = ordersPage.getContent()
                 .stream()
                 .map(this::convertToOrderFullDetailDTO)
@@ -110,5 +139,26 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
 
         return convertToOrderFullDetailDTO(order);
+    }
+
+    @Override
+    @Transactional
+    public boolean updateOrderStatus(UpdateStatusOrderDTO updateStatusOrderDTO) {
+        Order order = orderRepository.findById(updateStatusOrderDTO.getOrderId()).orElse(null);
+        if (order == null) {
+            return false;
+        }
+
+        order.setStatus(updateStatusOrderDTO.getStatus());
+        orderRepository.save(order);
+
+        OrderHistory orderHistory = new OrderHistory();
+        orderHistory.setOrder(order);
+        orderHistory.setStatus(updateStatusOrderDTO.getStatus());
+        orderHistory.setTimestamp(LocalDateTime.now());
+
+        orderHistoryRepository.save(orderHistory);
+
+        return true;
     }
 }

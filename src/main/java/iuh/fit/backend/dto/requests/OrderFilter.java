@@ -8,4 +8,8 @@ import java.time.LocalDateTime;
 public class OrderFilter {
     private Integer page;
     private Integer limit;
+    private OrderStatus status;
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
+    private String textSearch;
 }

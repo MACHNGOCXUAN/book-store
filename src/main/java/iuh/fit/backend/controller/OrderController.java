@@ -1,11 +1,13 @@
 package iuh.fit.backend.controller;
 
 import iuh.fit.backend.dto.requests.OrderFilter;
+import iuh.fit.backend.dto.requests.UpdateStatusOrderDTO;
 import iuh.fit.backend.dto.responses.OrderFullDetailDTO;
 import iuh.fit.backend.model.Order;
 import iuh.fit.backend.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Repository;
 import org.springframework.web.bind.annotation.*;
@@ -46,5 +48,16 @@ public class OrderController {
         System.out.println("getOrderById: " + id);
         OrderFullDetailDTO order = orderService.getOrderById(id);
         return ResponseEntity.ok(order);
+    }
+
+    @PutMapping("/update-status")
+    public  ResponseEntity<?> updateOrder(@RequestBody UpdateStatusOrderDTO updateStatusOrderDTO) {
+        boolean isSuccess = orderService.updateOrderStatus(updateStatusOrderDTO);
+        if (isSuccess) {
+            return ResponseEntity.ok(Map.of("message", "Cập nhật thành công!"));
+        } else {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Cập nhật thất bại!"));
+        }
     }
 }

@@ -22,6 +22,8 @@ public class OrderFullDetailDTO {
     // Order Details with Book Information
     private List<OrderDetailWithBookDTO> orderDetails;
 
+    private List<OrderHistoryDTO>orderHistories;
+
     @Data
     public static class CustomerInfoDTO {
         private String userId;
@@ -58,5 +60,13 @@ public class OrderFullDetailDTO {
         private Double price;
         private String category;
         private String coverImage;
+    }
+
+    @Data
+    public  static class OrderHistoryDTO {
+        private String id;
+        private String orderId;
+        private LocalDateTime timestamp;
+        private OrderStatus status;
     }
 }
