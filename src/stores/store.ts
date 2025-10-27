@@ -3,6 +3,7 @@ import authReducer from './slices/auth.slice'
 import userReducer from "./slices/user.slice"
 import productReducer from "./slices/product.slice"
 import sessionReducer from "./slices/session.slice"
+import discountReducer from "./slices/discount.slice"
 
 export const makeStore = () => {
   return configureStore({
@@ -10,7 +11,8 @@ export const makeStore = () => {
       auth: authReducer,
       user: userReducer,
       product: productReducer,
-      session: sessionReducer
+      session: sessionReducer,
+      discount: discountReducer,
     },
   })
 }
