@@ -36,56 +36,66 @@ async function safeJson(res: Response) {
 // Async thunk for login
 export const loginUser = createAsyncThunk<
   { token: string; user?: User },
-  { username: string; password: string },
+  { username: string; password: string; remember?: boolean },
   { rejectValue: string }
->("auth/login", async ({ username, password }, { rejectWithValue }) => {
-  try {
-    const res = await fetch(`${API_BASE}/auth/admin/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
-    if (!res.ok) {
-      const data = await safeJson(res);
-      return rejectWithValue(
-        (data && (data.message || data)) || `Login failed: ${res.status}`
-      );
-    }
-    const resData: any = await res.json();
-    if (!resData?.access_token) {
-      return rejectWithValue("No token received from server");
-    }
-    const token = resData.access_token;
-
-    // Fetch user profile
+>(
+  "auth/login",
+  async ({ username, password, remember }, { rejectWithValue }) => {
     try {
-      const profileRes = await fetch(`${API_BASE}/admin/me`, {
-        method: "GET",
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await fetch(`${API_BASE}/auth/admin/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
       });
-      if (profileRes.ok) {
-        const user: any = await profileRes.json();
-        console.log("User: .............", user);
-        return {
-          token,
-          user: {
-            userId: user?.userId,
-            userName: user?.userName,
-            fullName: user?.fullName,
-            email: user?.email,
-            phone: user?.phoneNumber,
-          },
-        };
+      if (!res.ok) {
+        const data = await safeJson(res);
+        return rejectWithValue(
+          (data && (data.message || data)) || `Login failed: ${res.status}`
+        );
       }
-    } catch {
-      // If profile fetch fails, return token only
-    }
+      const resData: any = await res.json();
+      if (!resData?.access_token) {
+        return rejectWithValue("No token received from server");
+      }
+      const token = resData.access_token;
 
-    return { token };
-  } catch (err) {
-    return rejectWithValue((err as Error).message);
+      // Store remember preference if enabled
+      if (remember) {
+        try {
+          localStorage.setItem("remember_me", "true");
+        } catch {}
+      }
+
+      // Fetch user profile
+      try {
+        const profileRes = await fetch(`${API_BASE}/admin/me`, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (profileRes.ok) {
+          const user: any = await profileRes.json();
+          console.log("User: .............", user);
+          return {
+            token,
+            user: {
+              userId: user?.userId,
+              userName: user?.userName,
+              fullName: user?.fullName,
+              email: user?.email,
+              phone: user?.phoneNumber,
+            },
+          };
+        }
+      } catch {
+        // If profile fetch fails, return token only
+      }
+
+      return { token };
+    } catch (err) {
+      return rejectWithValue((err as Error).message);
+    }
   }
-});
+);
 
 // Async thunk for fetching user profile
 export const fetchUserProfile = createAsyncThunk<
@@ -223,12 +233,65 @@ export const updateUser = createAsyncThunk<
   }
 );
 
+// Async thunk for requesting OTP
+export const requestOtp = createAsyncThunk<
+  void,
+  { email: string },
+  { rejectValue: string }
+>("auth/requestOtp", async ({ email }, { rejectWithValue }) => {
+  try {
+    const res = await fetch(`${API_BASE}/auth/password/otp/request`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    if (!res.ok) {
+      const data = await safeJson(res);
+      return rejectWithValue(
+        (data && (data.error || data.message)) ||
+          `Request OTP failed: ${res.status}`
+      );
+    }
+    return undefined;
+  } catch (err) {
+    return rejectWithValue((err as Error).message);
+  }
+});
+
+// Async thunk for resetting password with OTP
+export const resetPasswordWithOtp = createAsyncThunk<
+  void,
+  { email: string; otp: string; newPassword: string },
+  { rejectValue: string }
+>(
+  "auth/resetPasswordWithOtp",
+  async ({ email, otp, newPassword }, { rejectWithValue }) => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/password/otp/reset`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp, newPassword }),
+      });
+      if (!res.ok) {
+        const data = await safeJson(res);
+        return rejectWithValue(
+          (data && (data.error || data.message)) ||
+            `Reset password failed: ${res.status}`
+        );
+      }
+      return undefined;
+    } catch (err) {
+      return rejectWithValue((err as Error).message);
+    }
+  }
+);
+
 // Async thunk for Google login
 export const googleLogin = createAsyncThunk<
   { token: string; user?: User },
-  { idToken: string },
+  { idToken: string; remember?: boolean },
   { rejectValue: string }
->("auth/googleLogin", async ({ idToken }, { rejectWithValue }) => {
+>("auth/googleLogin", async ({ idToken, remember }, { rejectWithValue }) => {
   try {
     const res = await fetch(`${API_BASE}/auth/google`, {
       method: "POST",
@@ -246,6 +309,13 @@ export const googleLogin = createAsyncThunk<
       return rejectWithValue("No token received from Google");
     }
     const token = resData.access_token;
+
+    // Store remember preference if enabled
+    if (remember) {
+      try {
+        localStorage.setItem("remember_me", "true");
+      } catch {}
+    }
 
     // Backend giờ đã trả về user info trong response
     if (resData?.user) {
@@ -339,6 +409,7 @@ const authSlice = createSlice({
         localStorage.removeItem("access_token");
         localStorage.removeItem("user_profile");
         localStorage.removeItem("user_fullName");
+        localStorage.removeItem("remember_me");
       } catch {}
     },
   },
@@ -429,6 +500,32 @@ const authSlice = createSlice({
       .addCase(updateUser.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload ?? "Update failed";
+      })
+
+      .addCase(requestOtp.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(requestOtp.fulfilled, (state) => {
+        state.loading = false;
+        state.error = null;
+      })
+      .addCase(requestOtp.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload ?? "Request OTP failed";
+      })
+
+      .addCase(resetPasswordWithOtp.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(resetPasswordWithOtp.fulfilled, (state) => {
+        state.loading = false;
+        state.error = null;
+      })
+      .addCase(resetPasswordWithOtp.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload ?? "Reset password failed";
       })
 
       .addCase(googleLogin.pending, (state) => {
