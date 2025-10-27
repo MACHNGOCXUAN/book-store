@@ -44,16 +44,13 @@ public class AddressServiceImpl implements AddressService {
         
         address.setCustomer(customer);
         
-        // Nếu là địa chỉ đầu tiên, tự động đặt làm mặc định
         long addressCount = addressRepository.countByCustomerUserId(customerId);
         if (addressCount == 0) {
-            address.setMain(1); // Địa chỉ đầu tiên luôn là mặc định
+            address.setMain(1); 
         } else {
-            // Nếu địa chỉ mới được đặt làm mặc định, bỏ mặc định các địa chỉ khác
             if (address.getMain() == 1) {
                 addressRepository.setAllAddressesNotMain(customerId);
             } else {
-                // Đảm bảo địa chỉ mới không phải mặc định nếu không chỉ định
                 address.setMain(0);
             }
         }
@@ -118,10 +115,8 @@ public class AddressServiceImpl implements AddressService {
             throw new RuntimeException("Địa chỉ này không thuộc về khách hàng này");
         }
         
-        // Bỏ mặc định tất cả địa chỉ của customer
         addressRepository.setAllAddressesNotMain(customerId);
-        
-        // Đặt địa chỉ này làm mặc định
+    
         address.setMain(1);
         return addressRepository.save(address);
     }
