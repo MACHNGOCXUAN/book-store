@@ -27,16 +27,18 @@ public class JwtUtils {
     @Value("${book.app.jwtExpirationMs}")
     private int jwtExpirationMs;
 
-//     Lấy thông tin người dùng từ token
+    // Lấy thông tin người dùng từ token
     public String getUsernameFromToken(String token) {
-        return getClaimFromToken(token, Claims::getSubject);  // lay so dien thoai
+        // Lấy userId từ token, không phải phoneNumber
+        // vì phoneNumber có thể thay đổi nhưng userId không
+        final Claims claims = getAllClaimsFromToken(token);
+        return claims.get("userId", String.class);
     }
 
     public String getUserIdFromToken(String token) {
         final Claims claims = getAllClaimsFromToken(token);
-        return claims.get("id", String.class); // lay id nguoi dung
+        return claims.get("userId", String.class); // lay id nguoi dung
     }
-
 
     // Lấy thời gian hết hạn token
     public Date getExpirationDateFromToken(String token) {
@@ -66,14 +68,15 @@ public class JwtUtils {
 
     public String generateToken(CustomUserDetail userDetails) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("id", userDetails.getUserId());
-        return doGenerateToken(claims, userDetails.getUsername());
+        // Sử dụng userId thay vì phoneNumber vì userId không bao giờ thay đổi
+        claims.put("userId", userDetails.getUserId());
+        return doGenerateToken(claims, userDetails.getUserId());
     }
 
     private String doGenerateToken(Map<String, Object> claims, String subject) {
         return Jwts.builder()
-                .setClaims(claims)  // dữ liệu trong token
-                .setSubject(subject) // username
+                .setClaims(claims) // dữ liệu trong token
+                .setSubject(subject) // userId (không phải phoneNumber)
                 .setIssuedAt(new Date(System.currentTimeMillis())) // thời gian tạo
                 .setExpiration(new Date(System.currentTimeMillis() + JWT_TOKEN_VALIDITY * 1000)) // thời gian hết hạn
                 .signWith(SignatureAlgorithm.HS512, secret) // ký token bằng HS512 + secret

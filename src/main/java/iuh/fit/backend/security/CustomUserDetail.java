@@ -18,7 +18,8 @@ public class CustomUserDetail implements UserDetails {
     private String role;
     private List<GrantedAuthority> authorities;
 
-    public CustomUserDetail(String id, String username, String password, String role, List<GrantedAuthority> authorities) {
+    public CustomUserDetail(String id, String username, String password, String role,
+            List<GrantedAuthority> authorities) {
         this.id = id;
         this.username = username;
         this.password = password;
@@ -28,7 +29,9 @@ public class CustomUserDetail implements UserDetails {
 
     public CustomUserDetail(User user) {
         this.id = user.getUserId();
-        this.username = user.getPhoneNumber();
+        // Lưu ý: username ở đây là userId, không phải phoneNumber
+        // vì chúng ta sử dụng userId trong JWT token
+        this.username = user.getUserId();
         this.password = user.getPassword();
         this.role = String.valueOf(user.getRole());
         this.authorities = List.of(new SimpleGrantedAuthority(user.getRole().name().toLowerCase()));
