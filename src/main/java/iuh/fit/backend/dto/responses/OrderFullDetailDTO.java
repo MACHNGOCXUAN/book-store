@@ -16,11 +16,13 @@ public class OrderFullDetailDTO {
     // Customer (User) Information
     private CustomerInfoDTO customer;
 
-    // Payment Information
-    private PaymentInfoDTO payment;
+    // Payment Information (Support multiple payments)
+    private List<PaymentInfoDTO> payments;
 
     // Order Details with Book Information
     private List<OrderDetailWithBookDTO> orderDetails;
+
+    private List<OrderHistoryDTO>orderHistories;
 
     @Data
     public static class CustomerInfoDTO {
@@ -58,5 +60,13 @@ public class OrderFullDetailDTO {
         private Double price;
         private String category;
         private String coverImage;
+    }
+
+    @Data
+    public  static class OrderHistoryDTO {
+        private String id;
+        private String orderId;
+        private LocalDateTime timestamp;
+        private OrderStatus status;
     }
 }
