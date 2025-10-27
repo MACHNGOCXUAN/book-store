@@ -28,7 +28,6 @@ public class OrderServiceImpl implements OrderService {
             customerDTO.setFullName(order.getCustomer().getFullName());
             customerDTO.setPhoneNumber(order.getCustomer().getPhoneNumber());
             customerDTO.setEmail(order.getCustomer().getEmail());
-            customerDTO.setAddress(order.getCustomer().getAddress());
             dto.setCustomer(customerDTO);
         }
 

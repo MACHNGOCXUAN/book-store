@@ -75,11 +75,6 @@ public class AuthController {
             customer.setPassword(body.getPassword()); // service sẽ encode
             // optional fields
             try {
-                if (body.getAddress() != null)
-                    customer.setAddress(body.getAddress());
-            } catch (Exception ignored) {
-            }
-            try {
                 if (body.getDateOfBirth() != null && !body.getDateOfBirth().isBlank()) {
                     customer.setDateOfBirth(LocalDate.parse(body.getDateOfBirth()));
                 }

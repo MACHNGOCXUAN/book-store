@@ -4,7 +4,9 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @AllArgsConstructor
@@ -16,7 +18,6 @@ import java.util.Set;
 @DiscriminatorValue("CUSTOMER")
 public class Customer extends User {
     private String fullName;
-    private String address;
     private LocalDate dateOfBirth;
     private Integer loyaltyPoints;
 
@@ -31,4 +32,8 @@ public class Customer extends User {
             inverseJoinColumns = @JoinColumn(name = "book_id")
     )
     private Set<Book> favoriteBooks = new HashSet<>();
+
+    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    private List<Address> addresses = new ArrayList<>();
 }
