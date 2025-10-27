@@ -43,6 +43,36 @@ public class UserController {
         return ResponseEntity.ok(user);
     }
 
+    @PutMapping("/admin/profile")
+    public ResponseEntity<?> updateProfile(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, String> request) {
+        try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.badRequest().body("Missing Authorization header");
+            }
+
+            String token = authHeader.substring(7);
+            String userId = jwtUtils.getUserIdFromToken(token);
+
+            String fullName = request.get("fullName");
+            String email = request.get("email");
+            String phone = request.get("phone");
+
+            Customer updated = customerService.updateCustomerProfile(userId, fullName, email, phone);
+
+            if (updated == null) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("message", "Cập nhật thất bại"));
+            }
+
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Lỗi khi cập nhật: " + e.getMessage()));
+        }
+    }
+
     @PostMapping("/admin/get-staff")
     public ResponseEntity<?> getStaffs(@RequestBody UserFilter request) {
         Page<Staff> pageStaff = staffService.getStaffsFilter(request);
@@ -84,7 +114,7 @@ public class UserController {
     @PostMapping("/admin/create-staff")
     public ResponseEntity<?> createStaff(@RequestBody StaffCreateDto request) {
         boolean success = staffService.addStaff(request);
-        if(success) {
+        if (success) {
             return ResponseEntity.ok(Map.of("message", "Thêm nhân viên thành công"));
         } else {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -100,7 +130,7 @@ public class UserController {
     @PutMapping("/admin/staff/update")
     public ResponseEntity<?> updateStaff(@RequestBody StaffCreateDto request) {
         boolean success = staffService.updateStaff(request);
-        if(success) {
+        if (success) {
             return ResponseEntity.ok(Map.of("message", "Cập nhậts nhân viên thành công"));
         } else {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -112,7 +142,7 @@ public class UserController {
     public ResponseEntity<?> updateStatusStaff(@RequestBody UserUpdateStatusDto request) {
         System.out.println("nk: " + request);
         boolean success = staffService.updateStatusStaff(request);
-        if(success) {
+        if (success) {
             return ResponseEntity.ok(Map.of("message", "Cập nhật nhân viên thành công"));
         } else {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -123,7 +153,7 @@ public class UserController {
     @DeleteMapping("/admin/staff/{id}")
     public ResponseEntity<?> deleteStaffById(@PathVariable String id) {
         boolean success = staffService.deleteStaff(id);
-        if(success) {
+        if (success) {
             return ResponseEntity.ok(Map.of("message", "Xóa nhân viên thành công"));
         } else {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -134,7 +164,7 @@ public class UserController {
     @DeleteMapping("/admin/customer/{id}")
     public ResponseEntity<?> deleteCustomerById(@PathVariable String id) {
         boolean success = customerService.deleteCustomerById(id);
-        if(success) {
+        if (success) {
             return ResponseEntity.ok(Map.of("message", "Xóa khách hàng thành công"));
         } else {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -153,7 +183,7 @@ public class UserController {
     @PostMapping("/admin/customer/update-status")
     public ResponseEntity<?> updateStatusCustomer(@RequestBody UserUpdateStatusDto request) {
         boolean success = customerService.updateCustomerStatus(request);
-        if(success) {
+        if (success) {
             return ResponseEntity.ok(Map.of("message", "Cập nhật khách hàng thành công"));
         } else {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -189,5 +219,41 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/customer/{customerId}/change-password")
+    public ResponseEntity<?> changePassword(
+            @PathVariable String customerId,
+            @RequestBody Map<String, String> request) {
+        try {
+            String currentPassword = request.get("currentPassword");
+            String newPassword = request.get("newPassword");
+
+            if (currentPassword == null || currentPassword.isBlank()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "Vui lòng nhập mật khẩu hiện tại"));
+            }
+
+            if (newPassword == null || newPassword.isBlank()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "Vui lòng nhập mật khẩu mới"));
+            }
+
+            if (newPassword.length() < 6) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "Mật khẩu mới phải có ít nhất 6 ký tự"));
+            }
+
+            boolean success = customerService.changePassword(customerId, currentPassword, newPassword);
+
+            if (success) {
+                return ResponseEntity.ok(Map.of("message", "Đổi mật khẩu thành công"));
+            } else {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "Mật khẩu hiện tại không đúng"));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Lỗi khi đổi mật khẩu: " + e.getMessage()));
+        }
+    }
 
 }

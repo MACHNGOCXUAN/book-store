@@ -90,7 +90,6 @@ public class BookServiceImpl implements iuh.fit.backend.service.BookService {
         return repo.findAll(spec, PageRequest.of(page, limit, Sort.by("title").ascending()));
     }
 
-
     @Override
     public List<Book> getTop20BestsellerBooks() {
         PageRequest pageRequest = PageRequest.of(0, 20);
@@ -118,5 +117,8 @@ public class BookServiceImpl implements iuh.fit.backend.service.BookService {
         return repo.findTop20BestsellerBooksByYear(startDate, pageRequest);
     }
 
-
+    @Override
+    public List<Book> findByCategory(String category) {
+        return repo.findByCategory(category);
+    }
 }

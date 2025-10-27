@@ -18,9 +18,17 @@ public class CustomUserDetailsService implements UserDetailsService {
 
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+		// username ở đây thực ra là userId (vì chúng ta đã thay đổi JWT để sử dụng
+		// userId)
+		// Tìm user bằng userId trước
+		User user = userRepository.findById(username).orElse(null);
 
-		// Thử tìm user bằng phone number trước
-		User user = userRepository.findByPhoneNumber(username).orElse(null);
+		if (user != null) {
+			return new CustomUserDetail(user);
+		}
+
+		// Backward compatibility: nếu không tìm thấy bằng userId, thử tìm bằng phone
+		user = userRepository.findByPhoneNumber(username).orElse(null);
 
 		// Nếu không tìm thấy, thử tìm bằng email
 		if (user == null) {
@@ -29,14 +37,8 @@ public class CustomUserDetailsService implements UserDetailsService {
 
 		// Nếu vẫn không tìm thấy, ném exception
 		if (user == null) {
-			throw new UsernameNotFoundException("User not found with phone or email: " + username);
+			throw new UsernameNotFoundException("User not found with id, phone or email: " + username);
 		}
-
-		// return org.springframework.security.core.userdetails.User
-		// .withUsername(user.getPhoneNumber())
-		// .password(user.getPassword())
-		// .authorities("USER")
-		// .build();
 
 		return new CustomUserDetail(user);
 	}

@@ -7,6 +7,7 @@ import iuh.fit.backend.dto.requests.RegisterDto;
 import iuh.fit.backend.dto.responses.JwtAuthResponse;
 import iuh.fit.backend.security.CustomUserDetail;
 import iuh.fit.backend.service.CustomerService;
+import iuh.fit.backend.service.PasswordResetService;
 import iuh.fit.backend.service.UserService;
 import iuh.fit.backend.utils.JwtUtils;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,7 @@ public class AuthController {
     private final JwtUtils jwtUtils;
     private final CustomerService customerService;
     private final UserService userService; // Dùng để tra user theo email (Google)
+    private final PasswordResetService passwordResetService;
 
     // ======================= ADMIN LOGIN =======================
     @PostMapping("/admin/login")
@@ -72,11 +74,6 @@ public class AuthController {
             customer.setRegistrationDate(LocalDate.now());
             customer.setPassword(body.getPassword()); // service sẽ encode
             // optional fields
-            try {
-                if (body.getAddress() != null)
-                    customer.setAddress(body.getAddress());
-            } catch (Exception ignored) {
-            }
             try {
                 if (body.getDateOfBirth() != null && !body.getDateOfBirth().isBlank()) {
                     customer.setDateOfBirth(LocalDate.parse(body.getDateOfBirth()));
@@ -151,8 +148,24 @@ public class AuthController {
 
             CustomUserDetail cud = new CustomUserDetail(user);
             String token = jwtUtils.generateToken(cud);
-            JwtAuthResponse jwtAuthResponse = new JwtAuthResponse();
-            jwtAuthResponse.setAccess_token(token);
+
+            // Tạo response object với token và user info
+            Map<String, Object> jwtAuthResponse = new java.util.HashMap<>();
+            jwtAuthResponse.put("access_token", token);
+
+            Map<String, Object> userInfo = new java.util.HashMap<>();
+            userInfo.put("userId", user.getUserId());
+            userInfo.put("userName", user.getUserName());
+            userInfo.put("email", user.getEmail());
+            userInfo.put("phoneNumber", user.getPhoneNumber());
+
+            // fullName chỉ có trong Customer
+            if (user instanceof Customer) {
+                userInfo.put("fullName", ((Customer) user).getFullName());
+            }
+
+            jwtAuthResponse.put("user", userInfo);
+
             return ResponseEntity.ok(jwtAuthResponse);
         } catch (Exception e) {
             log.error("Google login failed", e);
@@ -203,5 +216,42 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn không có quyền truy cập!");
         }
         return ResponseEntity.ok(user);
+    }
+
+    // ======================= PASSWORD RESET (OTP) =======================
+    @PostMapping("/password/otp/request")
+    public ResponseEntity<?> requestOtp(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Email không được để trống."));
+        }
+        passwordResetService.requestOtp(email.trim());
+        // Luôn trả về OK, không lộ email tồn tại
+        return ResponseEntity.ok(Map.of("message", "Nếu email tồn tại, mã OTP đã được gửi."));
+    }
+
+    @PostMapping("/password/otp/reset")
+    public ResponseEntity<?> resetPasswordWithOtp(@RequestBody Map<String, String> body) {
+        try {
+            String email = body.get("email");
+            String otp = body.get("otp");
+            String newPassword = body.get("newPassword");
+
+            if (email == null || email.isBlank() || otp == null || otp.isBlank() || newPassword == null
+                    || newPassword.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Vui lòng điền đầy đủ thông tin."));
+            }
+
+            passwordResetService.resetWithOtp(email.trim(), otp.trim(), newPassword);
+            return ResponseEntity.ok(Map.of("message", "Đổi mật khẩu thành công."));
+        } catch (IllegalArgumentException e) {
+            log.warn("Password reset failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Password reset error", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Lỗi khi đặt lại mật khẩu."));
+        }
     }
 }

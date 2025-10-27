@@ -1,8 +1,5 @@
 package iuh.fit.backend.config;
 
-import iuh.fit.backend.security.CustomUserDetailsService;
-import iuh.fit.backend.security.JWTAthenticationEntryPoint;
-import iuh.fit.backend.security.JWTAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -16,6 +13,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import iuh.fit.backend.security.CustomUserDetailsService;
+import iuh.fit.backend.security.JWTAthenticationEntryPoint;
+import iuh.fit.backend.security.JWTAuthenticationFilter;
 
 
 @Configuration
@@ -53,11 +54,18 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers("/api/auth/**").permitAll()
-//                        .requestMatchers("/api/books").authenticated()
-//                        .anyRequest().authenticated()
-                                .requestMatchers("/ws/**").permitAll()
-                        .anyRequest().permitAll()
+                        .requestMatchers(
+                                "/api/auth/**",
+                                "/api/reports/admin/overview",
+                                "/api/reports/revenue",
+                                "/api/reports/orders",
+                                "/api/reports/books",
+                                "/api/reports/customers",
+                                "/ws/**",
+                                "/api/favorites/**",
+                                "/api/books/**"
+                        ).permitAll()
+                        .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(point))
                 .sessionManagement(session ->

@@ -35,6 +35,9 @@ public class Order {
     @JoinColumn(name = "discount_code_id", nullable = false)
     private DiscountCode discountCode;
 
+    @ManyToOne
+    @JoinColumn(name = "staff_id")
+    private Staff staff;
     /* ----------------- Helpers ----------------- */
 
     /** Tính lại tổng tiền từ các dòng chi tiết */
