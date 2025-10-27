@@ -33,6 +33,10 @@ public class Order {
     @ManyToOne
     @JoinColumn(name = "staff_id")
     private Staff staff;
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    private List<OrderHistory> orderHistories = new ArrayList<>();
     /* ----------------- Helpers ----------------- */
 
     /** Tính lại tổng tiền từ các dòng chi tiết */

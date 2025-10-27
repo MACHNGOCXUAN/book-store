@@ -16,8 +16,8 @@ public class OrderFullDetailDTO {
     // Customer (User) Information
     private CustomerInfoDTO customer;
 
-    // Payment Information
-    private PaymentInfoDTO payment;
+    // Payment Information (Support multiple payments)
+    private List<PaymentInfoDTO> payments;
 
     // Order Details with Book Information
     private List<OrderDetailWithBookDTO> orderDetails;
