@@ -31,7 +31,7 @@ import ModalAddDiscount from "@/components/Model/model-add-discount"; // <-- C�
 
 // ... (Interface DiscountDataType giữ nguyên) ...
 interface DiscountDataType {
-  discountId: string;
+  discountCodeId: string;
   name: string;
   percent: number;
   startDate: string;
@@ -47,9 +47,7 @@ interface DiscountDataType {
 export default function DiscountPage() {
   const [form] = Form.useForm();
   
-  // THÊM VÀO: State cho Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
-  // THÊM VÀO: State cho Filter (để giữ filter khi chuyển trang)
   const [filters, setFilters] = useState<any>({});
 
   const dispatch = useAppDispatch();
@@ -58,62 +56,39 @@ export default function DiscountPage() {
   );
   const { openNotification, contextHolder } = useMyNotification();
 
-  // Lấy dữ liệu khi load (chỉ 1 lần)
   useEffect(() => {
     dispatch(getDiscountsFilter({}));
   }, [dispatch]);
 
-  // Xử lý thông báo (cho XÓA)
-  useEffect(() => {
-    // Chỉ xử lý message khi *không* mở modal
-    // (Vì modal tự xử lý message Thêm/Sửa)
-    if (message && !isModalOpen) {
-      if (message.type == "success") {
-        openNotification("success", message?.message);
-      } else {
-        openNotification("error", message?.message);
-      }
-      // Load lại dữ liệu (sau khi Xóa thành công)
-      dispatch(getDiscountsFilter(filters));
-      dispatch(resetMessage());
-    }
-  }, [message, dispatch, isModalOpen, filters]); // Thêm isModalOpen, filters
-
-  // ... (useEffect console.log giữ nguyên) ...
-
-  // SỬA ĐỔI: handlePageChange (thêm filter)
   const handlePageChange = (page: number, pageSize: number) => {
     const newQuery = { ...filters, page: page, limit: pageSize };
     dispatch(getDiscountsFilter(newQuery));
   };
 
-  // SỬA ĐỔI: onFinish (Filter) (thêm filter)
   const onFinish = (values: any) => {
     console.log("Filter values:", values);
     setFilters(values); // <-- Lưu filter
     dispatch(getDiscountsFilter(values));
   };
 
-  // SỬA ĐỔI: onReset (thêm filter)
   const onReset = () => {
     form.resetFields();
-    setFilters({}); // <-- Xóa filter
+    setFilters({});
     dispatch(getDiscountsFilter({}));
   };
 
-  // SỬA ĐỔI: Hàm xử lý sửa
-  const handleEditDiscount = (id: string) => {
-    dispatch(getDiscountById(id));
-    setIsModalOpen(true);
+  const handleEditDiscount = async (id: string) => {
+    console.log("Edit discount with ID:", id);
+    const result = await dispatch(getDiscountById(id));
+    if (result.meta.requestStatus === "fulfilled") {
+      setIsModalOpen(true);
+    }
   };
 
-  // THÊM VÀO: Hàm mở modal Thêm mới
   const handleOpenAddModal = () => {
     setIsModalOpen(true);
   };
 
-  // ... (const columns giữ nguyên) ...
-  // Sửa lỗi nhỏ: thêm ? để tránh lỗi khi value null
   const columns: TableProps<DiscountDataType>["columns"] = [
      {
       title: "Tên mã",
@@ -165,7 +140,7 @@ export default function DiscountPage() {
       render: (_, record) => (
           <EditOutlined
             style={{ color: "blue", cursor: "pointer" }}
-            onClick={() => handleEditDiscount(record.discountId)}
+            onClick={() => handleEditDiscount(record.discountCodeId)}
           />
       ),
     },
@@ -258,7 +233,7 @@ export default function DiscountPage() {
         <Table<DiscountDataType>
           columns={columns}
           data={listDiscount}
-          rowKey="discountId"
+          rowKey="discountCodeId"
           pagination={{
             // ... (pagination config giữ nguyên) ...
              showQuickJumper: false,

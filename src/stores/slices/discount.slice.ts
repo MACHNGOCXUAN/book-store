@@ -3,25 +3,6 @@
 import http from "@/lib/utils/api";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 
-/**
- * --- ĐỊNH NGHĨA CÁC ASYNC THUNKS (CALL API) ---
- * Tôi đã giả định các đường dẫn API theo cấu trúc của user.slice.ts
- * (ví dụ: admin/get-discount, admin/discount/[id], ...)
- */
-
-// // Lấy danh sách discount (có lọc và phân trang)
-// export const getDiscountsFilter = createAsyncThunk(
-//   "discount/getAllDiscountCodes",
-//   async (data: any) => {
-//     // THAY ĐỔI: Gọi endpoint mới.
-//     // Lưu ý: tham số 'data' (chứa filter) sẽ bị bỏ qua
-//     // vì GET /api/discounts không hỗ trợ.
-//     const response = await http.get("discounts");
-//     console.log("API Response:", response);
-//     return response;
-//   }
-// );
-
 export const getDiscountsFilter = createAsyncThunk(
   "discount/filterDiscountCodes",
   async (data: any) => {
@@ -59,7 +40,6 @@ export const getDiscountsFilter = createAsyncThunk(
   }
 );
 
-// Tạo discount mới
 export const createDiscount = createAsyncThunk(
   "discount/createDiscount",
   async (data: any) => {
@@ -68,31 +48,23 @@ export const createDiscount = createAsyncThunk(
   }
 );
 
-// Lấy 1 discount bằng ID (dùng cho form Sửa)
 export const getDiscountById = createAsyncThunk(
   "discount/getDiscountById",
   async (id: string) => {
-    // Giả định API get by id: "admin/discount/[id]"
-    const response = await http.get(`admin/discount/${id}`);
+    const response = await http.get(`discounts/${id}`);
     return response;
   }
 );
 
-// Cập nhật discount
 export const updateDiscount = createAsyncThunk(
   "discount/updateDiscount",
-  async (data: any) => {
-    // Giả định API update: "admin/discount/update"
-    const response = await http.put("admin/discount/update", data);
+  async ({ id, data }: { id: string; data: any }) => {
+    const response = await http.put(`discounts/${id}`, data);
     return response;
   }
 );
 
-/**
- * --- ĐỊNH NGHĨA STATE VÀ SLICE ---
- */
 
-// Cấu trúc phân trang cơ bản
 const pagination = {
   curPage: 1,
   limitPage: 10,
@@ -100,16 +72,14 @@ const pagination = {
   totalPage: 0,
 };
 
-// Kiểu dữ liệu cho state (dựa theo user.slice.ts)
 type initialStatetype = {
   loading: boolean;
-  listDiscount: any[]; // Bạn có thể thay any bằng DiscountDataType
+  listDiscount: any[];
   pagination: any;
   message?: any;
-  discount?: any; // Dùng để lưu dữ liệu khi getById (cho form Sửa)
+  discount?: any; 
 };
 
-// Giá trị state ban đầu
 const initialState: initialStatetype = {
   loading: false,
   listDiscount: [],
@@ -118,18 +88,15 @@ const initialState: initialStatetype = {
   discount: undefined,
 };
 
-// Tạo slice
 export const discountSlice = createSlice({
   name: "discount",
   initialState,
   reducers: {
-    // Reducer để reset message (cho thông báo)
     resetMessage: (state) => {
       state.message = undefined;
     },
   },
   extraReducers: (builder) => {
-    // Xử lý getDiscountsFilter
     builder
       .addCase(getDiscountsFilter.pending, (state) => {
         state.loading = true;
@@ -151,7 +118,6 @@ export const discountSlice = createSlice({
         state.pagination = pagination;
       });
 
-    // Xử lý createDiscount
     builder
       .addCase(createDiscount.pending, (state) => {
         state.loading = true;
@@ -171,21 +137,19 @@ export const discountSlice = createSlice({
         };
       });
 
-    // Xử lý getDiscountById
     builder
       .addCase(getDiscountById.pending, (state) => {
         state.loading = true;
       })
       .addCase(getDiscountById.fulfilled, (state, action) => {
         state.loading = false;
-        state.discount = action.payload; // Chứa 1 object discount
+        state.discount = action.payload;
       })
       .addCase(getDiscountById.rejected, (state) => {
         state.loading = false;
         state.discount = null;
       });
 
-    // Xử lý updateDiscount
     builder
       .addCase(updateDiscount.pending, (state) => {
         state.loading = true;

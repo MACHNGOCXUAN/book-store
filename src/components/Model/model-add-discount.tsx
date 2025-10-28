@@ -25,7 +25,7 @@ const { TextArea } = Input;
 
 // Bạn nên chuyển interface này ra file /types
 interface DiscountDataType {
-  discountId: string;
+  discountCodeId: string;
   name: string;
   percent: number;
   startDate: string;
@@ -53,11 +53,15 @@ const ModalAddDiscount = ({ isModalOpen, setIsModalOpen }: any) => {
       endDate: dayjs(values.endDate).toISOString(),
     };
 
-    if (discount?.discountId) {
-      // Logic Cập nhật
-      dispatch(updateDiscount({ ...payload, discountId: discount.discountId }));
+    if (discount?.discountCodeId) {
+  // Logic Cập nhật
+      dispatch(
+        updateDiscount({
+          id: discount.discountCodeId, // ✅ dùng đúng tên BE
+          data: payload,
+        })
+      );
     } else {
-      // Logic Thêm mới
       dispatch(createDiscount(payload));
     }
   };
