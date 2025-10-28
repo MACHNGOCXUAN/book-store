@@ -6,6 +6,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import iuh.fit.backend.model.Category;
+import iuh.fit.backend.repository.CategoryRepository;
+import iuh.fit.backend.service.BookService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -19,8 +22,9 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class BookServiceImpl implements iuh.fit.backend.service.BookService {
+public class BookServiceImpl implements BookService {
     private final BookRepository repo;
+    private final CategoryRepository categoryRepository;
 
     @Override
     public Book save(Book book) {
@@ -119,6 +123,7 @@ public class BookServiceImpl implements iuh.fit.backend.service.BookService {
 
     @Override
     public List<Book> findByCategory(String category) {
-        return repo.findByCategory(category);
+        Category c = categoryRepository.findByCategoryId(category);
+        return repo.findBookByCategory(c);
     }
 }

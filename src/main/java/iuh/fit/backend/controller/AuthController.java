@@ -225,6 +225,8 @@ public class AuthController {
         if (email == null || email.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Email không được để trống."));
         }
+
+
         passwordResetService.requestOtp(email.trim());
         // Luôn trả về OK, không lộ email tồn tại
         return ResponseEntity.ok(Map.of("message", "Nếu email tồn tại, mã OTP đã được gửi."));

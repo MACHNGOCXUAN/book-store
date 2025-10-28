@@ -99,7 +99,7 @@ public class OrderServiceImpl implements OrderService {
         bookDTO.setAuthor(od.getBook().getAuthor());
         bookDTO.setPublisher(od.getBook().getPublisher());
         bookDTO.setPrice(od.getBook().getPrice());
-        bookDTO.setCategory(od.getBook().getCategory());
+        bookDTO.setCategory(od.getBook().getCategory().getCategoryId());
         bookDTO.setCoverImage(od.getBook().getCoverImage());
         return bookDTO;
     }
