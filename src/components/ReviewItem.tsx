@@ -1,5 +1,15 @@
 import React, { useState } from "react";
-import { Card, Rate, Button, Space, Modal, Form, Input, message } from "antd";
+import {
+  Card,
+  Rate,
+  Button,
+  Space,
+  Form,
+  Input,
+  message,
+  App,
+  Modal,
+} from "antd";
 import { UserOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { Comment } from "../types";
 
@@ -8,28 +18,35 @@ interface CommentItemProps {
   comment: Comment;
   primaryColor: string;
   isCurrentUserComment?: boolean;
-  onEdit?: (reviewId: string | number, rating: number, content: string) => Promise<void>;
+  onEdit?: (
+    reviewId: string | number,
+    rating: number,
+    content: string
+  ) => Promise<void>;
   onDelete?: (reviewId: string | number) => Promise<void>;
 }
 
 const CONTENT_PREVIEW_LENGTH = 200; // Ký tự hiển thị trước
 
-const ReviewItem: React.FC<CommentItemProps> = ({ 
-  comment, 
+const ReviewItem: React.FC<CommentItemProps> = ({
+  comment,
   primaryColor,
   isCurrentUserComment,
   onEdit,
   onDelete,
 }) => {
+  const { modal } = App.useApp();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editForm] = Form.useForm();
   const [editLoading, setEditLoading] = useState(false);
-  
-  const isLongContent = comment.content && comment.content.length > CONTENT_PREVIEW_LENGTH;
-  const displayContent = isExpanded || !isLongContent 
-    ? comment.content 
-    : `${comment.content.substring(0, CONTENT_PREVIEW_LENGTH)}...`;
+
+  const isLongContent =
+    comment.content && comment.content.length > CONTENT_PREVIEW_LENGTH;
+  const displayContent =
+    isExpanded || !isLongContent
+      ? comment.content
+      : `${comment.content.substring(0, CONTENT_PREVIEW_LENGTH)}...`;
 
   const handleEditClick = () => {
     editForm.setFieldsValue({
@@ -56,12 +73,23 @@ const ReviewItem: React.FC<CommentItemProps> = ({
 
   const handleDeleteClick = async () => {
     if (!onDelete) return;
-    try {
-      await onDelete(comment.review_id);
-      message.success("Xóa bình luận thành công ✅");
-    } catch (error: any) {
-      message.error("Lỗi khi xóa bình luận 😢");
-    }
+
+    // Confirm before delete using App modal hook
+    modal.confirm({
+      title: "Xóa bình luận",
+      content: "Bạn có chắc chắn muốn xóa bình luận này?",
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          await onDelete(comment.review_id);
+          message.success("Xóa bình luận thành công ✅");
+        } catch (error: any) {
+          message.error(error.message || "Lỗi khi xóa bình luận 😢");
+        }
+      },
+    });
   };
 
   return (
@@ -100,23 +128,38 @@ const ReviewItem: React.FC<CommentItemProps> = ({
               }}
             >
               <div>
-                <p style={{ margin: 0, fontWeight: "bold", fontSize: "16px", color: "#000" }}>
-                  {comment.customer_name || 
-                   comment.customer_full_name || 
-                   comment.customerName || 
-                   comment.customerFullName || 
-                   comment.customer?.fullName || 
-                   "Khách hàng"}
+                <p
+                  style={{
+                    margin: 0,
+                    fontWeight: "bold",
+                    fontSize: "16px",
+                    color: "#000",
+                  }}
+                >
+                  {comment.customer_name ||
+                    comment.customer_full_name ||
+                    comment.customerName ||
+                    comment.customerFullName ||
+                    comment.customer?.fullName ||
+                    "Khách hàng"}
                 </p>
-                <Rate disabled value={comment.rating} style={{ fontSize: "14px", marginTop: "4px" }} />
+                <Rate
+                  disabled
+                  value={comment.rating}
+                  style={{ fontSize: "14px", marginTop: "4px" }}
+                />
               </div>
               <span style={{ fontSize: "12px", color: "#999" }}>
-                {comment.rating_date || comment.ratingDate || new Date().toISOString().split("T")[0]}
+                {comment.rating_date ||
+                  comment.ratingDate ||
+                  new Date().toISOString().split("T")[0]}
               </span>
             </div>
 
             {/* Comment Text */}
-            <p style={{ margin: "12px 0 0 0", color: "#333", lineHeight: "1.6" }}>
+            <p
+              style={{ margin: "12px 0 0 0", color: "#333", lineHeight: "1.6" }}
+            >
               {displayContent}
             </p>
 
@@ -125,7 +168,11 @@ const ReviewItem: React.FC<CommentItemProps> = ({
               <Button
                 type="link"
                 size="small"
-                style={{ padding: "4px 0", color: primaryColor, fontWeight: "500" }}
+                style={{
+                  padding: "4px 0",
+                  color: primaryColor,
+                  fontWeight: "500",
+                }}
                 onClick={() => setIsExpanded(!isExpanded)}
               >
                 {isExpanded ? "Thu gọn" : "Xem thêm"}
@@ -178,11 +225,7 @@ const ReviewItem: React.FC<CommentItemProps> = ({
         okText="Lưu"
         cancelText="Hủy"
       >
-        <Form
-          form={editForm}
-          layout="vertical"
-          onFinish={handleEditSubmit}
-        >
+        <Form form={editForm} layout="vertical" onFinish={handleEditSubmit}>
           <Form.Item
             name="rating"
             label="Đánh giá"
@@ -194,11 +237,17 @@ const ReviewItem: React.FC<CommentItemProps> = ({
           <Form.Item
             name="content"
             label="Bình luận"
-            rules={[{ required: true, message: "Vui lòng nhập bình luận" }]}
+            rules={[
+              { required: true, message: "Vui lòng nhập bình luận" },
+              { min: 10, message: "Bình luận phải có ít nhất 10 ký tự" },
+              { max: 2000, message: "Bình luận tối đa 2000 ký tự" },
+            ]}
           >
             <Input.TextArea
               placeholder="Mời bạn tham gia thảo luận!"
               rows={4}
+              showCount
+              maxLength={2000}
             />
           </Form.Item>
         </Form>

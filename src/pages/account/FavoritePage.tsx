@@ -11,7 +11,7 @@ interface FavoriteProductProps {
   onRemove?: (bookId: string) => void;
 }
 
-const FavoritePage = ({ favorites, onRemove }: FavoriteProductProps) => {
+const FavoritePage = (_props: FavoriteProductProps) => {
   const authUser = useAppSelector((s) => s.auth.user);
   const [favoriteBooks, setFavoriteBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +42,7 @@ const FavoritePage = ({ favorites, onRemove }: FavoriteProductProps) => {
     try {
       setRemoving(bookId);
       const res = await fetch(
-        `${API_BASE}/favorites/remove?customerId=${authUser.userId}&bookId=${bookId}`,
+        `${API_BASE}/favorites/remove?customerId=${authUser?.userId}&bookId=${bookId}`,
         { method: "DELETE" }
       );
 

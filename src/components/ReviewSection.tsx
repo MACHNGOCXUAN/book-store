@@ -1,11 +1,22 @@
-import React, { useState } from "react"
-import { Row, Col, Card, Space, Button, Rate, Divider, Form, Input, Empty } from "antd"
-import { StarOutlined, MessageOutlined, SendOutlined } from "@ant-design/icons"
+import React, { useState } from "react";
+import {
+  Row,
+  Col,
+  Card,
+  Space,
+  Button,
+  Rate,
+  Divider,
+  Form,
+  Input,
+  Empty,
+} from "antd";
+import { StarOutlined, MessageOutlined, SendOutlined } from "@ant-design/icons";
 
 // 1. IMPORT COMMENT ITEM
 
 // Import types
-import type { Comment } from "../types"
+import type { Comment } from "../types";
 import ReviewItem from "./ReviewItem";
 
 /* ===================== ReviewSection Types ===================== */
@@ -22,7 +33,11 @@ interface ReviewSectionProps {
   form: any; // Ant Design Form Instance
   currentUserId?: string;
   onCommentSubmit: (values: any) => void;
-  onEditComment?: (reviewId: string | number, rating: number, content: string) => Promise<void>;
+  onEditComment?: (
+    reviewId: string | number,
+    rating: number,
+    content: string
+  ) => Promise<void>;
   onDeleteComment?: (reviewId: string | number) => Promise<void>;
   onToggleLogin?: (status: boolean) => void;
 }
@@ -44,19 +59,19 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({
   onDeleteComment,
 }) => {
   const [displayedCount, setDisplayedCount] = useState(REVIEWS_PER_PAGE);
-  
+
   // Hàm xử lý cuộn khi nhấn nút Đánh giá ngay
   const handleRateNowClick = () => {
-    const reviewFormAnchor = document.getElementById('review-form-anchor');
+    const reviewFormAnchor = document.getElementById("review-form-anchor");
     if (reviewFormAnchor) {
-        reviewFormAnchor.scrollIntoView({ behavior: 'smooth' });
+      reviewFormAnchor.scrollIntoView({ behavior: "smooth" });
     }
-  }
+  };
 
   // Hàm xử lý xem thêm bình luận
   const handleLoadMore = () => {
-    setDisplayedCount(prev => prev + REVIEWS_PER_PAGE);
-  }
+    setDisplayedCount((prev) => prev + REVIEWS_PER_PAGE);
+  };
 
   // Lấy bình luận hiển thị
   const displayedComments = comments.slice(0, displayedCount);
@@ -67,7 +82,9 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({
       {/* ---------------------------------------------------- */}
       {/* 1. RATING STATISTICS & SUMMARY (Giữ nguyên) */}
       {/* ---------------------------------------------------- */}
-      <h2 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "24px" }}>
+      <h2
+        style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "24px" }}
+      >
         <StarOutlined style={{ marginRight: "8px", color: primaryColor }} />
         Đánh giá {bookTitle}
       </h2>
@@ -77,11 +94,23 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({
         <Col xs={24} md={12}>
           <Space direction="vertical" style={{ width: "100%" }} size="middle">
             {[5, 4, 3, 2, 1].map((stars) => {
-              const count = ratingStats[stars as keyof RatingStats] // SỬA: Loại bỏ typeof
-              const percentage = totalRatings > 0 ? Math.round((count / totalRatings) * 100) : 0
+              const count = ratingStats[stars as keyof RatingStats]; // SỬA: Loại bỏ typeof
+              const percentage =
+                totalRatings > 0 ? Math.round((count / totalRatings) * 100) : 0;
               return (
-                <div key={stars} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "bold", width: "32px" }}>{stars}★</span>
+                <div
+                  key={stars}
+                  style={{ display: "flex", alignItems: "center", gap: "12px" }}
+                >
+                  <span
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: "bold",
+                      width: "32px",
+                    }}
+                  >
+                    {stars}★
+                  </span>
                   <div
                     style={{
                       flex: 1,
@@ -100,11 +129,17 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({
                       }}
                     ></div>
                   </div>
-                  <span style={{ fontSize: "14px", color: "#1890ff", minWidth: "80px" }}>
+                  <span
+                    style={{
+                      fontSize: "14px",
+                      color: "#1890ff",
+                      minWidth: "80px",
+                    }}
+                  >
                     {percentage}% | {count} đánh giá
                   </span>
                 </div>
-              )
+              );
             })}
           </Space>
         </Col>
@@ -122,9 +157,23 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({
           }}
         >
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "48px", fontWeight: "bold", color: primaryColor }}>{averageRating}</div>
-            <Rate disabled value={Math.round(Number(averageRating))} style={{ fontSize: "20px" }} />
-            <p style={{ margin: "8px 0 0 0", color: "#666" }}>({totalRatings} đánh giá)</p>
+            <div
+              style={{
+                fontSize: "48px",
+                fontWeight: "bold",
+                color: primaryColor,
+              }}
+            >
+              {averageRating}
+            </div>
+            <Rate
+              disabled
+              value={Math.round(Number(averageRating))}
+              style={{ fontSize: "20px" }}
+            />
+            <p style={{ margin: "8px 0 0 0", color: "#666" }}>
+              ({totalRatings} đánh giá)
+            </p>
           </div>
           <Button
             type="primary"
@@ -151,35 +200,49 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({
       {/* ---------------------------------------------------- */}
       {isLoggedIn ? (
         <>
-          <h3 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "24px" }}>
-            <MessageOutlined style={{ marginRight: "8px", color: primaryColor }} />
+          <h3
+            style={{
+              fontSize: "18px",
+              fontWeight: "bold",
+              marginBottom: "24px",
+            }}
+          >
+            <MessageOutlined
+              style={{ marginRight: "8px", color: primaryColor }}
+            />
             Bình luận ({totalRatings})
           </h3>
 
-          <Space direction="vertical" style={{ width: "100%", marginBottom: "32px" }} size="large">
+          <Space
+            direction="vertical"
+            style={{ width: "100%", marginBottom: "32px" }}
+            size="large"
+          >
             {comments.length > 0 ? (
               <>
                 {displayedComments.map((comment) => {
-                  const isCurrentUser = (comment.customerId || comment.customer_id) === currentUserId;
+                  const isCurrentUser =
+                    (comment.customerId || comment.customer_id) ===
+                    currentUserId;
                   console.log("ReviewItem render:", {
                     reviewId: comment.review_id,
                     customerId: comment.customerId || comment.customer_id,
                     currentUserId,
                     isCurrentUser,
-                    comment
+                    comment,
                   });
                   return (
-                    <ReviewItem 
-                        key={comment.review_id} 
-                        comment={comment} 
-                        primaryColor={primaryColor}
-                        isCurrentUserComment={isCurrentUser}
-                        onEdit={onEditComment}
-                        onDelete={onDeleteComment}
+                    <ReviewItem
+                      key={comment.review_id}
+                      comment={comment}
+                      primaryColor={primaryColor}
+                      isCurrentUserComment={isCurrentUser}
+                      onEdit={onEditComment}
+                      onDelete={onDeleteComment}
                     />
                   );
                 })}
-                
+
                 {/* Nút Xem thêm */}
                 {hasMore && (
                   <div style={{ textAlign: "center", marginTop: "16px" }}>
@@ -216,10 +279,17 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({
             padding: "32px 24px",
           }}
         >
-          <p style={{ fontSize: "16px", color: "#92400e", margin: "0 0 16px 0", fontWeight: "500" }}>
-            Chỉ có thành viên mới có thể viết nhận xét. Vui lòng đăng nhập hoặc đăng ký.
+          <p
+            style={{
+              fontSize: "16px",
+              color: "#92400e",
+              margin: "0 0 16px 0",
+              fontWeight: "500",
+            }}
+          >
+            Chỉ có thành viên mới có thể viết nhận xét. Vui lòng đăng nhập hoặc
+            đăng ký.
           </p>
-          
         </Card>
       )}
 
@@ -230,7 +300,14 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({
       {/* ---------------------------------------------------- */}
       {isLoggedIn && (
         <>
-          <h3 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "24px" }} id="review-form-anchor">
+          <h3
+            style={{
+              fontSize: "18px",
+              fontWeight: "bold",
+              marginBottom: "24px",
+            }}
+            id="review-form-anchor"
+          >
             Viết bình luận của bạn
           </h3>
 
@@ -244,13 +321,19 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({
             </Form.Item>
 
             <Form.Item
-              name="content" 
+              name="content"
               label="Bình luận"
-              rules={[{ required: true, message: "Vui lòng nhập bình luận" }]}
+              rules={[
+                { required: true, message: "Vui lòng nhập bình luận" },
+                { min: 10, message: "Bình luận phải có ít nhất 10 ký tự" },
+                { max: 2000, message: "Bình luận tối đa 2000 ký tự" },
+              ]}
             >
               <Input.TextArea
                 placeholder="Mời bạn tham gia thảo luận, vui lòng nhập tiếng Việt có dấu"
                 rows={4}
+                showCount
+                maxLength={2000}
               />
             </Form.Item>
 
@@ -259,7 +342,11 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({
                 type="primary"
                 htmlType="submit"
                 size="large"
-                style={{ backgroundColor: "#fbbf24", color: "#000", fontWeight: "bold" }}
+                style={{
+                  backgroundColor: "#fbbf24",
+                  color: "#000",
+                  fontWeight: "bold",
+                }}
                 icon={<SendOutlined />}
               >
                 Gửi bình luận
@@ -269,7 +356,7 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({
         </>
       )}
     </Card>
-  )
-}
+  );
+};
 
-export default ReviewSection
+export default ReviewSection;

@@ -5,7 +5,7 @@
 import { EyeOutlined, ShoppingCartOutlined } from "@ant-design/icons";
 import { Button, Card, Tooltip, Typography } from "antd";
 import type React from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { addOrUpdateCartItem } from "../features/cart/cartSlice";
 import { useAppDispatch } from "../store/hooks";
@@ -25,7 +25,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
 
   // Hàm điều hướng đến trang chi tiết sản phẩm
   const handleViewDetails = () => {
-    navigate(`books/${book.bookId}`);
+    navigate(`/books/${book.bookId}`);
   };
 
   const handleAddToCart = async () => {
@@ -63,20 +63,27 @@ const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
             justifyContent: "center",
           }}
         >
-          <img
-            alt={book.title}
-            src={book.coverImage}
+          <Link
+            to={`/books/${book.bookId}`}
             style={{
               height: "100%",
-              width: "auto",
-              objectFit: "contain",
-              transition: "transform 0.3s ease",
             }}
-            onMouseOver={(e) =>
-              (e.currentTarget.style.transform = "scale(1.05)")
-            }
-            onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
-          />
+          >
+            <img
+              alt={book.title}
+              src={book.coverImage}
+              style={{
+                height: "100%",
+                width: "auto",
+                objectFit: "contain",
+                transition: "transform 0.3s ease",
+              }}
+              onMouseOver={(e) =>
+                (e.currentTarget.style.transform = "scale(1.05)")
+              }
+              onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
+            />
+          </Link>
         </div>
       }
       style={{
@@ -90,12 +97,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
         border: "1px solid #f0f0f0",
         background: "#ffffff",
       }}
-      bodyStyle={{
-        padding: "16px",
-        flex: 1,
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
+      styles={{
+        body: {
+          padding: "16px",
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+        },
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.boxShadow = "0 8px 20px rgba(201,33,39,0.2)";
