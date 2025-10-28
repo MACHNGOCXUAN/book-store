@@ -18,7 +18,6 @@ public class Book {
     private String title;
     private String author;
     private String publisher;
-    private String category;
     private double price;
     private double importPrice;
     private int stock;
@@ -26,6 +25,10 @@ public class Book {
     @Column(columnDefinition = "MEDIUMTEXT")
     private String description;
     private LocalDate publishDate;
+
+    @ManyToOne
+    @JoinColumn(name = "category_id", nullable = false)
+    private Category category;
 
     @Lob
     @Column(columnDefinition = "MEDIUMTEXT")
