@@ -1,8 +1,8 @@
 // src/components/header/HeaderCategoryMenu.tsx
+import { AppstoreOutlined, BookOutlined } from "@ant-design/icons";
+import { Button } from "antd";
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { Button } from "antd";
-import { AppstoreOutlined, BookOutlined } from "@ant-design/icons";
 
 interface HeaderCategoryMenuProps {
   categories: string[];
@@ -36,7 +36,7 @@ const HeaderCategoryMenu: React.FC<HeaderCategoryMenuProps> = ({
         <div
           style={{
             position: "absolute",
-            top: "100%",
+            top: "90%",
             left: 0,
             marginTop: 4,
             backgroundColor: "white",
