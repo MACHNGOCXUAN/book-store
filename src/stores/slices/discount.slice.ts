@@ -9,14 +9,51 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
  * (ví dụ: admin/get-discount, admin/discount/[id], ...)
  */
 
-// Lấy danh sách discount (có lọc và phân trang)
+// // Lấy danh sách discount (có lọc và phân trang)
+// export const getDiscountsFilter = createAsyncThunk(
+//   "discount/getAllDiscountCodes",
+//   async (data: any) => {
+//     // THAY ĐỔI: Gọi endpoint mới.
+//     // Lưu ý: tham số 'data' (chứa filter) sẽ bị bỏ qua
+//     // vì GET /api/discounts không hỗ trợ.
+//     const response = await http.get("discounts");
+//     console.log("API Response:", response);
+//     return response;
+//   }
+// );
+
 export const getDiscountsFilter = createAsyncThunk(
-  "discount/getAllDiscountCodes",
+  "discount/filterDiscountCodes",
   async (data: any) => {
-    // THAY ĐỔI: Gọi endpoint mới.
-    // Lưu ý: tham số 'data' (chứa filter) sẽ bị bỏ qua
-    // vì GET /api/discounts không hỗ trợ.
-    const response = await http.get("discounts");
+    const {
+      page, 
+      limit, 
+      discountCode, 
+      type, 
+      description,
+    } = data;
+    console.log("Filter data received:", data);
+    const params = new URLSearchParams();
+
+    if (page) {
+      params.append("page", (page - 1).toString());
+    }
+    if (limit) {
+      params.append("size", limit.toString());
+    }
+
+
+    if (discountCode) {
+      params.append("discountCode", discountCode);
+    }
+    if (type && type !== "tat_ca") {
+      params.append("type", type);
+    }
+    if (description) {
+      params.append("description", description);
+    }
+
+    const response = await http.get(`discounts?${params.toString()}`);
     console.log("API Response:", response);
     return response;
   }
@@ -26,8 +63,7 @@ export const getDiscountsFilter = createAsyncThunk(
 export const createDiscount = createAsyncThunk(
   "discount/createDiscount",
   async (data: any) => {
-    // Giả định API create: "admin/create-discount"
-    const response = await http.post("admin/create-discount", data);
+    const response = await http.post("discounts", data);
     return response;
   }
 );
@@ -48,16 +84,6 @@ export const updateDiscount = createAsyncThunk(
   async (data: any) => {
     // Giả định API update: "admin/discount/update"
     const response = await http.put("admin/discount/update", data);
-    return response;
-  }
-);
-
-// Xóa discount
-export const deleteDiscount = createAsyncThunk(
-  "discount/deleteDiscount",
-  async (id: string) => {
-    // Giả định API delete: "admin/discount/[id]"
-    const response = await http.delete(`admin/discount/${id}`);
     return response;
   }
 );
@@ -176,26 +202,6 @@ export const discountSlice = createSlice({
         state.message = {
           type: "error",
           message: "Cập nhật thất bại!",
-        };
-      });
-
-    // Xử lý deleteDiscount
-    builder
-      .addCase(deleteDiscount.pending, (state) => {
-        state.loading = true;
-      })
-      .addCase(deleteDiscount.fulfilled, (state, action) => {
-        state.loading = false;
-        state.message = {
-          type: "success",
-          message: "Xóa thành công!",
-        };
-      })
-      .addCase(deleteDiscount.rejected, (state) => {
-        state.loading = false;
-        state.message = {
-          type: "error",
-          message: "Xóa thất bại!",
         };
       });
   },
