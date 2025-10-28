@@ -4,7 +4,7 @@ import AboutPage from "../pages/AboutPage";
 import AccountLayout from "../pages/account/AccountLayout";
 import { CartPage } from "../pages/CartPage";
 import ContactPage from "../pages/ContactPage";
-import DetailPage from "../pages/DetailPage";
+
 import HomePage from "../pages/HomePage";
 import AddressPage from "../pages/account/AddressPage";
 import VoucherPage from "../pages/account/VoucherPage";
@@ -13,6 +13,7 @@ import { OrdersPage } from "../pages/account/OrdersPage";
 import FilterCategory from "../pages/FilterCategory";
 import AccountInfoPage from "../pages/account/AccountInfoPage";
 import ChangePasswordPage from "../pages/account/ChangePasswordPage";
+import DetailPage from "../pages/DetailPage";
 
 const router = createBrowserRouter([
   {
