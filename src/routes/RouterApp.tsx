@@ -5,15 +5,15 @@ import AccountLayout from "../pages/account/AccountLayout";
 import { CartPage } from "../pages/CartPage";
 import ContactPage from "../pages/ContactPage";
 
-import HomePage from "../pages/HomePage";
+import AccountInfoPage from "../pages/account/AccountInfoPage";
 import AddressPage from "../pages/account/AddressPage";
-import VoucherPage from "../pages/account/VoucherPage";
+import ChangePasswordPage from "../pages/account/ChangePasswordPage";
 import FavoritePage from "../pages/account/FavoritePage";
 import { OrdersPage } from "../pages/account/OrdersPage";
-import FilterCategory from "../pages/FilterCategory";
-import AccountInfoPage from "../pages/account/AccountInfoPage";
-import ChangePasswordPage from "../pages/account/ChangePasswordPage";
+import VoucherPage from "../pages/account/VoucherPage";
 import DetailPage from "../pages/DetailPage";
+import FilterCategory from "../pages/FilterCategory";
+import HomePage from "../pages/HomePage";
 
 const router = createBrowserRouter([
   {
