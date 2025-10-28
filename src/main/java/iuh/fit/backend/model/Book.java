@@ -14,7 +14,7 @@ import java.util.Set;
 public class Book {
     @Id
     private String bookId;
-
+    @Column(columnDefinition = "MEDIUMTEXT")
     private String title;
     private String author;
     private String publisher;
@@ -23,7 +23,7 @@ public class Book {
     private double importPrice;
     private int stock;
     private int discountPercent;
-    @Column(length = 2000)
+    @Column(columnDefinition = "MEDIUMTEXT")
     private String description;
     private LocalDate publishDate;
 

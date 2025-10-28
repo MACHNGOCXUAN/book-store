@@ -12,6 +12,8 @@ import iuh.fit.backend.repository.CustomerRepository;
 import iuh.fit.backend.repository.ReviewRepository;
 import iuh.fit.backend.service.ReviewService;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +25,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional
 public class ReviewServiceImpl implements ReviewService {
+    private static final Logger logger = LoggerFactory.getLogger(ReviewServiceImpl.class);
     private final ReviewRepository reviewRepository;
     private final BookRepository bookRepository;
     private final CustomerRepository customerRepository;
@@ -48,6 +51,15 @@ public class ReviewServiceImpl implements ReviewService {
             throw new IllegalArgumentException("Rating must be between 1 and 5");
         }
 
+        // Validate content
+        if (request.getContent() == null || request.getContent().trim().isEmpty()) {
+            throw new IllegalArgumentException("Content cannot be empty");
+        }
+
+        if (request.getContent().trim().length() < 10) {
+            throw new IllegalArgumentException("Content must be at least 10 characters");
+        }
+
         // Get book and customer
         Book book = bookRepository.findById(request.getBookId())
                 .orElseThrow(() -> new RuntimeException("Book not found with id: " + request.getBookId()));
@@ -61,7 +73,7 @@ public class ReviewServiceImpl implements ReviewService {
         review.setBook(book);
         review.setCustomer(customer);
         review.setRating(request.getRating());
-        review.setContent(request.getContent());
+        review.setContent(request.getContent().trim());
         review.setRatingDate(LocalDate.now());
 
         Review savedReview = reviewRepository.save(review);
@@ -75,11 +87,20 @@ public class ReviewServiceImpl implements ReviewService {
             throw new IllegalArgumentException("Rating must be between 1 and 5");
         }
 
+        // Validate content
+        if (request.getContent() == null || request.getContent().trim().isEmpty()) {
+            throw new IllegalArgumentException("Content cannot be empty");
+        }
+
+        if (request.getContent().trim().length() < 10) {
+            throw new IllegalArgumentException("Content must be at least 10 characters");
+        }
+
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new RuntimeException("Review not found with id: " + reviewId));
 
         review.setRating(request.getRating());
-        review.setContent(request.getContent());
+        review.setContent(request.getContent().trim());
 
         Review updatedReview = reviewRepository.save(review);
         return convertToDto(updatedReview);
@@ -87,9 +108,15 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     public void deleteReview(String reviewId) {
+        logger.info("Attempting to delete review with ID: {}", reviewId);
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new RuntimeException("Review not found with id: " + reviewId));
+                .orElseThrow(() -> {
+                    logger.error("Review not found with id: {}", reviewId);
+                    return new RuntimeException("Review not found with id: " + reviewId);
+                });
+        logger.info("Found review: {} for customer: {}", reviewId, review.getCustomer().getUserId());
         reviewRepository.delete(review);
+        logger.info("Successfully deleted review with ID: {}", reviewId);
     }
 
     @Override
