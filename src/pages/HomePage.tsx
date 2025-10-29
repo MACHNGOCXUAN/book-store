@@ -15,28 +15,28 @@ const { Title, Paragraph } = Typography;
 // Famous book brands
 const famousBrands = [
   {
-    name: "NXB Kim Đồng",
-    logo: "https://cdn0.fahasa.com/media/wysiwyg/Duy-VHDT/Thuong_hieu_NCCBH.jpg",
-  },
-  {
-    name: "IPM",
-    logo: "https://cdn0.fahasa.com/media/wysiwyg/Duy-VHDT/Thuong_hieu_IPM.jpg",
-  },
-  {
-    name: "Nhã Nam",
-    logo: "https://cdn0.fahasa.com/media/wysiwyg/Duy-VHDT/Thuong_hieu_Nha_Nam.jpg",
-  },
-  {
     name: "Alphabooks",
-    logo: "https://cdn0.fahasa.com/media/wysiwyg/Duy-VHDT/Thuong_hieu_AlphaBook.jpg",
+    logo: "	https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRRWsoa7MAE3_RoPTjA4MDtBoKSpu2z_sAImw&s",
   },
   {
-    name: "Thái Hà",
-    logo: "https://cdn0.fahasa.com/media/wysiwyg/Duy-VHDT/Thuong_hieu_Thai_ha.jpg",
+    name: "MCBooks",
+    logo: "https://mcbooks.vn/wp-content/uploads/2025/03/mcbooks-logo.png",
+  },
+  {
+    name: "Megabook",
+    logo: "https://static.ybox.vn/2022/7/3/1658889187120-1614821884298-1604980498235-1604384267608-1597147211396-1571017819963-1543649572501-LOGO%20MEGA.jpg",
   },
   {
     name: "MeBook",
-    logo: "https://cdn0.fahasa.com/media/wysiwyg/Duy-VHDT/Thuong_hieu_mebook.jpg",
+    logo: "https://mms.img.susercontent.com/0e3ced521251ced02c86462b233419a9_tn",
+  },
+  {
+    name: "Thaihabooks",
+    logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQE33DWi41s1gfCFwlTl_qM0nFCsZof6L2d6w&s",
+  },
+  {
+    name: "Skybook",
+    logo: "https://media.licdn.com/dms/image/v2/C560BAQGhxOUCGAkcSQ/company-logo_200_200/company-logo_200_200/0/1630621198942?e=2147483647&v=beta&t=3lY2kOpwHLICAptGcPTFVzQimFiZvUEbFPJ7NenVd00",
   },
 ];
 
