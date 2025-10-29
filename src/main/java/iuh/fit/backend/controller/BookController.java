@@ -129,8 +129,8 @@ public class BookController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/categories/{category}")
-    public ResponseEntity<List<Book>> getBooksByCategory(@PathVariable String category) {
-        return ResponseEntity.ok(service.findByCategory(category));
+    @GetMapping("/categories/{categoryId}")
+    public ResponseEntity<List<Book>> getBooksByCategoryId(@PathVariable String categoryId) {
+        return ResponseEntity.ok(service.findByCategoryId(categoryId));
     }
 }

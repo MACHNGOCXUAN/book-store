@@ -122,8 +122,7 @@ public class BookServiceImpl implements BookService {
     }
 
     @Override
-    public List<Book> findByCategory(String category) {
-        Category c = categoryRepository.findByCategoryId(category);
-        return repo.findBookByCategory(c);
+    public List<Book> findByCategoryId(String categoryId) {
+        return repo.findByCategoryCategoryId(categoryId);
     }
 }
