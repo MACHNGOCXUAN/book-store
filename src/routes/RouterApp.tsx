@@ -14,6 +14,7 @@ import VoucherPage from "../pages/account/VoucherPage";
 import DetailPage from "../pages/DetailPage";
 import FilterCategory from "../pages/FilterCategory";
 import HomePage from "../pages/HomePage";
+import MembershipPage from "../pages/MembershipPage";
 
 const router = createBrowserRouter([
   {
@@ -31,6 +32,10 @@ const router = createBrowserRouter([
       {
         path: "about",
         element: <AboutPage />,
+      },
+      {
+        path: "membership",
+        element: <MembershipPage />,
       },
       {
         path: "cart",

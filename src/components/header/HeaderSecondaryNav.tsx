@@ -62,8 +62,8 @@ const HeaderSecondaryNav: React.FC = () => {
           >
             Giới thiệu
           </Link>
-          <a
-            href="#"
+          <Link
+            to="/membership"
             style={{
               color: "white",
               textDecoration: "none",
@@ -92,7 +92,8 @@ const HeaderSecondaryNav: React.FC = () => {
             >
               HOT
             </span>
-          </a>
+          </Link>
+
           <a
             href="#"
             style={{
