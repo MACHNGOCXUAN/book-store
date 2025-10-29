@@ -293,7 +293,9 @@ function DetailPage() {
             }}
           >
             <p style={{ margin: 0, fontSize: "14px", color: "#666" }}>
-              Trang chủ / {reduxBook.category} / {reduxBook.publisher}
+              Trang chủ /{" "}
+              {reduxBook.category?.categoryName || reduxBook.category} /{" "}
+              {reduxBook.publisher}
             </p>
           </div>
 
