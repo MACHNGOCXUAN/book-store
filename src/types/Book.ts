@@ -1,15 +1,16 @@
+import type { Category } from "./Category";
+
 export interface Book {
   bookId: string;
   title: string;
   author: string;
   publisher: string;
-  category: string;
+  category: Category;
   price: number;
-  stockQuantity: number;
-  soldQuantity: number;
+  importPrice: number;
+  stock: number;
   discountPercent: number;
   description: string;
-  publishDate: string;
+  publishDate: string; // LocalDate từ backend, truyền qua JSON thành string
   coverImage: string;
 }
-

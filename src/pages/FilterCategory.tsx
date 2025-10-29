@@ -14,20 +14,22 @@ import { SortAscendingOutlined, ReloadOutlined } from "@ant-design/icons";
 import { useParams } from "react-router-dom";
 import type { Book as BookType } from "../types/Book";
 import ProductCard from "../components/ProductCard";
-import { API_BASE } from "../config/api"; // Updated import path
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { fetchBooksByCategory } from "../features/books/bookSlice";
 
-// --- Dummy Interfaces for Missing Imports ---
+// --- Interface for Price Ranges ---
 interface PriceRange {
   id: string;
   label: string;
 }
-// --- END Dummy Interfaces ---
 
 export default function FilterCategory() {
   const { type } = useParams<{ type: string }>();
+  const dispatch = useAppDispatch();
+  const bookData = useAppSelector((s) => s.books.books);
 
   // --- State chính ---
-  const [books, setBooks] = useState<BookType[]>([]); // Khởi tạo là mảng rỗng
+  const [books, setBooks] = useState<BookType[]>([]);
   const [authors, setAuthors] = useState<{ label: string; value: string }[]>(
     []
   );
@@ -36,9 +38,6 @@ export default function FilterCategory() {
   >([]);
 
   // States lọc
-  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(
-    new Set()
-  );
   const [selectedPrice, setSelectedPrice] = useState<string | null>(null);
   const [customPriceFrom, setCustomPriceFrom] = useState<number | null>(null);
   const [customPriceTo, setCustomPriceTo] = useState<number | null>(null);
@@ -56,43 +55,25 @@ export default function FilterCategory() {
   // MÀU CHỦ ĐẠO
   const PRIMARY_COLOR = "rgb(217, 47, 56)";
 
-  // --- Lấy dữ liệu & Sinh Authors/Publishers ---
+  // --- Lấy dữ liệu khi categoryId thay đổi ---
   useEffect(() => {
-    async function doFecth() {
-      try {
-        const encodedType = encodeURIComponent(type ?? "");
-        const response = await fetch(
-          `${API_BASE}/books/categories/${encodedType}`
-        );
-        // Kiểm tra lỗi HTTP (ví dụ: 404)
-        if (!response.ok) {
-          throw new Error(`Failed to fetch: ${response.status}`);
-        }
-
-        const data = await response.json();
-        let bookList: BookType[] = [];
-        if (Array.isArray(data)) {
-          bookList = data;
-        } else if (data && Array.isArray(data.books)) {
-          bookList = data.books;
-        }
-        console.log(bookList);
-        setBooks(bookList);
-
-        const authorSet = Array.from(new Set(bookList.map((b) => b.author)));
-        const publisherSet = Array.from(
-          new Set(bookList.map((b) => b.publisher))
-        );
-        setAuthors(authorSet.map((a) => ({ label: a, value: a })));
-        setPublishers(publisherSet.map((p) => ({ label: p, value: p })));
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        setBooks([]); // Quan trọng: Đặt về mảng rỗng nếu có lỗi
-      }
+    if (type) {
+      dispatch(fetchBooksByCategory(type));
     }
+  }, [type, dispatch]);
 
-    doFecth();
-  }, [type]);
+  // --- Cập nhật local state khi Redux bookData thay đổi ---
+  useEffect(() => {
+    if (Array.isArray(bookData)) {
+      setBooks(bookData);
+      const authorSet = Array.from(new Set(bookData.map((b) => b.author)));
+      const publisherSet = Array.from(
+        new Set(bookData.map((b) => b.publisher))
+      );
+      setAuthors(authorSet.map((a) => ({ label: a, value: a })));
+      setPublishers(publisherSet.map((p) => ({ label: p, value: p })));
+    }
+  }, [bookData]);
 
   const handlePriceRangeChange = (e: any) => {
     setSelectedPrice(e.target.value);
@@ -110,11 +91,7 @@ export default function FilterCategory() {
     }
   };
 
-  // toggleCategory was removed because categories are not rendered as a checkbox list
-  // and the state is currently managed elsewhere (keeps code clean and avoids TS unused warnings).
-
   const resetAllFilters = () => {
-    setSelectedCategories(new Set());
     setSelectedPrice(null);
     setCustomPriceFrom(null);
     setCustomPriceTo(null);
@@ -126,10 +103,7 @@ export default function FilterCategory() {
   };
 
   // --- ÁP DỤNG BỘ LỌC VÀ SẮP XẾP ---
-  const filteredBooks = books // <-- FIX: books được đảm bảo là mảng rỗng nếu fetch lỗi
-    .filter(
-      (b) => selectedCategories.size === 0 || selectedCategories.has(b.category)
-    )
+  const filteredBooks = books
     .filter((b) => !selectedAuthor || b.author === selectedAuthor)
     .filter((b) => !selectedPublisher || b.publisher === selectedPublisher)
     .filter((b) => {
@@ -152,7 +126,6 @@ export default function FilterCategory() {
         }
       }
 
-      // --- Lọc theo giá nhập tay (InputNumber) ---
       // --- Lọc theo giá nhập tay (InputNumber) ---
       const from = (customPriceFrom ?? 0) * 1000;
       const to = (customPriceTo ?? Infinity) * 1000;
