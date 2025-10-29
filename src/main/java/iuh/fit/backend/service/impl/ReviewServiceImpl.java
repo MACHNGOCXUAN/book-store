@@ -175,6 +175,11 @@ public class ReviewServiceImpl implements ReviewService {
         dto.setReviewId(review.getReviewId());
         dto.setBookId(review.getBook().getBookId());
         dto.setBookTitle(review.getBook().getTitle());
+        dto.setBookCover(review.getBook().getCoverImage());
+        // thêm tác giả và giá
+        dto.setBookAuthor(review.getBook().getAuthor());
+        dto.setBookPrice(review.getBook().getPrice());
+        dto.setBookDiscountPercent(review.getBook().getDiscountPercent());
         dto.setCustomerId(review.getCustomer().getUserId());
         dto.setCustomerName(review.getCustomer().getUserName());
         dto.setCustomerFullName(review.getCustomer().getFullName() != null ? review.getCustomer().getFullName() : "");
@@ -206,5 +211,14 @@ public class ReviewServiceImpl implements ReviewService {
         }
 
         return "REVIEW" + String.format("%03d", nextNum);
+    }
+
+    @Override
+    public List<ReviewDto> getAllReviews() {
+
+        return reviewRepository.findAll()
+                .stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
     }
 }

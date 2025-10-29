@@ -33,4 +33,17 @@ public class ReviewDto {
 
     @JsonProperty("rating_date")
     private LocalDate ratingDate;
+
+    @JsonProperty("book_cover")
+    private String bookCover;
+
+    
+    @JsonProperty("book_author")
+    private String bookAuthor;
+
+    @JsonProperty("book_price")
+    private Double bookPrice;
+
+    @JsonProperty("book_discount_percent")
+    private Integer bookDiscountPercent;
 }
