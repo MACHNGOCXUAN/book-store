@@ -4,9 +4,12 @@ import iuh.fit.backend.dto.requests.OrderFilter;
 import iuh.fit.backend.dto.requests.UpdateStatusOrderDTO;
 import iuh.fit.backend.dto.responses.OrderFullDetailDTO;
 import iuh.fit.backend.model.*;
+import iuh.fit.backend.model.enums.OrderStatus;
+import iuh.fit.backend.model.enums.Role;
 import iuh.fit.backend.repository.OrderHistoryRepository;
 import iuh.fit.backend.repository.OrderRepository;
 import iuh.fit.backend.repository.PaymentRepository;
+import iuh.fit.backend.repository.StaffRepository;
 import iuh.fit.backend.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
@@ -23,6 +26,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final OrderHistoryRepository orderHistoryRepository;
+    private final StaffRepository staffRepository;
 
     private OrderFullDetailDTO convertToOrderFullDetailDTO(Order order) {
         OrderFullDetailDTO dto = new OrderFullDetailDTO();
@@ -106,7 +110,7 @@ public class OrderServiceImpl implements OrderService {
 
 
     @Override
-    public Page<OrderFullDetailDTO> getOrdersFilter(OrderFilter orderFilter) {
+    public Page<OrderFullDetailDTO> getOrdersFilter(OrderFilter orderFilter, User user) {
         int page = orderFilter.getPage() != null ? orderFilter.getPage() - 1 : 0;
         int limit = orderFilter.getLimit() != null ? orderFilter.getLimit() : 10;
 
@@ -116,13 +120,27 @@ public class OrderServiceImpl implements OrderService {
         LocalDateTime startDate = orderFilter.getStartTime();
         LocalDateTime endDate = orderFilter.getEndTime();
 
-        Page<Order> ordersPage = orderRepository.findByFilter(
-                orderFilter.getStatus(),
-                orderFilter.getStartTime(),
-                orderFilter.getEndTime(),
-                orderFilter.getTextSearch(),
-                pageable
-        );
+        Page<Order> ordersPage;
+
+        if(user.getRole() == Role.ADMIN) {
+            ordersPage = orderRepository.findByFilter(
+                    orderFilter.getStatus(),
+                    orderFilter.getStartTime(),
+                    orderFilter.getEndTime(),
+                    orderFilter.getTextSearch(),
+                    pageable
+            );
+        } else {
+            ordersPage = orderRepository.findByFilterStaff(
+                    orderFilter.getStatus(),
+                    orderFilter.getStartTime(),
+                    orderFilter.getEndTime(),
+                    orderFilter.getTextSearch(),
+                    user.getUserId(),
+                    pageable
+            );
+        }
+
         List<OrderFullDetailDTO> dtoList = ordersPage.getContent()
                 .stream()
                 .map(this::convertToOrderFullDetailDTO)
@@ -142,12 +160,14 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public boolean updateOrderStatus(UpdateStatusOrderDTO updateStatusOrderDTO) {
+    public boolean updateOrderStatus(UpdateStatusOrderDTO updateStatusOrderDTO, User user) {
         Order order = orderRepository.findById(updateStatusOrderDTO.getOrderId()).orElse(null);
         if (order == null) {
             return false;
         }
 
+        Staff staff = staffRepository.findById(user.getUserId()).orElse(null);
+        order.setStaff(staff);
         order.setStatus(updateStatusOrderDTO.getStatus());
         orderRepository.save(order);
 

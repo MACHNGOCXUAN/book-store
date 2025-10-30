@@ -25,4 +25,19 @@ public interface OrderRepository extends JpaRepository<Order, String>, JpaSpecif
                              @Param("endTime") LocalDateTime endTime,
                              @Param("textSearch") String textSearch,
                              Pageable pageable);
+
+    @Query("SELECT o FROM Order o " +
+            "WHERE (:status IS NULL OR o.status = :status) " +
+            "AND (:startTime IS NULL OR o.orderDate >= :startTime) " +
+            "AND (:endTime IS NULL OR o.orderDate <= :endTime) " +
+            "AND (:textSearch IS NULL OR LOWER(o.orderId) LIKE LOWER(CONCAT('%', :textSearch, '%')) " +
+            "     OR LOWER(o.customer.fullName) LIKE LOWER(CONCAT('%', :textSearch, '%'))) " +
+            "AND (o.staff.userId = :staffId OR (o.staff IS NULL AND o.status = 'PENDING'))")
+    Page<Order> findByFilterStaff(
+            @Param("status") OrderStatus status,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime,
+            @Param("textSearch") String textSearch,
+            @Param("staffId") String staffId,
+            Pageable pageable);
 }
