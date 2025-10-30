@@ -16,4 +16,5 @@ public interface ReviewService {
     ReviewStatisticsDto getReviewStatistics(String bookId);
     List<ReviewDto> getReviewsByCustomerId(String customerId);
     ReviewDto getReviewByIdAndCustomerId(String reviewId, String customerId);
+    List<ReviewDto> getAllReviews();
 }

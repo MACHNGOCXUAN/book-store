@@ -135,4 +135,9 @@ public class ReviewController {
                     .body(e.getMessage());
         }
     }
+
+    @GetMapping
+    public ResponseEntity<List<ReviewDto>> getAllReviews() {
+        return ResponseEntity.ok(reviewService.getAllReviews());
+    }
 }
