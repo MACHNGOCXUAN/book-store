@@ -1,4 +1,3 @@
-// File: app/(main)/products/page.tsx
 "use client";
 import React, { useEffect, useState } from "react";
 import { Button, Space, Image, TableProps } from "antd";
@@ -116,12 +115,12 @@ export default function ProductPage() {
             onClick={() => handleEditProduct(record.bookId)}
             title="Chỉnh sửa"
           />
-          <Button
+          {/* <Button
             danger
             icon={<DeleteOutlined />}
             onClick={() => handleDeleteProduct(record.bookId)}
             title="Xóa"
-          />
+          /> */}
         </Space>
       ),
     },

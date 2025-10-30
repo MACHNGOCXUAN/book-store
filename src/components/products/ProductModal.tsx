@@ -155,7 +155,6 @@ const ProductViewModal = ({
             </div>
           </div>
 
-          {/* Body Content */}
           <div className="px-8! py-8! bg-gray-50">
             <Row gutter={[32, 32]}>
               <Col xs={24} md={10}>

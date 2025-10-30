@@ -9,10 +9,13 @@ import {
   Col,
   Upload,
   message,
+  Select,
 } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import type { UploadFile } from "antd";
 import { ProductDataType, ProductFormValues } from "@/types/product";
+import { useAppDispatch, useAppSelector } from "@/stores/hooks";
+import { getAllCategories } from "@/stores/slices/category.slice";
 
 const { TextArea } = Input;
 
@@ -31,6 +34,8 @@ export default function ProductForm({
 }: ProductFormProps) {
   const [form] = Form.useForm();
   const [fileList, setFileList] = React.useState<UploadFile[]>([]);
+  const dispatch = useAppDispatch();
+  const { categories, loading } = useAppSelector(state => state.category);
 
   useEffect(() => {
     if (mode === "edit" && initialValues) {
@@ -41,7 +46,9 @@ export default function ProductForm({
         stock: initialValues.stock,
         description: initialValues.description,
         publisher: initialValues.publisher,
-        publishDate: initialValues.publishDate
+        publishDate: initialValues.publishDate,
+        category_id: initialValues.category?.categoryId || "",
+        importPrice: initialValues.importPrice,
       });
 
       if (initialValues.coverImage) {
@@ -85,6 +92,11 @@ export default function ProductForm({
   const handleChange = ({ fileList: newFileList }: { fileList: UploadFile[] }) => {
     setFileList(newFileList);
   };
+
+  useEffect(() => {
+    dispatch(getAllCategories())
+  }, [dispatch])
+
 
   return (
     <Form
@@ -133,6 +145,39 @@ export default function ProductForm({
 
         <Col span={12}>
           <Form.Item
+            label="Giá nhập (VNĐ)"
+            name="importPrice"
+            rules={[{ required: true, message: "Vui lòng nhập giá nhập!" }]}
+          >
+            <InputNumber
+              style={{ width: "100%" }}
+              min={0}
+              formatter={(value) =>
+                `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+              }
+              placeholder="Nhập giá sách"
+            />
+          </Form.Item>
+        </Col>
+
+        <Col span={12}>
+          <Form.Item
+            label="Giảm giá(%)"
+            name="discountPercent"
+          >
+            <InputNumber
+              style={{ width: "100%" }}
+              min={0}
+              formatter={(value) =>
+                `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+              }
+              placeholder="Nhập giá sách"
+            />
+          </Form.Item>
+        </Col>
+
+        <Col span={12}>
+          <Form.Item
             label="Số lượng tồn kho"
             name="stock"
             rules={[{ required: true, message: "Vui lòng nhập số lượng!" }]}
@@ -159,6 +204,20 @@ export default function ProductForm({
               max={new Date().getFullYear()}
               placeholder="Nhập năm xuất bản"
             />
+          </Form.Item>
+        </Col>
+
+        <Col span={12}>
+          <Form.Item label="Loại sách" name="category_id" rules={[{ required: true, message: "Vui lòng chọn loại sách!" }]}>
+            <Select placeholder="Chọn loại sách" allowClear>
+              {
+                categories.map((category: any) => (
+                  <Select.Option key={category.id} value={category.categoryId}>
+                    {category.categoryName}
+                  </Select.Option>
+                ))
+              }
+            </Select>
           </Form.Item>
         </Col>
 
