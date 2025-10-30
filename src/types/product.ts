@@ -15,6 +15,12 @@ export interface ProductDataType {
   language?: string;
   createdAt?: string;
   updatedAt?: string;
+  category?: {
+    categoryId: string;
+    categoryName: string;
+  },
+  importPrice: number;
+  discountPercent: number;
 }
 
 export interface ProductFormValues {
