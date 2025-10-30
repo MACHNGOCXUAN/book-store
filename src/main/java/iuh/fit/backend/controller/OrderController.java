@@ -4,7 +4,10 @@ import iuh.fit.backend.dto.requests.OrderFilter;
 import iuh.fit.backend.dto.requests.UpdateStatusOrderDTO;
 import iuh.fit.backend.dto.responses.OrderFullDetailDTO;
 import iuh.fit.backend.model.Order;
+import iuh.fit.backend.model.User;
 import iuh.fit.backend.service.OrderService;
+import iuh.fit.backend.service.UserService;
+import iuh.fit.backend.utils.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -23,10 +26,20 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class OrderController {
     private final OrderService orderService;
+    private final JwtUtils jwtUtils;
+    private final UserService userService;
 
     @PostMapping()
-    public ResponseEntity<?> getAllOrderFilter(@RequestBody OrderFilter orderFilter) {
-        Page<OrderFullDetailDTO> ordersPage = orderService.getOrdersFilter(orderFilter);
+    public ResponseEntity<?> getAllOrderFilter(@RequestBody OrderFilter orderFilter, @RequestHeader("Authorization") String authHeader) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.badRequest().body("Missing Authorization header");
+        }
+        String token = authHeader.substring(7);
+        String userId = jwtUtils.getUserIdFromToken(token);
+        User user = userService.findUserById(userId);
+
+        Page<OrderFullDetailDTO> ordersPage = orderService.getOrdersFilter(orderFilter, user);
         List<OrderFullDetailDTO> orders = ordersPage.getContent();
 
         Map<String, Object> response = new HashMap<>();
@@ -51,8 +64,14 @@ public class OrderController {
     }
 
     @PutMapping("/update-status")
-    public  ResponseEntity<?> updateOrder(@RequestBody UpdateStatusOrderDTO updateStatusOrderDTO) {
-        boolean isSuccess = orderService.updateOrderStatus(updateStatusOrderDTO);
+    public  ResponseEntity<?> updateOrder(@RequestBody UpdateStatusOrderDTO updateStatusOrderDTO, @RequestHeader("Authorization") String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.badRequest().body("Missing Authorization header");
+        }
+        String token = authHeader.substring(7);
+        String userId = jwtUtils.getUserIdFromToken(token);
+        User user = userService.findUserById(userId);
+        boolean isSuccess = orderService.updateOrderStatus(updateStatusOrderDTO, user);
         if (isSuccess) {
             return ResponseEntity.ok(Map.of("message", "Cập nhật thành công!"));
         } else {

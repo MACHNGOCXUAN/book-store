@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import iuh.fit.backend.dto.requests.BookCreateDTO;
 import iuh.fit.backend.model.Category;
 import iuh.fit.backend.repository.CategoryRepository;
 import iuh.fit.backend.service.BookService;
@@ -27,14 +28,37 @@ public class BookServiceImpl implements BookService {
     private final CategoryRepository categoryRepository;
 
     @Override
-    public Book save(Book book) {
-        // Nếu muốn phát sinh ID B001, B002 thì viết thêm logic ở đây
+    public Book save(BookCreateDTO book) {
         if (book.getBookId() == null || book.getBookId().isBlank()) {
             String prefix = "B";
-            int nextNum = (int) (repo.count() + 1);
+            String lastId = repo.findIdMaxBookId();
+            int nextNum = 1;
+            if (lastId != null && lastId.startsWith("B")) {
+                try {
+                    nextNum = Integer.parseInt(lastId.substring(1)) + 1;
+                } catch (NumberFormatException e) {
+                    nextNum = 1;
+                }
+            }
             book.setBookId(prefix + String.format("%03d", nextNum));
         }
-        return repo.save(book);
+        Book newBook = new Book();
+        newBook.setBookId(book.getBookId());
+        newBook.setTitle(book.getTitle());
+        newBook.setAuthor(book.getAuthor());
+        newBook.setPublisher(book.getPublisher());
+        newBook.setPrice(book.getPrice());
+        newBook.setImportPrice(book.getImportPrice());
+        newBook.setStock(book.getStock());
+        newBook.setPublishDate(book.getPublishDate());
+        newBook.setDescription(book.getDescription());
+        newBook.setCoverImage(book.getCoverImage());
+        newBook.setDiscountPercent(book.getDiscountPercent());
+
+        Category category = categoryRepository.findByCategoryId(book.getCategory_id());
+        newBook.setCategory(category);
+
+        return repo.save(newBook);
     }
 
     @Override

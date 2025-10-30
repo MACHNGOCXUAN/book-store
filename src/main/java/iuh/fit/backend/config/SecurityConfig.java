@@ -63,7 +63,8 @@ public class SecurityConfig {
                                 "/api/reports/customers",
                                 "/ws/**",
                                 "/api/favorites/**",
-                                "/api/books/**"
+                                "/api/books/**",
+                                "api/categories/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

@@ -32,7 +32,7 @@ public class Order {
     private List<Payment> payments = new ArrayList<>();
 
     @ManyToOne
-    @JoinColumn(name = "discount_code_id", nullable = false)
+    @JoinColumn(name = "discount_code_id", nullable = true)
     private DiscountCode discountCode;
 
     @ManyToOne

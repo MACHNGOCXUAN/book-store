@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import iuh.fit.backend.dto.requests.BookCreateDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -69,7 +70,7 @@ public class BookController {
 
     // Tạo 1 cuốn
     @PostMapping
-    public ResponseEntity<Book> create(@RequestBody Book book) {
+    public ResponseEntity<Book> create(@RequestBody BookCreateDTO book) {
         Book saved = service.save(book);
         // Nếu bookId tự sinh, Location trỏ tới resource vừa tạo
         return ResponseEntity
@@ -88,7 +89,7 @@ public class BookController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Book> update(@PathVariable String id, @RequestBody Book book) {
+    public ResponseEntity<Book> update(@PathVariable String id, @RequestBody BookCreateDTO book) {
         // Có thể kiểm tra tồn tại trước khi update (tuỳ logic)
         if (service.findById(id).isEmpty()) {
             return ResponseEntity.notFound().build();
