@@ -15,26 +15,17 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import { Checkbox } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
+import { CartItem, type CartItemType } from "../components/CartItem";
 import momoIcon from "../components/icons/logo-momo.png";
 import zalopayIcon from "../components/icons/logo-zalo-tron.jpg";
 import vnpayIcon from "../components/icons/logo-vnpay.jpg";
 
 const { Title, Text } = Typography;
 
-interface CartItem {
-  id: string;
-  bookId: string;
-  title: string;
-  author: string;
-  price: number;
-  quantity: number;
-  image?: string;
-}
-
 const CheckoutPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [cartItems, setCartItems] = useState<CartItemType[]>([]);
 
   useEffect(() => {
     if (location.state?.items) {
