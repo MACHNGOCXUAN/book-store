@@ -15,7 +15,8 @@ import DetailPage from "../pages/DetailPage";
 import FilterCategory from "../pages/FilterCategory";
 import HomePage from "../pages/HomePage";
 import MembershipPage from "../pages/MembershipPage";
-import ReviewPage from "../pages/ReviewPage"
+import ReviewPage from "../pages/ReviewPage";
+import CheckoutPage from "../pages/CheckoutPage";
 const router = createBrowserRouter([
   {
     path: "",
@@ -82,6 +83,10 @@ const router = createBrowserRouter([
       {
         path: "categories/:type",
         element: <FilterCategory />,
+      },
+      {
+        path: "checkout",
+        element: <CheckoutPage />,
       },
     ],
   },
