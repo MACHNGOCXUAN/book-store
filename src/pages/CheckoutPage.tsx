@@ -45,9 +45,7 @@ const CheckoutPage: React.FC = () => {
   };
 
   return (
-    <div
-      style={{ background: "#f5f5f5", minHeight: "100vh", paddingBottom: 120 }}
-    >
+    <div className="container" style={{ maxWidth: 1200, margin: "0 auto" }}>
       <Card
         style={{
           margin: 24,
@@ -150,15 +148,7 @@ const CheckoutPage: React.FC = () => {
             </Col>
 
             <Col span={24}>
-              <Radio value="cod">
-                <img
-                  src="https://cdn0.fahasa.com/media/wysiwyg/payment_icon/ico_deli_payment.svg"
-                  alt="COD"
-                  width={28}
-                  style={{ marginRight: 8, verticalAlign: "middle" }}
-                />
-                Thanh toán khi nhận hàng (COD)
-              </Radio>
+              <Radio value="cod">Thanh toán khi nhận hàng (COD)</Radio>
             </Col>
           </Row>
         </Radio.Group>
@@ -191,10 +181,21 @@ const CheckoutPage: React.FC = () => {
             <Input placeholder="Nhập mã khuyến mãi / Gift Card" />
           </Col>
           <Col>
-            <Button type="primary">Áp dụng</Button>
+            <Button
+              style={{
+                backgroundColor: "#CB3131",
+                color: "white",
+                border: "none",
+                fontWeight: "bold",
+              }}
+            >
+              Áp dụng
+            </Button>
           </Col>
           <Col>
-            <Button type="link">Chọn mã khuyến mãi</Button>
+            <Button type="link" style={{ color: "#CB3131" }}>
+              Chọn mã khuyến mãi
+            </Button>
           </Col>
         </Row>
         <Text type="secondary" style={{ display: "block", marginTop: 8 }}>
@@ -302,7 +303,7 @@ const CheckoutPage: React.FC = () => {
           boxShadow: "0 -4px 12px rgba(0,0,0,0.08)",
           padding: "16px 24px",
           display: "flex",
-          justifyContent: "space-between",
+          justifyContent: "space-evenly",
           alignItems: "center",
           zIndex: 1000,
         }}
@@ -311,7 +312,7 @@ const CheckoutPage: React.FC = () => {
           <div
             style={{
               display: "flex",
-              justifyContent: "space-between",
+              justifyContent: "space-",
               width: 220,
             }}
           >
