@@ -1,5 +1,6 @@
 package iuh.fit.backend.controller;
 
+import iuh.fit.backend.dto.requests.CreateOrderRequestDTO;
 import iuh.fit.backend.dto.requests.OrderFilter;
 import iuh.fit.backend.dto.requests.UpdateStatusOrderDTO;
 import iuh.fit.backend.dto.responses.OrderFullDetailDTO;
@@ -77,6 +78,38 @@ public class OrderController {
         } else {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Cập nhật thất bại!"));
+        }
+    }
+
+    @PostMapping("/createOrder")
+    public ResponseEntity<?> createOrder(
+            @RequestBody CreateOrderRequestDTO request,
+            @RequestHeader("Authorization") String authHeader) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Missing Authorization header"));
+        }
+
+        String token = authHeader.substring(7);
+        String userId = jwtUtils.getUserIdFromToken(token);
+
+        User user = userService.findUserById(userId);
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Invalid token or user not found"));
+        }
+
+        try {
+            OrderFullDetailDTO createdOrder = orderService.createOrder(request, user);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdOrder);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Failed to create order: " + e.getMessage()));
         }
     }
 }

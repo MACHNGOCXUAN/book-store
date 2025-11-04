@@ -1,15 +1,14 @@
 package iuh.fit.backend.service.impl;
 
+import iuh.fit.backend.dto.requests.CreateOrderRequestDTO;
 import iuh.fit.backend.dto.requests.OrderFilter;
 import iuh.fit.backend.dto.requests.UpdateStatusOrderDTO;
 import iuh.fit.backend.dto.responses.OrderFullDetailDTO;
 import iuh.fit.backend.model.*;
+import iuh.fit.backend.model.enums.DiscountType;
 import iuh.fit.backend.model.enums.OrderStatus;
 import iuh.fit.backend.model.enums.Role;
-import iuh.fit.backend.repository.OrderHistoryRepository;
-import iuh.fit.backend.repository.OrderRepository;
-import iuh.fit.backend.repository.PaymentRepository;
-import iuh.fit.backend.repository.StaffRepository;
+import iuh.fit.backend.repository.*;
 import iuh.fit.backend.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
@@ -27,6 +26,13 @@ public class OrderServiceImpl implements OrderService {
     private final PaymentRepository paymentRepository;
     private final OrderHistoryRepository orderHistoryRepository;
     private final StaffRepository staffRepository;
+
+    private final CustomerRepository customerRepository;
+    private final BookRepository bookRepository;
+    private final DiscountCodeRepository discountCodeRepository;
+    private final CartRepository cartRepository;
+    private final CartItemRepository cartItemRepository;
+    private final OrderDetailRepository orderDetailRepository;
 
     private OrderFullDetailDTO convertToOrderFullDetailDTO(Order order) {
         OrderFullDetailDTO dto = new OrderFullDetailDTO();
@@ -179,5 +185,131 @@ public class OrderServiceImpl implements OrderService {
         orderHistoryRepository.save(orderHistory);
 
         return true;
+    }
+
+    // TẠO ORDER CHO METHOD COD (THANH TOÁN KHI NHẬN HÀNG), BỔ SUNG CÁC METHOD VNPAY,MOMO SAU NÀY
+    @Override
+    @Transactional
+    public OrderFullDetailDTO createOrder(CreateOrderRequestDTO request, User user) {
+        Customer customer = customerRepository.findById(request.getCustomerId())
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        // TẠO ORDER
+        String lastOrderId = orderRepository.findMaxOrderId();
+        int nextOrderNum = 1;
+        if (lastOrderId != null && !lastOrderId.isBlank() && lastOrderId.startsWith("ORD")) {
+            try {
+                nextOrderNum = Integer.parseInt(lastOrderId.substring(3)) + 1;
+            } catch (NumberFormatException ignored) {
+
+            }
+        }
+        String orderId = "ORD" + String.format("%03d", nextOrderNum);
+
+        Order order = new Order();
+        order.setOrderId(orderId);
+        order.setOrderDate(LocalDateTime.now());
+        order.setStatus(OrderStatus.PROCESSING);
+        order.setCustomer(customer);
+
+        if (request.getDiscountCode() != null && !request.getDiscountCode().isBlank()) {
+            DiscountCode discountCode = discountCodeRepository.findById(request.getDiscountCode())
+                    .orElseThrow(() -> new RuntimeException("Invalid discount code"));
+            validateDiscountCode(discountCode, order);
+            order.setDiscountCode(discountCode);
+        }
+
+        // TẠO CÁC ORDER DETAILS
+        String lastDetailId = orderDetailRepository.findMaxOrderDetailId();
+        int nextDetailNum = 1;
+        if (lastDetailId != null && !lastDetailId.isBlank() && lastDetailId.startsWith("ODT")) {
+            try {
+                nextDetailNum = Integer.parseInt(lastDetailId.substring(3)) + 1;
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        for (CreateOrderRequestDTO.OrderDetailRequest detailReq : request.getOrderDetails()) {
+            Book book = bookRepository.findById(detailReq.getBookId())
+                    .orElseThrow(() -> new RuntimeException("Book not found"));
+
+            if (book.getStock() < detailReq.getQuantity()) {
+                throw new RuntimeException("Not enough stock");
+            }
+
+            String orderDetailId = "ODT" + String.format("%03d", nextDetailNum);
+            nextDetailNum++;
+
+            OrderDetail orderDetail = new OrderDetail();
+            orderDetail.setOrderDetailId(orderDetailId);
+            orderDetail.setBook(book);
+            orderDetail.setQuantity(detailReq.getQuantity());
+            orderDetail.setUnitPrice(book.getPrice() * (100 - book.getDiscountPercent()) / 100.0);
+
+            order.addOrderDetail(orderDetail);
+
+            book.setStock(book.getStock() - detailReq.getQuantity());
+            bookRepository.save(book);
+        }
+
+        //LƯU ORDER (orderDetails cascade)
+        Order savedOrder = orderRepository.save(order);
+
+        //TÍNH TOTAL
+        double subtotal = savedOrder.calcItemsTotal();
+        if (savedOrder.getDiscountCode() != null) {
+            DiscountCode code = savedOrder.getDiscountCode();
+            double discountAmount = subtotal * code.getPercent() / 100.0;
+            savedOrder.setTotalAmount(subtotal - discountAmount);
+
+            code.setQuantity(code.getQuantity() - 1);
+            discountCodeRepository.save(code);
+        } else {
+            savedOrder.setTotalAmount(subtotal);
+        }
+
+        orderRepository.save(savedOrder);
+
+        //CẬP NHẬT GIỎ HÀNG
+        Cart cart = cartRepository.findByCustomerUserId(request.getCustomerId())
+                .orElseThrow(() -> new RuntimeException("Giỏ hàng không tồn tại"));
+
+        for (CreateOrderRequestDTO.OrderDetailRequest detail : request.getOrderDetails()) {
+            String bookId = detail.getBookId();
+            int orderedQty = detail.getQuantity();
+
+            cartItemRepository.findByCart_CartIdAndBook_BookId(cart.getCartId(), bookId)
+                    .ifPresent(cartItem -> {
+                        int newQty = cartItem.getQuantity() - orderedQty;
+                        if (newQty > 0) {
+                            cartItem.setQuantity(newQty);
+                            cartItemRepository.save(cartItem);
+                        } else {
+                            cart.getItems().remove(cartItem);
+                            cartItemRepository.delete(cartItem);
+                        }
+                    });
+        }
+
+        return convertToOrderFullDetailDTO(savedOrder);
+    }
+
+    private void validateDiscountCode(DiscountCode code, Order order) {
+        LocalDateTime now = LocalDateTime.now();
+        if (code.getStartDate() != null && now.toLocalDate().isBefore(code.getStartDate())) {
+            throw new RuntimeException("Discount code not started yet");
+        }
+        if (code.getEndDate() != null && now.toLocalDate().isAfter(code.getEndDate())) {
+            throw new RuntimeException("Discount code has expired");
+        }
+        if (code.getQuantity() <= 0) {
+            throw new RuntimeException("Discount code is out of uses");
+        }
+        if (code.getDiscountType() == DiscountType.ONE_TIME && code.getOrder() != null && !code.getOrder().isEmpty()) {
+            throw new RuntimeException("This discount code can only be used once");
+        }
+        if (order.calcItemsTotal() < code.getMinPriceToApply()) {
+            throw new RuntimeException("Order total must be at least " + code.getMinPriceToApply());
+        }
     }
 }
