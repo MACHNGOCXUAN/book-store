@@ -17,6 +17,7 @@ import HomePage from "../pages/HomePage";
 import MembershipPage from "../pages/MembershipPage";
 import ReviewPage from "../pages/ReviewPage";
 import CheckoutPage from "../pages/CheckoutPage";
+import OrderSuccessPage from "../pages/OrderSuccessPage";
 const router = createBrowserRouter([
   {
     path: "",
@@ -87,6 +88,10 @@ const router = createBrowserRouter([
       {
         path: "checkout",
         element: <CheckoutPage />,
+      },
+      {
+        path: "order-success",
+        element: <OrderSuccessPage />,
       },
     ],
   },

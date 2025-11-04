@@ -62,6 +62,7 @@ function DetailPage() {
       toast.error("Lỗi khi thêm sản phẩm 😢");
     }
   };
+
   const handleAddFavorite = async () => {
     try {
       const token = localStorage.getItem("access_token");
