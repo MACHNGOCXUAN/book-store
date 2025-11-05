@@ -40,4 +40,7 @@ public interface OrderRepository extends JpaRepository<Order, String>, JpaSpecif
             @Param("textSearch") String textSearch,
             @Param("staffId") String staffId,
             Pageable pageable);
+
+    @Query("SELECT MAX(o.orderId) FROM Order o")
+    String findMaxOrderId();
 }

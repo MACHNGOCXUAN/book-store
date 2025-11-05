@@ -1,5 +1,6 @@
 package iuh.fit.backend.service;
 
+import iuh.fit.backend.dto.requests.CreateOrderRequestDTO;
 import iuh.fit.backend.dto.requests.OrderFilter;
 import iuh.fit.backend.dto.requests.UpdateStatusOrderDTO;
 import iuh.fit.backend.dto.responses.OrderFullDetailDTO;
@@ -12,4 +13,5 @@ public interface OrderService {
     Page<OrderFullDetailDTO> getOrdersFilter(OrderFilter orderFilter, User user);
     OrderFullDetailDTO getOrderById(String orderId);
     boolean updateOrderStatus(UpdateStatusOrderDTO updateStatusOrderDTO, User user);
+    OrderFullDetailDTO createOrder(CreateOrderRequestDTO request, User user);
 }
