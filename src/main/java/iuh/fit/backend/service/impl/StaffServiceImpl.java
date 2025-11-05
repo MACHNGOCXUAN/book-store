@@ -90,7 +90,6 @@ public class StaffServiceImpl implements StaffService {
                 String newId = "USER" + String.format("%03d", nextNum);
                 staff.setUserId(newId);
             }
-            staff.setUserName(staffInput.getUserName());
             staff.setEmail(staffInput.getEmail());
             staff.setPhoneNumber(staffInput.getPhoneNumber());
             staff.setShift(staffInput.getShift());
@@ -122,7 +121,6 @@ public class StaffServiceImpl implements StaffService {
                 return false;
             }
 
-            staff.setUserName(staffCreateDto.getUserName());
             staff.setEmail(staffCreateDto.getEmail());
             staff.setPhoneNumber(staffCreateDto.getPhoneNumber());
             staff.setDepartment(staffCreateDto.getDepartment());

@@ -169,10 +169,11 @@ public class CustomerServiceImpl implements CustomerService {
         }
     }
 
-    // ======================= UPDATE PROFILE =======================
-    @Override
+    // ======================= UPDATE PROFILE WITH GENDER & DATE OF BIRTH
+    // =======================
     @Transactional
-    public Customer updateCustomerProfile(String userId, String fullName, String email, String phone) {
+    public Customer updateCustomerProfile(String userId, String fullName, String email, String phone, String gender,
+            String dateOfBirth) {
         try {
             Customer customer = customerRepository.findById(userId).orElse(null);
             if (customer == null) {
@@ -182,7 +183,6 @@ public class CustomerServiceImpl implements CustomerService {
 
             if (fullName != null && !fullName.isBlank()) {
                 customer.setFullName(fullName);
-                customer.setUserName(fullName);
             }
             if (email != null && !email.isBlank()) {
                 customer.setEmail(email);
@@ -190,10 +190,33 @@ public class CustomerServiceImpl implements CustomerService {
             if (phone != null && !phone.isBlank()) {
                 customer.setPhoneNumber(phone);
             }
+            if (gender != null && !gender.isBlank()) {
+                try {
+                    customer.setGender(iuh.fit.backend.model.enums.Gender.valueOf(gender.toUpperCase()));
+                } catch (IllegalArgumentException e) {
+                    log.warn("Invalid gender value: {}", gender);
+                }
+            }
+            if (dateOfBirth != null && !dateOfBirth.isBlank()) {
+                try {
+                    customer.setDateOfBirth(java.time.LocalDate.parse(dateOfBirth));
+                    log.info("Successfully parsed dateOfBirth: {}", dateOfBirth);
+                } catch (java.time.format.DateTimeParseException e) {
+                    log.warn("Invalid dateOfBirth format: {} - Error: {}", dateOfBirth, e.getMessage());
+                }
+            }
 
-            return customerRepository.save(customer);
+            Customer saved = customerRepository.save(customer);
+            System.out.println("=== SAVE RESULT ===");
+            System.out.println("Saved customer: " + saved);
+            System.out.println("Saved gender: " + saved.getGender());
+            System.out.println("Saved dateOfBirth: " + saved.getDateOfBirth());
+            return saved;
         } catch (Exception e) {
-            log.error("updateCustomerProfile failed", e);
+            System.out.println("=== SAVE ERROR ===");
+            System.out.println("Error: " + e.getMessage());
+            e.printStackTrace();
+            log.error("updateCustomerProfile with gender and dateOfBirth failed", e);
             return null;
         }
     }

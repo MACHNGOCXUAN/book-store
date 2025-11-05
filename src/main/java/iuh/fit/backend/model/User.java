@@ -1,6 +1,7 @@
 package iuh.fit.backend.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import iuh.fit.backend.model.enums.Gender;
 import iuh.fit.backend.model.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
@@ -20,7 +21,12 @@ public abstract class User {
     @Id
     private String userId;
 
-    private String userName;
+    private String fullName;
+
+    private LocalDate dateOfBirth;
+
+    @Enumerated(EnumType.STRING)
+    private Gender gender;
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;

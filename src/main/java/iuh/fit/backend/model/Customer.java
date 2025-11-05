@@ -17,8 +17,7 @@ import java.util.Set;
 @Entity
 @DiscriminatorValue("CUSTOMER")
 public class Customer extends User {
-    private String fullName;
-    private LocalDate dateOfBirth;
+
     private Integer loyaltyPoints;
 
     @OneToOne(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)

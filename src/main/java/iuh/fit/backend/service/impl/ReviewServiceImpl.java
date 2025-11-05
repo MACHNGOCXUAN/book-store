@@ -181,7 +181,6 @@ public class ReviewServiceImpl implements ReviewService {
         dto.setBookPrice(review.getBook().getPrice());
         dto.setBookDiscountPercent(review.getBook().getDiscountPercent());
         dto.setCustomerId(review.getCustomer().getUserId());
-        dto.setCustomerName(review.getCustomer().getUserName());
         dto.setCustomerFullName(review.getCustomer().getFullName() != null ? review.getCustomer().getFullName() : "");
         dto.setRating(review.getRating());
         dto.setContent(review.getContent());

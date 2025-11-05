@@ -8,7 +8,6 @@ import lombok.*;
 
 import java.util.List;
 
-@AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
@@ -16,6 +15,4 @@ import java.util.List;
 @Entity
 @DiscriminatorValue("ADMIN")
 public class Admin extends User {
-    private String position;
-    // Admin = quyền cao nhất
 }

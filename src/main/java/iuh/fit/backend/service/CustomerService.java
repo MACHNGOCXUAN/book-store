@@ -22,7 +22,8 @@ public interface CustomerService {
 
     boolean updateCustomerStatus(UserUpdateStatusDto customerUpdateStatusDto);
 
-    Customer updateCustomerProfile(String userId, String fullName, String email, String phone);
+    Customer updateCustomerProfile(String userId, String fullName, String email, String phone, String gender,
+            String dateOfBirth);
 
     boolean changePassword(String customerId, String currentPassword, String newPassword);
 }
