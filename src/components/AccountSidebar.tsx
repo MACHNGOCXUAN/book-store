@@ -19,18 +19,23 @@ const AccountSidebar = ({
   onMenuSelect,
 }: AccountSidebarProps) => {
   const authUser = useAppSelector((s) => s.auth.user);
+  const isGoogleLogin = useAppSelector((s) => s.auth.isGoogleLogin);
   const [fullname] = useState(authUser?.fullName || "");
+
+  const changePasswordItem = { key: "change-password", label: "Đổi mật khẩu" };
+
+  const accountInfoChildren = [
+    { key: "profile", label: "Hồ sơ cá nhân" },
+    { key: "address", label: "Số địa chỉ" },
+    ...(isGoogleLogin ? [] : [changePasswordItem]),
+  ];
 
   const menuItems = [
     {
       key: "account-info",
       icon: <UserOutlined />,
       label: "Thông tin tài khoản",
-      children: [
-        { key: "profile", label: "Hồ sơ cá nhân" },
-        { key: "address", label: "Số địa chỉ" },
-        { key: "change-password", label: "Đổi mật khẩu" },
-      ],
+      children: accountInfoChildren,
     },
     {
       key: "orders",

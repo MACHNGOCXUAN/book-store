@@ -5,6 +5,8 @@ import {
   FileTextOutlined,
   GiftOutlined,
   ShoppingCartOutlined,
+  HeartOutlined,
+  HeartFilled,
 } from "@ant-design/icons";
 import {
   Button,
@@ -45,6 +47,7 @@ function DetailPage() {
 
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoggedIn, setIsLoggedIn] = useState(!!token && !!authUser);
+  const [isFavorite, setIsFavorite] = useState(false);
   const [form] = Form.useForm();
   const [loadingReviews, setLoadingReviews] = useState(false);
 
@@ -65,24 +68,52 @@ function DetailPage() {
 
   const handleAddFavorite = async () => {
     try {
+      if (!isLoggedIn) {
+        toast.error("Vui lòng đăng nhập để thêm vào yêu thích");
+        return;
+      }
+
       const token = localStorage.getItem("access_token");
 
-      const res = await fetch(
-        `${API_BASE}/favorites/add?customerId=${authUser?.userId}&bookId=${id}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      if (isFavorite) {
+        // Remove from favorites
+        const res = await fetch(
+          `${API_BASE}/favorites/remove?customerId=${authUser?.userId}&bookId=${id}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      toast.success("Đã thêm vào yêu thích ❤️");
+        setIsFavorite(false);
+        toast.success("Đã xóa khỏi yêu thích");
+      } else {
+        // Add to favorites
+        const res = await fetch(
+          `${API_BASE}/favorites/add?customerId=${authUser?.userId}&bookId=${id}`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        setIsFavorite(true);
+        toast.success("Đã thêm vào yêu thích ❤️");
+      }
     } catch (err: any) {
-      toast.error("Lỗi khi thêm vào yêu thích");
+      toast.error(
+        isFavorite ? "Lỗi khi xóa yêu thích" : "Lỗi khi thêm vào yêu thích"
+      );
     }
   };
 
@@ -295,8 +326,10 @@ function DetailPage() {
           >
             <p style={{ margin: 0, fontSize: "14px", color: "#666" }}>
               Trang chủ /{" "}
-              {reduxBook.category?.categoryName || reduxBook.category} /{" "}
-              {reduxBook.publisher}
+              {typeof reduxBook.category === "string"
+                ? reduxBook.category
+                : reduxBook.category?.categoryName}{" "}
+              / {reduxBook.publisher}
             </p>
           </div>
 
@@ -313,6 +346,49 @@ function DetailPage() {
                       justifyContent: "center",
                     }}
                   >
+                    {/* Floating Heart Button */}
+                    <Button
+                      type="text"
+                      icon={
+                        isFavorite ? (
+                          <HeartFilled
+                            style={{
+                              fontSize: 28,
+                              color: "#C92127",
+                            }}
+                          />
+                        ) : (
+                          <HeartOutlined
+                            style={{
+                              fontSize: 28,
+                              color: "#C92127",
+                              strokeWidth: 1.5,
+                            }}
+                          />
+                        )
+                      }
+                      onClick={handleAddFavorite}
+                      style={{
+                        position: "absolute",
+                        top: 16,
+                        right: 16,
+                        zIndex: 10,
+                        padding: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: 48,
+                        height: 48,
+                        borderRadius: "50%",
+                        background: "rgba(255, 255, 255, 0.95)",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                        border: "1px solid #f0f0f0",
+                      }}
+                      title={
+                        isFavorite ? "Xóa khỏi yêu thích" : "Thêm vào yêu thích"
+                      }
+                    />
+
                     <img
                       src={reduxBook.coverImage || "/placeholder.svg"}
                       alt={reduxBook.title}
@@ -366,22 +442,6 @@ function DetailPage() {
                       style={{ width: "100%", marginBottom: "24px" }}
                       size="middle"
                     >
-                      <Button
-                        type="primary"
-                        size="large"
-                        block
-                        style={{
-                          backgroundColor: primaryColor,
-                          height: "48px",
-                          fontSize: "16px",
-                          fontWeight: "bold",
-                        }}
-                        onClick={() => {
-                          handleAddFavorite();
-                        }}
-                      >
-                        Thêm vào yêu thích
-                      </Button>
                       <Button
                         type="primary"
                         size="large"

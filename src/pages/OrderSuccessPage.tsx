@@ -7,19 +7,35 @@ import {
 } from "@ant-design/icons";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import { toast } from "react-toastify";
+import { useAppDispatch } from "../store/hooks";
+import { fetchCart } from "../features/cart/cartSlice";
 
 const { Title, Text } = Typography;
 
 export default function OrderSuccessPage() {
   const { state } = useLocation();
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
 
   const order = state?.order;
 
-  // Hiệu ứng cuộn lên đầu trang
+  // Hiệu ứng cuộn lên đầu trang và reload cart
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+    // Reload cart to update the cart icon count in header
+    dispatch(fetchCart());
+
+    // Show success toast
+    toast.success("Đặt hàng thành công!", {
+      position: "top-right",
+      autoClose: 3000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+    });
+  }, [dispatch]);
 
   return (
     <div

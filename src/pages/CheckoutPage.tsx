@@ -15,16 +15,21 @@ import {
   message,
 } from "antd";
 import { useNavigate, useLocation } from "react-router-dom";
+import { toast } from "react-toastify";
 import { Checkbox } from "antd";
 import { EditOutlined } from "@ant-design/icons";
 import { type CartItemType } from "../components/CartItem";
 import momoIcon from "../components/icons/logo-momo.png";
 import vnpayIcon from "../components/icons/logo-vnpay.jpg";
-import { addressService } from "../services/addressService";
 import type { Address } from "../types/Address";
 import { fetchProvincesV1, transformV1Data } from "../services/provincesApi";
-import { orderService } from "../services/orderService";
-import { useAppSelector } from "../store/hooks";
+import { useAppSelector, useAppDispatch } from "../store/hooks";
+import { createOrder, clearOrder } from "../features/orders/orderSlice";
+import { fetchCart } from "../features/cart/cartSlice";
+import {
+  getAddresses,
+  createAddress as createAddressAction,
+} from "../features/addresses/addressSlice";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -34,9 +39,12 @@ type ProvinceData = Record<string, Record<string, string[]>>;
 
 const CheckoutPage: React.FC = () => {
   const authUser = useAppSelector((s) => s.auth.user);
-  const [addresses, setAddresses] = useState<Address[]>([]);
+  const addressState = useAppSelector((s) => s.addresses);
+  const dispatch = useAppDispatch();
+  const { loading: orderLoading, error: orderError } = useAppSelector(
+    (s) => s.orders
+  );
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const [cartItems, setCartItems] = useState<CartItemType[]>([]);
@@ -95,29 +103,23 @@ const CheckoutPage: React.FC = () => {
     loadProvinces();
   }, []);
 
-  // Load addresses
+  // Load addresses using Redux
   useEffect(() => {
     if (authUser?.userId) {
-      loadAddresses();
+      dispatch(getAddresses(authUser.userId)).then(() => {
+        setLoading(false);
+      });
     }
-  }, [authUser]);
+  }, [authUser, dispatch]);
 
-  const loadAddresses = async () => {
-    try {
-      setLoading(true);
-      const data = await addressService.getAddressesByCustomer(
-        authUser!.userId
-      );
-      const sortedData = data.sort((a, b) =>
-        a.isDefault ? -1 : b.isDefault ? 1 : 0
-      );
-      setAddresses(sortedData);
-
-      const defaultAddress = sortedData.find((a) => a.isDefault);
+  // Populate form with default address
+  useEffect(() => {
+    if (addressState.addresses.length > 0 && !loading) {
+      const defaultAddress = addressState.addresses.find((a) => a.isDefault);
       if (defaultAddress) {
         form.setFieldsValue({
-          receiverName: authUser?.fullName,
-          receiverPhone: authUser?.phone,
+          receiverName: defaultAddress.receiverName,
+          receiverPhone: defaultAddress.receiverPhone,
           country: "Việt Nam",
           province: defaultAddress.province,
           district: defaultAddress.district,
@@ -133,13 +135,14 @@ const CheckoutPage: React.FC = () => {
           receiverPhone: authUser?.phone,
         });
       }
-    } catch (error) {
-      console.error("Error loading addresses:", error);
-      message.error("Lỗi tải địa chỉ");
-    } finally {
-      setLoading(false);
+    } else if (addressState.addresses.length === 0 && !loading) {
+      form.setFieldsValue({
+        country: "Việt Nam",
+        receiverName: authUser?.fullName,
+        receiverPhone: authUser?.phone,
+      });
     }
-  };
+  }, [addressState.addresses, loading, authUser, form]);
 
   // Load cart items
   useEffect(() => {
@@ -159,77 +162,126 @@ const CheckoutPage: React.FC = () => {
   const shipping = 20000;
   const total = subtotal + shipping;
 
-  const handleCreateOrder = async (orderPayload: any) => {
-    try {
-      const data = await orderService.createOrder(orderPayload);
-      return data;
-    } catch (error) {
-      console.error("Error creating order:", error);
-    }
-  };
-
   // Xử lý thanh toán
   const handleCheckout = async () => {
+    console.log("🔵 handleCheckout called");
+
     if (!authUser) {
+      console.log("❌ No auth user");
       message.error("Vui lòng đăng nhập!");
       navigate("/login");
       return;
     }
 
     try {
+      console.log("📋 Validating form...");
       const values = await form.validateFields();
-      setSubmitting(true);
+      console.log("✅ Form validated:", values);
 
-      // Payload gửi backend
+      // Kiểm tra giỏ hàng
+      if (!cartItems || cartItems.length === 0) {
+        console.log("❌ Cart is empty");
+        message.error("Giỏ hàng trống!");
+        return;
+      }
+
+      console.log("📦 Cart items:", cartItems);
+
+      // Tạo payload đúng định dạng Backend yêu cầu
       const orderDetails = cartItems.map((item) => ({
-        bookId: item.bookId,
+        bookId: String(item.bookId || ""),
         quantity: item.quantity,
       }));
 
-      const payload = {
+      const orderPayload = {
         customerId: authUser.userId,
         discountCode: discountCode.trim() || null,
         orderDetails,
       };
 
-      // Gọi API tạo đơn
-      const orderData = await handleCreateOrder(payload);
-      console.log("Order created:", orderData);
-      // Lưu địa chỉ nếu cần
-      const currentAddress = {
-        main: 1,
-        province: values.province,
-        district: values.district,
-        ward: values.ward,
-        specifics: values.specifics,
-        receiverName: values.receiverName,
-        receiverPhone: values.receiverPhone,
-        isDefault: addresses.length === 0,
-      };
+      console.log("📤 Dispatching createOrder with payload:", orderPayload);
 
-      const defaultAddr = addresses.find((a) => a.isDefault);
-      const isNewAddress =
-        !defaultAddr ||
-        defaultAddr.province !== values.province ||
-        defaultAddr.specifics !== values.specifics;
+      // Dispatch Redux action để tạo đơn
+      const result = await dispatch(createOrder(orderPayload));
 
-      if (isNewAddress) {
-        await addressService.createAddress(authUser.userId, currentAddress);
+      console.log("📥 Order result:", result);
+
+      // Kiểm tra kết quả
+      if (result.meta.requestStatus === "fulfilled") {
+        console.log("✅ Order created successfully!");
+
+        toast.success("Đặt hàng thành công!", {
+          position: "top-right",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+
+        // Lưu địa chỉ nếu là mới
+        const currentAddress = {
+          main: 1,
+          province: values.province,
+          district: values.district,
+          ward: values.ward,
+          specifics: values.specifics,
+          receiverName: values.receiverName,
+          receiverPhone: values.receiverPhone,
+          isDefault: addressState.addresses.length === 0,
+        };
+
+        const defaultAddr = addressState.addresses.find((a) => a.isDefault);
+        const isNewAddress =
+          !defaultAddr ||
+          defaultAddr.province !== values.province ||
+          defaultAddr.specifics !== values.specifics;
+
+        if (isNewAddress) {
+          console.log("💾 Saving new address...");
+          dispatch(
+            createAddressAction({
+              customerId: authUser.userId,
+              address: currentAddress as Address,
+            })
+          );
+        }
+
+        // Reload cart
+        dispatch(fetchCart());
+
+        // Reset order state
+        dispatch(clearOrder());
+
+        // Chuyển hướng
+        navigate("/order-success", {
+          state: {
+            order: result.payload,
+            paymentMethod,
+            address: currentAddress,
+          },
+        });
+      } else {
+        console.log("❌ Order creation failed:", result);
+        toast.error(orderError || "Đặt hàng thất bại. Vui lòng thử lại!", {
+          position: "top-right",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
       }
-
-      // Thành công
-      message.success("Đặt hàng thành công!");
-      navigate("/order-success", {
-        state: {
-          order: orderData,
-          paymentMethod,
-          address: currentAddress,
-        },
-      });
     } catch (error: any) {
-      message.error(error.message || "Đặt hàng thất bại. Vui lòng thử lại!");
-    } finally {
-      setSubmitting(false);
+      console.error("❌ Exception in handleCheckout:", error);
+      toast.error(error.message || "Có lỗi xảy ra. Vui lòng thử lại!", {
+        position: "top-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     }
   };
 
@@ -247,7 +299,7 @@ const CheckoutPage: React.FC = () => {
       style={{ maxWidth: 1200, margin: "0 auto", paddingBottom: 120 }}
     >
       <Spin
-        spinning={loadingProvinces || loading || submitting}
+        spinning={loadingProvinces || loading || orderLoading}
         tip="Đang xử lý..."
       >
         {/* Thẻ chú ý */}
@@ -328,7 +380,7 @@ const CheckoutPage: React.FC = () => {
                     onChange={handleCityChange}
                     showSearch
                     filterOption={(input, option) =>
-                      (option?.label ?? "")
+                      ((option?.label as string) ?? "")
                         .toLowerCase()
                         .includes(input.toLowerCase())
                     }
@@ -360,7 +412,7 @@ const CheckoutPage: React.FC = () => {
                     disabled={!selectedCity}
                     showSearch
                     filterOption={(input, option) =>
-                      (option?.label ?? "")
+                      ((option?.label as string) ?? "")
                         .toLowerCase()
                         .includes(input.toLowerCase())
                     }
@@ -387,7 +439,7 @@ const CheckoutPage: React.FC = () => {
                     disabled={!selectedDistrict}
                     showSearch
                     filterOption={(input, option) =>
-                      (option?.label ?? "")
+                      ((option?.label as string) ?? "")
                         .toLowerCase()
                         .includes(input.toLowerCase())
                     }
@@ -630,7 +682,7 @@ const CheckoutPage: React.FC = () => {
             type="primary"
             size="large"
             onClick={handleCheckout}
-            loading={submitting}
+            loading={orderLoading}
             style={{
               background: "linear-gradient(180deg,#d83b3b,#b72222)",
               border: "none",
@@ -641,7 +693,7 @@ const CheckoutPage: React.FC = () => {
               minWidth: 260,
             }}
           >
-            {submitting ? "ĐANG XỬ LÝ..." : "XÁC NHẬN ĐẶT HÀNG"}
+            {orderLoading ? "ĐANG XỬ LÝ..." : "XÁC NHẬN ĐẶT HÀNG"}
           </Button>
         </div>
       </Spin>
