@@ -1,4 +1,9 @@
-export type OrderStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "CANCELLED";
+export type OrderStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "SHIPPING"
+  | "COMPLETED"
+  | "CANCELLED";
 
 export interface Customer {
   userId: string;
@@ -18,8 +23,8 @@ export interface Payment {
 export interface OrderHistory {
   id: string;
   orderId: string;
-  timestamp: string
-  status: OrderStatus
+  timestamp: string;
+  status: OrderStatus;
 }
 
 export interface Book {
@@ -48,5 +53,5 @@ export interface OrderDataType {
   customer: Customer;
   payments: Payment[];
   orderDetails: OrderDetail[];
-  orderHistories: OrderHistory[]
+  orderHistories: OrderHistory[];
 }
