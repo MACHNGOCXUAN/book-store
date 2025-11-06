@@ -40,6 +40,11 @@ public class UserController {
         String userId = jwtUtils.getUserIdFromToken(token);
         User user = userService.findUserById(userId);
 
+        System.out.println("=== GET /admin/me RESPONSE ===");
+        System.out.println("User: " + user);
+        System.out.println("DateOfBirth: " + (user != null ? user.getDateOfBirth() : "null"));
+        System.out.println("Gender: " + (user != null ? user.getGender() : "null"));
+
         return ResponseEntity.ok(user);
     }
 
@@ -55,19 +60,42 @@ public class UserController {
             String token = authHeader.substring(7);
             String userId = jwtUtils.getUserIdFromToken(token);
 
+            System.out.println("=== FULL REQUEST BODY ===");
+            System.out.println("Request map: " + request);
+            System.out.println("Request keys: " + request.keySet());
+
             String fullName = request.get("fullName");
             String email = request.get("email");
             String phone = request.get("phone");
+            String gender = request.get("gender");
+            String dateOfBirth = request.get("dateOfBirth");
 
-            Customer updated = customerService.updateCustomerProfile(userId, fullName, email, phone);
+            System.out.println("=== UPDATE PROFILE REQUEST ===");
+            System.out.println("userId: " + userId);
+            System.out.println("fullName: " + fullName);
+            System.out.println("email: " + email);
+            System.out.println("phone: " + phone);
+            System.out.println("gender: " + gender);
+            System.out.println("dateOfBirth: " + dateOfBirth);
+
+            Customer updated = customerService.updateCustomerProfile(userId, fullName, email, phone, gender,
+                    dateOfBirth);
 
             if (updated == null) {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .body(Map.of("message", "Cập nhật thất bại"));
             }
 
-            return ResponseEntity.ok(updated);
+            System.out.println("=== UPDATE PROFILE RESPONSE ===");
+            System.out.println("Updated customer: " + updated);
+
+            // Convert to User format to match frontend expectation
+            User user = (User) updated;
+            return ResponseEntity.ok(user);
         } catch (Exception e) {
+            System.out.println("=== UPDATE PROFILE ERROR ===");
+            System.out.println("Error: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Lỗi khi cập nhật: " + e.getMessage()));
         }

@@ -66,7 +66,6 @@ public class AuthController {
         try {
             // KHÔNG tự set userId ở controller — service sẽ phát sinh USER###
             Customer customer = new Customer();
-            customer.setUserName(body.getFullName());
             customer.setFullName(body.getFullName());
             customer.setEmail(body.getEmail());
             customer.setPhoneNumber(body.getPhone());
@@ -129,7 +128,6 @@ public class AuthController {
                 // User chưa tồn tại -> tạo mới Customer
                 log.info("Google login: Creating new user with email={}", email);
                 Customer c = new Customer();
-                c.setUserName(name != null && !name.isBlank() ? name : email);
                 c.setFullName(name != null && !name.isBlank() ? name : email);
                 c.setEmail(email);
                 c.setPhoneNumber(""); // Để trống số điện thoại cho OAuth users
@@ -155,7 +153,6 @@ public class AuthController {
 
             Map<String, Object> userInfo = new java.util.HashMap<>();
             userInfo.put("userId", user.getUserId());
-            userInfo.put("userName", user.getUserName());
             userInfo.put("email", user.getEmail());
             userInfo.put("phoneNumber", user.getPhoneNumber());
 

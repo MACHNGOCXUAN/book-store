@@ -7,9 +7,13 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Entity @Table(name = "orders")
-@Getter @Setter @ToString(callSuper = true)
-@AllArgsConstructor @NoArgsConstructor
+@Entity
+@Table(name = "orders")
+@Getter
+@Setter
+@ToString(callSuper = true)
+@AllArgsConstructor
+@NoArgsConstructor
 public class Order {
     @Id
     private String orderId;
@@ -17,7 +21,7 @@ public class Order {
     private LocalDateTime orderDate;
     @Enumerated(EnumType.STRING)
     private OrderStatus status;
-    private double totalAmount;   // auto tính từ orderDetails
+    private double totalAmount; // auto tính từ orderDetails
 
     @ManyToOne
     @JoinColumn(name = "customer_id", nullable = false)
@@ -36,7 +40,7 @@ public class Order {
     private DiscountCode discountCode;
 
     @ManyToOne
-    @JoinColumn(name = "staff_id")
+    @JoinColumn(name = "staff_id", nullable = true)
     private Staff staff;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -46,16 +50,16 @@ public class Order {
 
     /** Tính lại tổng tiền từ các dòng chi tiết */
     public double calcItemsTotal() {
-        return orderDetails == null ? 0.0 :
-                orderDetails.stream()
+        return orderDetails == null ? 0.0
+                : orderDetails.stream()
                         .mapToDouble(od -> od.getUnitPrice() * od.getQuantity())
                         .sum();
     }
 
     /** Tổng tiền đã thanh toán */
     public double calcPaidAmount() {
-        return payments == null ? 0.0 :
-                payments.stream()
+        return payments == null ? 0.0
+                : payments.stream()
                         .mapToDouble(Payment::getAmount)
                         .sum();
     }
@@ -72,20 +76,24 @@ public class Order {
     }
 
     /** Tự động cập nhật trước khi insert/update */
-    @PrePersist @PreUpdate
+    @PrePersist
+    @PreUpdate
     private void onWrite() {
         this.totalAmount = calcItemsTotal();
     }
 
     /** Tiện phương thức add/remove giữ đồng bộ 2 chiều */
     public void addOrderDetail(OrderDetail d) {
-        if (d == null) return;
+        if (d == null)
+            return;
         d.setOrder(this);
         this.orderDetails.add(d);
         this.totalAmount = calcItemsTotal();
     }
+
     public void removeOrderDetail(OrderDetail d) {
-        if (d == null) return;
+        if (d == null)
+            return;
         this.orderDetails.remove(d);
         d.setOrder(null);
         this.totalAmount = calcItemsTotal();

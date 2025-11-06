@@ -1,5 +1,6 @@
 package iuh.fit.backend.controller;
 
+import iuh.fit.backend.dto.requests.CreateOrderRequestDTO;
 import iuh.fit.backend.dto.requests.OrderFilter;
 import iuh.fit.backend.dto.requests.UpdateStatusOrderDTO;
 import iuh.fit.backend.dto.responses.OrderFullDetailDTO;
@@ -20,7 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-
 @RestController
 @RequestMapping("/api/orders")
 @RequiredArgsConstructor
@@ -30,7 +30,8 @@ public class OrderController {
     private final UserService userService;
 
     @PostMapping()
-    public ResponseEntity<?> getAllOrderFilter(@RequestBody OrderFilter orderFilter, @RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<?> getAllOrderFilter(@RequestBody OrderFilter orderFilter,
+            @RequestHeader("Authorization") String authHeader) {
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.badRequest().body("Missing Authorization header");
@@ -64,7 +65,8 @@ public class OrderController {
     }
 
     @PutMapping("/update-status")
-    public  ResponseEntity<?> updateOrder(@RequestBody UpdateStatusOrderDTO updateStatusOrderDTO, @RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<?> updateOrder(@RequestBody UpdateStatusOrderDTO updateStatusOrderDTO,
+            @RequestHeader("Authorization") String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.badRequest().body("Missing Authorization header");
         }
@@ -77,6 +79,40 @@ public class OrderController {
         } else {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Cập nhật thất bại!"));
+        }
+    }
+
+    @PostMapping("/createOrder")
+    public ResponseEntity<?> createOrder(
+            @RequestBody CreateOrderRequestDTO request,
+            @RequestHeader("Authorization") String authHeader) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Missing Authorization header"));
+        }
+
+        String token = authHeader.substring(7);
+        String userId = jwtUtils.getUserIdFromToken(token);
+
+        User user = userService.findUserById(userId);
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Invalid token or user not found"));
+        }
+
+        try {
+            OrderFullDetailDTO createdOrder = orderService.createOrder(request, user);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdOrder);
+        } catch (RuntimeException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Failed to create order: " + e.getMessage()));
         }
     }
 }
