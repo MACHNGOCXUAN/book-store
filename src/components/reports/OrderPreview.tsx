@@ -128,8 +128,14 @@ const OrderPreview = () => {
       if (Array.isArray(payload?.data)) raw = payload.data;
       else if (Array.isArray(payload?.data?.data)) raw = payload.data.data;
 
+      const extractName = (str: string) => {
+        if (!str) return "Không rõ";
+        const match = str.match(/categoryName=([^,)]+)\)/);
+        return match ? match[1] : str;
+      };
+
       const categoryChart = raw.map((it: any) => ({
-        category: it.category,
+        category: extractName(it.category),
         totalSold: Number(it.totalSold ?? 0),
       }));
 
