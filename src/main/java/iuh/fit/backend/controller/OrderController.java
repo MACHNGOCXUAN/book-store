@@ -82,18 +82,44 @@ public class OrderController {
     @PutMapping("/update-status")
     public ResponseEntity<?> updateOrder(@RequestBody UpdateStatusOrderDTO updateStatusOrderDTO,
             @RequestHeader("Authorization") String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.badRequest().body("Missing Authorization header");
-        }
-        String token = authHeader.substring(7);
-        String userId = jwtUtils.getUserIdFromToken(token);
-        User user = userService.findUserById(userId);
-        boolean isSuccess = orderService.updateOrderStatus(updateStatusOrderDTO, user);
-        if (isSuccess) {
-            return ResponseEntity.ok(Map.of("message", "Cập nhật thành công!"));
-        } else {
+        try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "Missing Authorization header"));
+            }
+
+            if (updateStatusOrderDTO == null || updateStatusOrderDTO.getOrderId() == null
+                    || updateStatusOrderDTO.getStatus() == null) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "Invalid request: orderId and status are required"));
+            }
+
+            String token = authHeader.substring(7);
+            String userId = jwtUtils.getUserIdFromToken(token);
+            User user = userService.findUserById(userId);
+
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "User not found"));
+            }
+
+            System.out.println("📤 Update order status: " + updateStatusOrderDTO.getOrderId()
+                    + " -> " + updateStatusOrderDTO.getStatus());
+
+            boolean isSuccess = orderService.updateOrderStatus(updateStatusOrderDTO, user);
+            if (isSuccess) {
+                System.out.println("✅ Order status updated successfully");
+                return ResponseEntity.ok(Map.of("message", "Cập nhật thành công!"));
+            } else {
+                System.out.println("❌ Order status update failed");
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("message", "Cập nhật thất bại!"));
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error updating order status: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Cập nhật thất bại!"));
+                    .body(Map.of("message", "Lỗi server: " + e.getMessage()));
         }
     }
 
@@ -196,10 +222,12 @@ public class OrderController {
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
         } catch (RuntimeException e) {
+            System.out.println("❌ RuntimeException: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
+            System.out.println("❌ Exception: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Failed to checkout: " + e.getMessage()));

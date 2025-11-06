@@ -238,10 +238,11 @@ public class OrderServiceImpl implements OrderService {
 
         for (CreateOrderRequestDTO.OrderDetailRequest detailReq : request.getOrderDetails()) {
             Book book = bookRepository.findById(detailReq.getBookId())
-                    .orElseThrow(() -> new RuntimeException("Book not found"));
+                    .orElseThrow(() -> new RuntimeException("Book not found with ID: " + detailReq.getBookId()));
 
             if (book.getStock() < detailReq.getQuantity()) {
-                throw new RuntimeException("Not enough stock");
+                throw new RuntimeException("Sách \"" + book.getTitle() + "\" không đủ số lượng. " +
+                        "Kho: " + book.getStock() + ", Yêu cầu: " + detailReq.getQuantity());
             }
 
             String orderDetailId = "ODT" + String.format("%03d", nextDetailNum);

@@ -22,5 +22,8 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, Long> 
         ORDER BY total DESC
     """)
     List<Object[]> findBooksSoldByStaff(@Param("staffId") String staffId);
+
+    @Query("SELECT MAX(o.orderDetailId) FROM OrderDetail o")
+    String findMaxOrderDetailId();
 }
 
