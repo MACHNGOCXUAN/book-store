@@ -8,9 +8,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-@AllArgsConstructor @NoArgsConstructor
-@Getter @Setter @ToString
-@Entity @Table(name = "books")
+@AllArgsConstructor
+@NoArgsConstructor
+@Getter
+@Setter
+@ToString
+@Entity
+@Table(name = "books")
 public class Book {
     @Id
     private String bookId;
@@ -53,5 +57,6 @@ public class Book {
 
     @ManyToMany(mappedBy = "favoriteBooks")
     @JsonIgnore
+    @ToString.Exclude
     private Set<Customer> likedByCustomers = new HashSet<>();
 }

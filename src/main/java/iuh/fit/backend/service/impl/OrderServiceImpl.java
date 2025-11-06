@@ -114,7 +114,6 @@ public class OrderServiceImpl implements OrderService {
         return bookDTO;
     }
 
-
     @Override
     public Page<OrderFullDetailDTO> getOrdersFilter(OrderFilter orderFilter, User user) {
         int page = orderFilter.getPage() != null ? orderFilter.getPage() - 1 : 0;
@@ -128,23 +127,30 @@ public class OrderServiceImpl implements OrderService {
 
         Page<Order> ordersPage;
 
-        if(user.getRole() == Role.ADMIN) {
+        if (user.getRole() == Role.ADMIN) {
             ordersPage = orderRepository.findByFilter(
                     orderFilter.getStatus(),
                     orderFilter.getStartTime(),
                     orderFilter.getEndTime(),
                     orderFilter.getTextSearch(),
-                    pageable
-            );
-        } else {
+                    pageable);
+        } else if (user.getRole() == Role.STAFF) {
             ordersPage = orderRepository.findByFilterStaff(
                     orderFilter.getStatus(),
                     orderFilter.getStartTime(),
                     orderFilter.getEndTime(),
                     orderFilter.getTextSearch(),
                     user.getUserId(),
-                    pageable
-            );
+                    pageable);
+        } else {
+            // CUSTOMER - lấy orders của customer này
+            ordersPage = orderRepository.findByFilterCustomer(
+                    orderFilter.getStatus(),
+                    orderFilter.getStartTime(),
+                    orderFilter.getEndTime(),
+                    orderFilter.getTextSearch(),
+                    user.getUserId(),
+                    pageable);
         }
 
         List<OrderFullDetailDTO> dtoList = ordersPage.getContent()
@@ -187,7 +193,8 @@ public class OrderServiceImpl implements OrderService {
         return true;
     }
 
-    // TẠO ORDER CHO METHOD COD (THANH TOÁN KHI NHẬN HÀNG), BỔ SUNG CÁC METHOD VNPAY,MOMO SAU NÀY
+    // TẠO ORDER CHO METHOD COD (THANH TOÁN KHI NHẬN HÀNG), BỔ SUNG CÁC METHOD
+    // VNPAY,MOMO SAU NÀY
     @Override
     @Transactional
     public OrderFullDetailDTO createOrder(CreateOrderRequestDTO request, User user) {
@@ -209,7 +216,7 @@ public class OrderServiceImpl implements OrderService {
         Order order = new Order();
         order.setOrderId(orderId);
         order.setOrderDate(LocalDateTime.now());
-        order.setStatus(OrderStatus.PROCESSING);
+        order.setStatus(OrderStatus.PENDING);
         order.setCustomer(customer);
 
         if (request.getDiscountCode() != null && !request.getDiscountCode().isBlank()) {
@@ -252,10 +259,10 @@ public class OrderServiceImpl implements OrderService {
             bookRepository.save(book);
         }
 
-        //LƯU ORDER (orderDetails cascade)
+        // LƯU ORDER (orderDetails cascade)
         Order savedOrder = orderRepository.save(order);
 
-        //TÍNH TOTAL
+        // TÍNH TOTAL
         double subtotal = savedOrder.calcItemsTotal();
         if (savedOrder.getDiscountCode() != null) {
             DiscountCode code = savedOrder.getDiscountCode();
@@ -270,7 +277,7 @@ public class OrderServiceImpl implements OrderService {
 
         orderRepository.save(savedOrder);
 
-        //CẬP NHẬT GIỎ HÀNG
+        // CẬP NHẬT GIỎ HÀNG
         Cart cart = cartRepository.findByCustomerUserId(request.getCustomerId())
                 .orElseThrow(() -> new RuntimeException("Giỏ hàng không tồn tại"));
 
