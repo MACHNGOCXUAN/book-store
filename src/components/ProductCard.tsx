@@ -29,6 +29,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
   };
 
   const handleAddToCart = async () => {
+    // ✅ Kiểm tra stock trước khi thêm
+    if (book.stock <= 0) {
+      toast.error("Sản phẩm này hiện không có sẵn!");
+      return;
+    }
+
     try {
       await dispatch(
         addOrUpdateCartItem({ bookId: book.bookId, quantity: 1 })
@@ -219,17 +225,20 @@ const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
             size="small"
             icon={<ShoppingCartOutlined />}
             onClick={() => handleAddToCart()}
+            disabled={book.stock <= 0}
+            title={book.stock <= 0 ? "Sản phẩm đã hết hàng" : ""}
             style={{
               flex: 1,
               borderRadius: "6px",
               height: "36px",
               fontWeight: 500,
-              background: "#C92127",
+              background: book.stock <= 0 ? "#d9d9d9" : "#C92127",
               border: "none",
               fontSize: "13px",
+              cursor: book.stock <= 0 ? "not-allowed" : "pointer",
             }}
           >
-            Thêm vào giỏ hàng
+            {book.stock <= 0 ? "Hết hàng" : "Thêm vào giỏ hàng"}
           </Button>
         </div>
       </div>

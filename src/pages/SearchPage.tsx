@@ -37,19 +37,21 @@ export default function SearchPage() {
         <div style={{ textAlign: "center", padding: "40px 0" }}>
           <Spin />
         </div>
-      ) : books.length === 0 ? (
+      ) : books.filter((b) => b.stock > 0).length === 0 ? (
         <Empty description="Không tìm thấy sách nào" />
       ) : (
         <>
           <p style={{ marginBottom: 20, color: "#666" }}>
-            Tìm thấy {books.length} sách
+            Tìm thấy {books.filter((b) => b.stock > 0).length} sách
           </p>
           <Row gutter={[16, 16]}>
-            {books.map((book) => (
-              <Col key={book.bookId} xs={24} sm={12} md={8} lg={6}>
-                <ProductCard book={book} />
-              </Col>
-            ))}
+            {books
+              .filter((b) => b.stock > 0)
+              .map((book) => (
+                <Col key={book.bookId} xs={24} sm={12} md={8} lg={6}>
+                  <ProductCard book={book} />
+                </Col>
+              ))}
           </Row>
         </>
       )}

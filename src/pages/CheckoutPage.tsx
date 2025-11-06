@@ -13,6 +13,7 @@ import {
   List,
   Spin,
   message,
+  Modal,
 } from "antd";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -24,7 +25,7 @@ import vnpayIcon from "../components/icons/logo-vnpay.jpg";
 import type { Address } from "../types/Address";
 import { fetchProvincesV1, transformV1Data } from "../services/provincesApi";
 import { useAppSelector, useAppDispatch } from "../store/hooks";
-import { createOrder, clearOrder } from "../features/orders/orderSlice";
+import { createOrder, clearOrder } from "../features/orders/ordersSlice";
 import { fetchCart } from "../features/cart/cartSlice";
 import {
   getAddresses,
@@ -49,8 +50,12 @@ const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
   const [cartItems, setCartItems] = useState<CartItemType[]>([]);
   const [showNote, setShowNote] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"COD" | "ONLINE">("COD");
+  const [paymentMethod, setPaymentMethod] = useState<"COD" | "VNPAY" | "MOMO">(
+    "COD"
+  );
   const [discountCode, setDiscountCode] = useState<string>("");
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [currentOrderPayment, setCurrentOrderPayment] = useState<any>(null);
 
   const [form] = Form.useForm();
   // Province data
@@ -250,22 +255,47 @@ const CheckoutPage: React.FC = () => {
         // Reload cart
         dispatch(fetchCart());
 
-        // Reset order state
-        dispatch(clearOrder());
-
-        // Chuyển hướng
-        navigate("/order-success", {
-          state: {
-            order: result.payload,
-            paymentMethod,
+        // Nếu là thanh toán ONLINE và có QR code, hiển thị modal QR code
+        if (
+          (paymentMethod === "VNPAY" || paymentMethod === "MOMO") &&
+          result.payload &&
+          typeof result.payload === "object" &&
+          result.payload.payment?.qrCodeBase64
+        ) {
+          console.log(
+            "💳 Showing QR code for payment:",
+            result.payload.payment
+          );
+          setCurrentOrderPayment({
+            order: result.payload.order,
+            payment: result.payload.payment,
             address: currentAddress,
-          },
-        });
+          });
+          setShowQRModal(true);
+        } else if (result.payload && typeof result.payload === "object") {
+          // Nếu là COD, chuyển hướng ngay
+          dispatch(clearOrder());
+          navigate("/order-success", {
+            state: {
+              order: result.payload.order,
+              paymentMethod,
+              address: currentAddress,
+            },
+          });
+        }
       } else {
         console.log("❌ Order creation failed:", result);
-        toast.error(orderError || "Đặt hàng thất bại. Vui lòng thử lại!", {
+        // Extract error message from rejected action
+        const errorMessage =
+          result.payload ||
+          orderError ||
+          "Đặt hàng thất bại. Vui lòng thử lại!";
+
+        console.error("📋 Error details:", errorMessage);
+
+        toast.error(errorMessage, {
           position: "top-right",
-          autoClose: 2000,
+          autoClose: 3000,
           hideProgressBar: false,
           closeOnClick: true,
           pauseOnHover: true,
@@ -483,7 +513,7 @@ const CheckoutPage: React.FC = () => {
           >
             <Row gutter={[0, 12]}>
               <Col span={24}>
-                <Radio value="ONLINE">
+                <Radio value="VNPAY">
                   <img
                     src={vnpayIcon}
                     alt="VNPAY"
@@ -494,7 +524,7 @@ const CheckoutPage: React.FC = () => {
                 </Radio>
               </Col>
               <Col span={24}>
-                <Radio value="ONLINE">
+                <Radio value="MOMO">
                   <img
                     src={momoIcon}
                     alt="MoMo"
@@ -696,6 +726,120 @@ const CheckoutPage: React.FC = () => {
             {orderLoading ? "ĐANG XỬ LÝ..." : "XÁC NHẬN ĐẶT HÀNG"}
           </Button>
         </div>
+
+        {/* QR Code Modal */}
+        <Modal
+          title="Thanh toán qua VNPay"
+          open={showQRModal}
+          onCancel={() => setShowQRModal(false)}
+          width={500}
+          style={{ textAlign: "center" }}
+          bodyStyle={{
+            background: "linear-gradient(135deg, #fdfbfb 0%, #f4f4f9 100%)",
+            padding: "32px 24px",
+          }}
+          footer={[
+            <Button
+              key="close"
+              onClick={() => setShowQRModal(false)}
+              style={{ borderRadius: 8 }}
+            >
+              Đóng
+            </Button>,
+            <Button
+              key="confirm"
+              type="primary"
+              onClick={() => {
+                dispatch(clearOrder());
+                navigate("/order-success", {
+                  state: {
+                    order: currentOrderPayment?.order,
+                    paymentMethod: paymentMethod,
+                    address: currentOrderPayment?.address,
+                    payment: currentOrderPayment?.payment,
+                  },
+                });
+                setShowQRModal(false);
+              }}
+              style={{
+                background: "#d32f2f",
+                borderRadius: 8,
+              }}
+            >
+              Xác nhận đã thanh toán
+            </Button>,
+          ]}
+        >
+          <div style={{ padding: "16px 0" }}>
+            <Text
+              strong
+              style={{ fontSize: 18, display: "block", marginBottom: 20 }}
+            >
+              Mã QR thanh toán
+            </Text>
+            {currentOrderPayment?.payment?.qrCodeBase64 && (
+              <>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    marginBottom: 20,
+                  }}
+                >
+                  <div
+                    style={{
+                      background: "white",
+                      padding: 16,
+                      borderRadius: 12,
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                    }}
+                  >
+                    <img
+                      src={currentOrderPayment.payment.qrCodeBase64}
+                      alt="QR Code"
+                      style={{
+                        maxWidth: 280,
+                        width: "100%",
+                        height: "auto",
+                        borderRadius: 8,
+                      }}
+                    />
+                  </div>
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <Text type="secondary" style={{ fontSize: 13 }}>
+                    Hạn thanh toán:{" "}
+                    {currentOrderPayment.payment.expiresAt
+                      ? new Date(
+                          currentOrderPayment.payment.expiresAt
+                        ).toLocaleString("vi-VN")
+                      : "15 phút từ bây giờ"}
+                  </Text>
+                </div>
+                <div
+                  style={{
+                    marginBottom: 16,
+                    padding: "16px",
+                    background: "white",
+                    borderRadius: 8,
+                    border: "2px solid #d32f2f",
+                    boxShadow: "0 2px 8px rgba(211, 47, 47, 0.15)",
+                  }}
+                >
+                  <Text strong style={{ color: "#d32f2f", fontSize: 18 }}>
+                    {currentOrderPayment.payment.amount?.toLocaleString(
+                      "vi-VN"
+                    )}{" "}
+                    ₫
+                  </Text>
+                </div>
+              </>
+            )}
+            <Text type="secondary" style={{ fontSize: 13, display: "block" }}>
+              Quét mã QR bằng ứng dụng ngân hàng hoặc ứng dụng hỗ trợ thanh toán
+            </Text>
+          </div>
+        </Modal>
       </Spin>
     </div>
   );

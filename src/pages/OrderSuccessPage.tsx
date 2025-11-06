@@ -4,9 +4,10 @@ import {
   CheckCircleOutlined,
   HomeOutlined,
   EyeOutlined,
+  CopyOutlined,
 } from "@ant-design/icons";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useAppDispatch } from "../store/hooks";
 import { fetchCart } from "../features/cart/cartSlice";
@@ -19,6 +20,9 @@ export default function OrderSuccessPage() {
   const dispatch = useAppDispatch();
 
   const order = state?.order;
+  const payment = state?.payment;
+  const paymentMethod = state?.paymentMethod;
+  const [qrExpired, setQrExpired] = useState(false);
 
   // Hiệu ứng cuộn lên đầu trang và reload cart
   useEffect(() => {
@@ -37,6 +41,31 @@ export default function OrderSuccessPage() {
     });
   }, [dispatch]);
 
+  // Kiểm tra hạn QR code
+  useEffect(() => {
+    if (payment?.expiresAt) {
+      const timeLeft = payment.expiresAt - Date.now();
+      if (timeLeft > 0) {
+        const timer = setTimeout(() => {
+          setQrExpired(true);
+        }, timeLeft);
+        return () => clearTimeout(timer);
+      } else {
+        setQrExpired(true);
+      }
+    }
+  }, [payment]);
+
+  const handleCopyPaymentUrl = () => {
+    if (payment?.paymentUrl) {
+      navigator.clipboard.writeText(payment.paymentUrl);
+      toast.success("Đã sao chép link thanh toán!", {
+        position: "top-right",
+        autoClose: 2000,
+      });
+    }
+  };
+
   return (
     <div
       style={{
@@ -50,7 +79,10 @@ export default function OrderSuccessPage() {
     >
       <Card
         style={{
-          maxWidth: 520,
+          maxWidth:
+            paymentMethod === "VNPAY" || (paymentMethod === "MOMO" && payment)
+              ? 600
+              : 520,
           width: "100%",
           borderRadius: 16,
           boxShadow: "0 10px 30px rgba(207, 38, 45, 0.1)",
@@ -96,6 +128,112 @@ export default function OrderSuccessPage() {
                 {order?.orderId}
               </Title>
             </div>
+
+            {/* QR Code Section cho ONLINE payment */}
+            {(paymentMethod === "VNPAY" || paymentMethod === "MOMO") &&
+              payment?.qrCodeBase64 && (
+                <>
+                  <Divider style={{ margin: "20px 0", borderColor: "#eee" }} />
+                  <div
+                    style={{
+                      background: "#fffbf0",
+                      padding: 20,
+                      borderRadius: 12,
+                      border: "1px solid #ffc069",
+                    }}
+                  >
+                    <Text
+                      strong
+                      style={{
+                        color: "#d46b08",
+                        fontSize: 14,
+                        display: "block",
+                        marginBottom: 16,
+                      }}
+                    >
+                      📱 Thông tin thanh toán
+                    </Text>
+                    {!qrExpired && (
+                      <div style={{ marginBottom: 16 }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "center",
+                            marginBottom: 12,
+                          }}
+                        >
+                          <div
+                            style={{
+                              background: "white",
+                              padding: 12,
+                              borderRadius: 8,
+                              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                            }}
+                          >
+                            <img
+                              src={payment.qrCodeBase64}
+                              alt="QR Code"
+                              style={{
+                                maxWidth: 220,
+                                width: "100%",
+                                height: "auto",
+                                borderRadius: 6,
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <Text
+                          type="secondary"
+                          style={{
+                            fontSize: 12,
+                            display: "block",
+                            textAlign: "center",
+                          }}
+                        >
+                          Quét mã QR để thanh toán
+                        </Text>
+                      </div>
+                    )}
+                    {qrExpired && (
+                      <Text
+                        type="danger"
+                        style={{ display: "block", marginBottom: 12 }}
+                      >
+                        ⏰ Mã QR đã hết hạn. Vui lòng tạo lại đơn hàng nếu chưa
+                        thanh toán.
+                      </Text>
+                    )}
+                    <div
+                      style={{
+                        marginBottom: 12,
+                        padding: 14,
+                        background: "white",
+                        borderRadius: 8,
+                        textAlign: "center",
+                        border: "2px solid #ffc069",
+                      }}
+                    >
+                      <Text strong style={{ color: "#d32f2f", fontSize: 18 }}>
+                        {payment.amount?.toLocaleString("vi-VN")} ₫
+                      </Text>
+                    </div>
+                    {!qrExpired && (
+                      <>
+                        <Divider style={{ margin: "8px 0" }} />
+                        <Button
+                          size="small"
+                          type="text"
+                          icon={<CopyOutlined />}
+                          onClick={handleCopyPaymentUrl}
+                          style={{ width: "100%", color: "#d46b08" }}
+                        >
+                          Sao chép link thanh toán
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
 
             <Divider style={{ margin: "20px 0", borderColor: "#eee" }} />
 

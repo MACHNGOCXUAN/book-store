@@ -18,6 +18,12 @@ import MembershipPage from "../pages/MembershipPage";
 import ReviewPage from "../pages/ReviewPage";
 import CheckoutPage from "../pages/CheckoutPage";
 import OrderSuccessPage from "../pages/OrderSuccessPage";
+import OrderHistoryPage from "../pages/orders/OrderHistoryPage";
+import OrderPendingPage from "../pages/orders/OrderPendingPage";
+import OrderProcessingPage from "../pages/orders/OrderProcessingPage";
+import OrderShippingPage from "../pages/orders/OrderShippingPage";
+import OrderCancelledPage from "../pages/orders/OrderCancelledPage";
+
 const router = createBrowserRouter([
   {
     path: "",
@@ -78,6 +84,32 @@ const router = createBrowserRouter([
           {
             path: "orders",
             element: <OrdersPage />,
+            children: [
+              {
+                index: true,
+                element: <OrderHistoryPage />,
+              },
+              {
+                path: "pending",
+                element: <OrderPendingPage />,
+              },
+              {
+                path: "processing",
+                element: <OrderProcessingPage />,
+              },
+              {
+                path: "shipping",
+                element: <OrderShippingPage />,
+              },
+              {
+                path: "completed",
+                element: <OrderShippingPage />,
+              },
+              {
+                path: "cancelled",
+                element: <OrderCancelledPage />,
+              },
+            ],
           },
         ],
       },

@@ -3,7 +3,7 @@ import bookReducer from "../features/books/bookSlice";
 import authReducer from "../features/auth/authSlice";
 import cartReducer from "../features/cart/cartSlice";
 import { reviewReducer } from "../features/reviews";
-import orderReducer from "../features/orders/orderSlice";
+import ordersReducer from "../features/orders/ordersSlice";
 import addressReducer from "../features/addresses/addressSlice";
 
 export const store = configureStore({
@@ -12,7 +12,7 @@ export const store = configureStore({
     auth: authReducer,
     cart: cartReducer,
     reviews: reviewReducer,
-    orders: orderReducer,
+    orders: ordersReducer,
     addresses: addressReducer,
   },
 });

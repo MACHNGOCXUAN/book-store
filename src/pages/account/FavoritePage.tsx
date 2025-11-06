@@ -106,40 +106,42 @@ const FavoritePage = (_props: FavoriteProductProps) => {
     >
       {favoriteBooks.length > 0 ? (
         <Row gutter={[16, 16]}>
-          {favoriteBooks.map((book) => (
-            <Col xs={24} sm={12} md={8} lg={8} key={book.bookId}>
-              <div style={{ position: "relative" }}>
-                <ProductCard book={book} />
+          {favoriteBooks
+            .filter((b) => b.stock > 0)
+            .map((book) => (
+              <Col xs={24} sm={12} md={8} lg={8} key={book.bookId}>
+                <div style={{ position: "relative" }}>
+                  <ProductCard book={book} />
 
-                {/* Remove Button - Heart Icon */}
-                <Button
-                  type="text"
-                  icon={
-                    <HeartFilled style={{ fontSize: 24, color: "#C92127" }} />
-                  }
-                  loading={removing === book.bookId}
-                  onClick={() => handleRemoveFromFavorites(book.bookId)}
-                  style={{
-                    position: "absolute",
-                    top: 8,
-                    right: 8,
-                    zIndex: 10,
-                    padding: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: 40,
-                    height: 40,
-                    borderRadius: "50%",
-                    background: "rgba(255, 255, 255, 0.9)",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                    border: "none",
-                  }}
-                  title="Xóa khỏi danh sách yêu thích"
-                />
-              </div>
-            </Col>
-          ))}
+                  {/* Remove Button - Heart Icon */}
+                  <Button
+                    type="text"
+                    icon={
+                      <HeartFilled style={{ fontSize: 24, color: "#C92127" }} />
+                    }
+                    loading={removing === book.bookId}
+                    onClick={() => handleRemoveFromFavorites(book.bookId)}
+                    style={{
+                      position: "absolute",
+                      top: 8,
+                      right: 8,
+                      zIndex: 10,
+                      padding: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 40,
+                      height: 40,
+                      borderRadius: "50%",
+                      background: "rgba(255, 255, 255, 0.9)",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                      border: "none",
+                    }}
+                    title="Xóa khỏi danh sách yêu thích"
+                  />
+                </div>
+              </Col>
+            ))}
         </Row>
       ) : (
         <Empty

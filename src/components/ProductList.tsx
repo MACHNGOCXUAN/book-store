@@ -35,9 +35,11 @@ const ProductList: React.FC = () => {
     setSortOrder(searchParams.get("sort") || "default");
   }, [searchParams]);
 
-  // Sắp xếp
+  // Lọc sách có stock > 0 và sắp xếp
   const sortedBooks = useMemo(() => {
-    const sortableBooks = [...books];
+    // ✅ Lọc ra chỉ những sách có stock > 0
+    const availableBooks = books.filter((book) => book.stock > 0);
+    const sortableBooks = [...availableBooks];
     switch (sortOrder) {
       case "price-asc":
         sortableBooks.sort((a, b) => a.price - b.price);

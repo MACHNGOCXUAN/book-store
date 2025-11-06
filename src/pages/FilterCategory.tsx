@@ -423,17 +423,19 @@ export default function FilterCategory() {
                 fontSize: "18px",
               }}
             >
-              {filteredBooks.length}
+              {filteredBooks.filter((b) => b.stock > 0).length}
             </span>
             sản phẩm phù hợp.
           </div>
 
           <Row gutter={[16, 16]}>
-            {paginatedBooks.map((book) => (
-              <Col key={book.bookId} span={8}>
-                <ProductCard book={book} />
-              </Col>
-            ))}
+            {paginatedBooks
+              .filter((b) => b.stock > 0)
+              .map((book) => (
+                <Col key={book.bookId} span={8}>
+                  <ProductCard book={book} />
+                </Col>
+              ))}
           </Row>
 
           {/* Phân trang */}

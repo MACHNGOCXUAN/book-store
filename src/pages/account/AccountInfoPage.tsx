@@ -45,15 +45,29 @@ const AccountInfoPage = ({ initialData, onSave }: UserProfileProps) => {
       }
     } catch {}
 
-    const birthday = authUser?.birthday
-      ? dayjs(authUser.birthday)
-      : userFromLocalStorage?.birthday
-      ? dayjs(userFromLocalStorage.birthday)
-      : initialData?.birthday?.year
-      ? dayjs(
-          `${initialData.birthday.year}-${initialData.birthday.month}-${initialData.birthday.day}`
-        )
-      : null;
+    // Try to get birthday from multiple sources
+    let birthday = null;
+
+    // First, try dateOfBirth from authUser
+    if (authUser?.birthday) {
+      birthday = dayjs(authUser.birthday);
+    }
+    // Then try birthday from authUser
+    else if (authUser?.birthday) {
+      birthday = dayjs(authUser.birthday);
+    }
+    // Then try from localStorage
+    else if (userFromLocalStorage?.dateOfBirth) {
+      birthday = dayjs(userFromLocalStorage.dateOfBirth);
+    } else if (userFromLocalStorage?.birthday) {
+      birthday = dayjs(userFromLocalStorage.birthday);
+    }
+    // Finally try from initialData
+    else if (initialData?.birthday?.year) {
+      birthday = dayjs(
+        `${initialData.birthday.year}-${initialData.birthday.month}-${initialData.birthday.day}`
+      );
+    }
 
     form.setFieldsValue({
       fullname: authUser?.fullName || initialData?.firstName || "",
