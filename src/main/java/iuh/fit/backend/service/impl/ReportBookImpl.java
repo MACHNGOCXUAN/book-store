@@ -1,6 +1,7 @@
 package iuh.fit.backend.service.impl;
 
 import iuh.fit.backend.repository.ReportBookRepository;
+import iuh.fit.backend.repository.ReportOrderBookStaffRepository;
 import iuh.fit.backend.service.ReportBookService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,7 @@ import java.util.*;
 public class ReportBookImpl implements ReportBookService {
 
     private final ReportBookRepository reportBookRepository;
+    private final ReportOrderBookStaffRepository reportOrderBookStaffRepository;
 
     @Override
     public Map<String, Object> getBookReport(String type, Integer year, Integer month, String startDate, String endDate) {
@@ -87,4 +89,35 @@ public class ReportBookImpl implements ReportBookService {
 
         return result;
     }
+// staff
+@Override
+public Map<String, Object> getBookReportForStaff(
+        String staffId, String type, Integer year, Integer month,
+        String startDate, String endDate
+) {
+
+    List<Object[]> rows;
+
+    switch (type.toLowerCase()) {
+        case "year" -> rows = reportOrderBookStaffRepository.topBooksByYear(staffId, year);
+        case "month" -> rows = reportOrderBookStaffRepository.topBooksByMonth(staffId, year, month);
+        case "range" -> {
+            LocalDateTime start = LocalDate.parse(startDate).atStartOfDay();
+            LocalDateTime end = LocalDate.parse(endDate).atTime(23, 59, 59);
+            rows = reportOrderBookStaffRepository.topBooksByRange(staffId, start, end);
+        }
+        default -> rows = reportOrderBookStaffRepository.topBooksAll(staffId);
+    }
+
+    List<Map<String, Object>> list = new ArrayList<>();
+    for (Object[] r : rows) {
+        list.add(Map.of(
+                "title", r[0],
+                "quantity", ((Number) r[1]).intValue()
+        ));
+    }
+
+    return Map.of("topBooks", list);
+}
+
 }
