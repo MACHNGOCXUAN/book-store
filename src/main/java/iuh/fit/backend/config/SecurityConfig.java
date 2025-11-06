@@ -56,15 +56,18 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/auth/**",
+                                "/api/reports/admin/**",
+                                "/api/reports/staff/**",
                                 "/api/reports/admin/overview",
                                 "/api/reports/revenue",
+                                "/api/reports/staff",
                                 "/api/reports/orders",
                                 "/api/reports/books",
                                 "/api/reports/customers",
                                 "/ws/**",
                                 "/api/favorites/**",
                                 "/api/books/**",
-                                "api/categories/**",
+                                "/api/categories/**",
                                 "/api/reviews/**"
                         ).permitAll()
                         .anyRequest().authenticated()

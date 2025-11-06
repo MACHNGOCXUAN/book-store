@@ -1,5 +1,7 @@
 package iuh.fit.backend.service.impl;
 
+import iuh.fit.backend.repository.OrderDetailRepository;
+import iuh.fit.backend.repository.OrderRepository;
 import iuh.fit.backend.repository.ReportOrderRepository;
 import iuh.fit.backend.service.ReportOrderService;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +18,8 @@ import java.util.*;
 public class ReportOrderImpl implements ReportOrderService {
 
     private final ReportOrderRepository reportOrderRepository;
-
+private  final OrderDetailRepository orderDetailRepository;
+private final OrderRepository orderRepository;
     @Override
     public Map<String, Object> getOrderReport(String type, Integer year, Integer month, String startDate, String endDate) {
         Map<String, Object> result = new HashMap<>();
@@ -158,4 +161,44 @@ public class ReportOrderImpl implements ReportOrderService {
             return result;
         }
     }
+    // staff
+    public Map<String, Object> getOrderReportForStaff(String staffId, String type, Integer year, Integer month, String startDate, String endDate) {
+
+        List<Map<String, Object>> chart = new ArrayList<>();
+
+        if (type.equals("month")) {
+            year = (year == null) ? LocalDate.now().getYear() : year;
+            List<Object[]> rs = orderRepository.sumOrdersByMonthInYearForStaff(staffId, year);
+
+            rs.forEach(row -> chart.add(Map.of(
+                    "label", "Tháng " + row[0],
+                    "orders", ((Number) row[1]).intValue()
+            )));
+        }
+
+        else if (type.equals("monthnumber")) {
+            year = (year == null) ? LocalDate.now().getYear() : year;
+            List<Object[]> rs = orderRepository.sumOrdersByDayInMonthForStaff(staffId, year, month);
+
+            rs.forEach(row -> chart.add(Map.of(
+                    "label", "Ngày " + row[0],
+                    "orders", ((Number) row[1]).intValue()
+            )));
+        }
+
+        else if (type.equals("range")) {
+            LocalDateTime start = LocalDate.parse(startDate).atStartOfDay();
+            LocalDateTime end = LocalDate.parse(endDate).atTime(23, 59, 59);
+            List<Object[]> rs = orderRepository.sumOrdersByDateRangeForStaff(staffId, start, end);
+
+            rs.forEach(row -> chart.add(Map.of(
+                    "label", row[0].toString(),
+                    "orders", ((Number) row[1]).intValue()
+            )));
+        }
+
+        return Map.of("chartData", chart);
+    }
+
+
 }
