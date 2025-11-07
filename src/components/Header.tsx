@@ -1,10 +1,12 @@
 // src/components/Header.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "../assets/logo1.png";
+import { API_BASE } from "../config/api";
 import { fetchBooks } from "../features/books/bookSlice";
 import { fetchCart } from "../features/cart/cartSlice";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
+import type { Book } from "../types";
 
 // Icons
 import {
@@ -24,12 +26,12 @@ import { clearAuth } from "../features/auth/authSlice";
 import AuthModal from "./AuthModal";
 
 // Import các component con
-import HeaderTopBanner from "./header/HeaderTopBanner";
-import HeaderSecondaryNav from "./header/HeaderSecondaryNav";
-import HeaderCategoryMenu from "./header/HeaderCategoryMenu";
 import HeaderActions from "./header/HeaderActions";
+import HeaderCategoryMenu from "./header/HeaderCategoryMenu";
 import HeaderMobileDrawer from "./header/HeaderMobileDrawer";
 import HeaderSearchModal from "./header/HeaderSearchModal";
+import HeaderSecondaryNav from "./header/HeaderSecondaryNav";
+import HeaderTopBanner from "./header/HeaderTopBanner";
 
 const { useBreakpoint } = Grid;
 
@@ -42,6 +44,9 @@ const Header = () => {
 
   // -------------------- Local states --------------------
   const [searchValue, setSearchValue] = useState("");
+  const [suggestions, setSuggestions] = useState<Book[]>([]);
+  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [openDrawer, setOpenDrawer] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -49,6 +54,9 @@ const Header = () => {
 
   const screens = useBreakpoint();
   const navigate = useNavigate();
+  const searchDebounce = useRef<number | null>(null);
+  const searchAbort = useRef<AbortController | null>(null);
+  const token = useAppSelector((s) => s.auth.token);
 
   // -------------------- Derived data --------------------
   const cartCount = useMemo(() => {
@@ -141,11 +149,96 @@ const Header = () => {
   const handleSearch = (value?: string) => {
     const q = (value ?? searchValue).trim();
     if (!q) return;
-    navigate(`/search?q=${encodeURIComponent(q)}`);
+    // Navigate to FilterCategory page with type 'search' and pass the query param
+    navigate(`/categories/search?search=${encodeURIComponent(q)}`);
     setSearchValue("");
+    setSuggestions([]);
+    setIsSuggestionsOpen(false);
     setOpenDrawer(false);
     setIsSearchModalOpen(false);
   };
+
+  // Select suggestion -> go to book detail
+  const handleSelectSuggestion = (book: Book) => {
+    navigate(`/books/${book.bookId}`);
+    setSearchValue("");
+    setSuggestions([]);
+    setIsSuggestionsOpen(false);
+  };
+
+  // Debounced effect: call API when searchValue changes
+  useEffect(() => {
+    const q = searchValue.trim();
+
+    // clear previous debounce
+    if (searchDebounce.current) {
+      window.clearTimeout(searchDebounce.current);
+      searchDebounce.current = null;
+    }
+
+    // abort previous fetch
+    if (searchAbort.current) {
+      try {
+        searchAbort.current.abort();
+      } catch {
+        /* ignore */
+      }
+      searchAbort.current = null;
+    }
+
+    if (!q) {
+      setSuggestions([]);
+      setIsSuggestionsOpen(false);
+      setSuggestionsLoading(false);
+      return;
+    }
+
+    setSuggestionsLoading(true);
+    // debounce 300ms
+    searchDebounce.current = window.setTimeout(async () => {
+      const controller = new AbortController();
+      searchAbort.current = controller;
+      try {
+        // Use centralized API_BASE and the same endpoint used elsewhere (/books/search?q=)
+        const url = `${API_BASE}/books/search?search=${encodeURIComponent(q)}`;
+        const res = await fetch(url, {
+          signal: controller.signal,
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        if (!res.ok) throw new Error("Fetch error");
+        const data = (await res.json()) as Book[];
+        // limit to 5
+        setSuggestions(Array.isArray(data) ? data.slice(0, 5) : []);
+        setIsSuggestionsOpen(Array.isArray(data) && data.length > 0);
+      } catch (err) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if ((err as any)?.name === "AbortError") {
+          // aborted - ignore
+        } else {
+          // on error, clear suggestions
+          setSuggestions([]);
+          setIsSuggestionsOpen(false);
+        }
+      } finally {
+        setSuggestionsLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      if (searchDebounce.current) {
+        window.clearTimeout(searchDebounce.current);
+        searchDebounce.current = null;
+      }
+      if (searchAbort.current) {
+        try {
+          searchAbort.current.abort();
+        } catch {
+          /* ignore */
+        }
+        searchAbort.current = null;
+      }
+    };
+  }, [searchValue, navigate, token]);
 
   const handleLogout = () => {
     dispatch(clearAuth());
@@ -238,13 +331,16 @@ const Header = () => {
                 <HeaderCategoryMenu categories={categories} />
 
                 {/* Search */}
-                <div style={{ flex: 1, maxWidth: 600 }}>
+                <div style={{ flex: 1, maxWidth: 600, position: "relative" }}>
                   <Input.Search
                     placeholder="Tìm kiếm sách..."
                     size="large"
                     value={searchValue}
                     onChange={(e) => setSearchValue(e.target.value)}
                     onSearch={handleSearch}
+                    onFocus={() => {
+                      if (suggestions.length) setIsSuggestionsOpen(true);
+                    }}
                     style={{ borderRadius: 4 }}
                     enterButton={
                       <Button
@@ -257,6 +353,89 @@ const Header = () => {
                       />
                     }
                   />
+
+                  {/* Suggestions dropdown */}
+                  {isSuggestionsOpen && suggestions.length > 0 && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: 0,
+                        right: 0,
+                        marginTop: 8,
+                        background: "#fff",
+                        border: "1px solid #e8e8e8",
+                        borderRadius: 6,
+                        boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
+                        zIndex: 1200,
+                        overflow: "hidden",
+                      }}
+                    >
+                      {suggestions.map((b) => (
+                        <div
+                          key={b.bookId}
+                          onMouseDown={(e) => {
+                            // use onMouseDown so click navigates before blur
+                            e.preventDefault();
+                            handleSelectSuggestion(b);
+                          }}
+                          style={{
+                            display: "flex",
+                            gap: 12,
+                            padding: "8px 12px",
+                            alignItems: "center",
+                            cursor: "pointer",
+                            borderBottom: "1px solid #f5f5f5",
+                          }}
+                        >
+                          <img
+                            src={b.coverImage}
+                            alt={b.title}
+                            style={{
+                              width: 48,
+                              height: 64,
+                              objectFit: "cover",
+                              borderRadius: 4,
+                              background: "#f5f5f5",
+                            }}
+                          />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div
+                              style={{
+                                fontSize: 14,
+                                fontWeight: 600,
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                            >
+                              {b.title}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 13,
+                                color: "#666",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                            >
+                              {b.author}
+                            </div>
+                          </div>
+                          <div style={{ marginLeft: 8, textAlign: "right" }}>
+                            <div style={{ color: "#C92127", fontWeight: 700 }}>
+                              {(
+                                Number(b.price) -
+                                (Number(b.price) * Number(b.discountPercent)) /
+                                100
+                              ).toLocaleString("vi-VN")}
+                              ₫
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Right side actions */}

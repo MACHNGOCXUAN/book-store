@@ -1,6 +1,6 @@
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import type { Book } from "../../types";
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { API_BASE } from "../../config/api";
+import type { Book } from "../../types";
 
 /* ===================== Book State Type ===================== */
 type BookState = {
@@ -79,7 +79,7 @@ export const searchBooks = createAsyncThunk<
 >("books/searchBooks", async (keyword, { rejectWithValue }) => {
   try {
     const res = await fetch(
-      `${API_BASE}/books/search?q=${encodeURIComponent(keyword)}`
+      `${API_BASE}/books/search?search=${encodeURIComponent(keyword)}`
     );
     if (!res.ok) {
       return rejectWithValue(`HTTP ${res.status}`);

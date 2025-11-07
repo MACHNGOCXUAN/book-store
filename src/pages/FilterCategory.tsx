@@ -1,21 +1,21 @@
-import { useState, useEffect } from "react";
+import { ReloadOutlined, SortAscendingOutlined } from "@ant-design/icons";
 import {
-  Radio,
   Button,
+  Col,
   Collapse,
   InputNumber,
-  Space,
-  Select,
+  Radio,
   Row,
-  Col,
+  Select,
+  Space,
   Tooltip,
 } from "antd";
-import { SortAscendingOutlined, ReloadOutlined } from "@ant-design/icons";
-import { useParams } from "react-router-dom";
-import type { Book as BookType } from "../types/Book";
+import { useEffect, useState } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
+import { fetchBooksByCategory, searchBooks } from "../features/books/bookSlice";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
-import { fetchBooksByCategory } from "../features/books/bookSlice";
+import type { Book as BookType } from "../types/Book";
 
 // --- Interface for Price Ranges ---
 interface PriceRange {
@@ -56,11 +56,20 @@ export default function FilterCategory() {
   const PRIMARY_COLOR = "rgb(217, 47, 56)";
 
   // --- Lấy dữ liệu khi categoryId thay đổi ---
+  const [searchParams] = useSearchParams();
   useEffect(() => {
-    if (type) {
+    if (!type) return;
+
+    if (type === "search") {
+      // If navigating to /categories/search?search=term -> perform keyword search
+      const keyword = searchParams.get("search") || "";
+      if (keyword.trim()) {
+        dispatch(searchBooks(keyword));
+      }
+    } else {
       dispatch(fetchBooksByCategory(type));
     }
-  }, [type, dispatch]);
+  }, [type, dispatch, searchParams]);
 
   // --- Cập nhật local state khi Redux bookData thay đổi ---
   useEffect(() => {
