@@ -120,7 +120,6 @@ const ChangePasswordPage = ({ onSave }: ChangePasswordProps) => {
             placeholder="Mật khẩu hiện tại"
             size="large"
             style={{ borderRadius: 8 }}
-            autoComplete="current-password"
           />
         </Form.Item>
 

@@ -3,33 +3,23 @@ import { useState, useEffect } from "react";
 import { Row, Col, Spin, Empty } from "antd";
 import type { Book } from "../types/Book";
 import ProductCard from "../components/ProductCard";
-import { API_BASE } from "../config/api";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { searchBooks } from "../features/books/bookSlice";
 
 export default function SearchPage() {
   const [searchParams] = useSearchParams();
   const q = searchParams.get("q") || "";
 
-  const [books, setBooks] = useState<Book[]>([]);
-  const [loading, setLoading] = useState(false);
+  const dispatch = useAppDispatch();
+  const books = useAppSelector((s) => s.books.books);
+  const loading = useAppSelector((s) => s.books.loading);
 
   useEffect(() => {
     if (!q.trim()) {
-      setBooks([]);
       return;
     }
-
-    setLoading(true);
-    fetch(`${API_BASE}/books/search?q=${encodeURIComponent(q)}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setBooks(Array.isArray(data) ? data : []);
-      })
-      .catch((err) => {
-        console.error("Search error:", err);
-        setBooks([]);
-      })
-      .finally(() => setLoading(false));
-  }, [q]);
+    dispatch(searchBooks(q));
+  }, [q, dispatch]);
 
   return (
     <div
@@ -47,19 +37,21 @@ export default function SearchPage() {
         <div style={{ textAlign: "center", padding: "40px 0" }}>
           <Spin />
         </div>
-      ) : books.length === 0 ? (
+      ) : books.filter((b) => b.stock > 0).length === 0 ? (
         <Empty description="Không tìm thấy sách nào" />
       ) : (
         <>
           <p style={{ marginBottom: 20, color: "#666" }}>
-            Tìm thấy {books.length} sách
+            Tìm thấy {books.filter((b) => b.stock > 0).length} sách
           </p>
           <Row gutter={[16, 16]}>
-            {books.map((book) => (
-              <Col key={book.bookId} xs={24} sm={12} md={8} lg={6}>
-                <ProductCard book={book} />
-              </Col>
-            ))}
+            {books
+              .filter((b) => b.stock > 0)
+              .map((book) => (
+                <Col key={book.bookId} xs={24} sm={12} md={8} lg={6}>
+                  <ProductCard book={book} />
+                </Col>
+              ))}
           </Row>
         </>
       )}

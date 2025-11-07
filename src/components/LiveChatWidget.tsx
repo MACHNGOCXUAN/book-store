@@ -27,7 +27,10 @@ interface Message {
 const ChatPopoverWidget = () => {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { role: "bot", text: "Xin chào 👋! Tôi là trợ lý AI. Tôi có thể giúp gì cho bạn?" },
+    {
+      role: "bot",
+      text: "Xin chào 👋! Tôi là trợ lý AI. Tôi có thể giúp gì cho bạn?",
+    },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -67,8 +70,9 @@ const ChatPopoverWidget = () => {
       let errorText = "⚠️ Xin lỗi, hệ thống đang bận.";
 
       if (err instanceof TypeError) {
-        errorText = "⚠️ Không thể kết nối đến server. Vui lòng kiểm tra backend có chạy không.";
-      } else if (err instanceof Error && err.name === 'AbortError') {
+        errorText =
+          "⚠️ Không thể kết nối đến server. Vui lòng kiểm tra backend có chạy không.";
+      } else if (err instanceof Error && err.name === "AbortError") {
         errorText = "⚠️ Yêu cầu timeout. Vui lòng thử lại.";
       }
 
@@ -83,7 +87,9 @@ const ChatPopoverWidget = () => {
     <div style={{ width: 340, maxHeight: "70vh", height: 500 }}>
       <Flex vertical justify="space-between" style={{ height: "100%" }}>
         {/* 1. Header */}
-        <div style={{ padding: "12px 16px", borderBottom: "1px solid #f0f0f0" }}>
+        <div
+          style={{ padding: "12px 16px", borderBottom: "1px solid #f0f0f0" }}
+        >
           <Flex align="center" justify="space-between">
             <Text strong style={{ fontSize: 18 }}>
               Trợ lý AI
@@ -121,14 +127,12 @@ const ChatPopoverWidget = () => {
                     }}
                   >
                     <Text style={{ whiteSpace: "pre-line" }}>
-                      {msg.text
-                        .split(/(?=\d+\.\s)/)
-                        .map((part, index) => (
-                          <span key={index}>
-                            {part.trim()}
-                            <br />
-                          </span>
-                        ))}
+                      {msg.text.split(/(?=\d+\.\s)/).map((part, index) => (
+                        <span key={index}>
+                          {part.trim()}
+                          <br />
+                        </span>
+                      ))}
                     </Text>
                   </div>
                 </Flex>
@@ -198,10 +202,12 @@ const ChatPopoverWidget = () => {
       onOpenChange={setOpen}
       placement="topLeft"
       overlayStyle={{ paddingTop: 16 }}
-      overlayInnerStyle={{
-        padding: 0,
-        borderRadius: 12,
-        overflow: "hidden",
+      styles={{
+        body: {
+          padding: 0,
+          borderRadius: 12,
+          overflow: "hidden",
+        },
       }}
     >
       <FloatButton

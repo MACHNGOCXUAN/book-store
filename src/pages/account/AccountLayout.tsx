@@ -1,5 +1,5 @@
 import { ExclamationCircleOutlined } from "@ant-design/icons";
-import { Alert, Col, Row, Modal } from "antd";
+import { Alert, Col, Modal, Row } from "antd";
 import { useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import AccountSidebar from "../../components/AccountSidebar";
@@ -52,7 +52,7 @@ const AccountLayoutInner = () => {
         navigate("change-password");
         break;
       case "vouchers":
-        navigate("voucher");
+        navigate("vouchers");
         break;
       case "favorites":
         navigate("favorites");

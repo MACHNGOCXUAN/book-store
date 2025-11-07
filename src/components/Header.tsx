@@ -107,9 +107,15 @@ const Header = () => {
 
   // -------------------- Derived menus --------------------
   const categories = useMemo(() => {
-    const set = new Set<string>();
-    bookData.forEach((b) => b.category && set.add(b.category));
-    return Array.from(set).sort((a, b) => a.localeCompare(b, "vi"));
+    const categoryMap = new Map<string, string>(); // id -> name
+    bookData.forEach((b) => {
+      if (b.category && b.category.categoryId && b.category.categoryName) {
+        categoryMap.set(b.category.categoryId, b.category.categoryName);
+      }
+    });
+    return Array.from(categoryMap.entries()).sort((a, b) =>
+      a[1].localeCompare(b[1], "vi")
+    );
   }, [bookData]);
 
   // Menu items cho cả desktop và mobile
@@ -117,14 +123,14 @@ const Header = () => {
     if (!categories.length) {
       return [{ key: "no-cat", disabled: true, label: "Chưa có danh mục." }];
     }
-    return categories.map((c) => ({
-      key: `/categories/${encodeURIComponent(c)}`,
+    return categories.map(([categoryId, categoryName]) => ({
+      key: `/categories/${encodeURIComponent(categoryId)}`,
       label: (
         <Link
           style={{ textDecoration: "none" }}
-          to={`/categories/${encodeURIComponent(c)}`}
+          to={`/categories/${encodeURIComponent(categoryId)}`}
         >
-          {c}
+          {categoryName}
         </Link>
       ),
       icon: <BookOutlined />,

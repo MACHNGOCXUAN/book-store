@@ -5,7 +5,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
 interface HeaderCategoryMenuProps {
-  categories: string[];
+  categories: Array<[string, string]>; // [categoryId, categoryName]
 }
 
 const HeaderCategoryMenu: React.FC<HeaderCategoryMenuProps> = ({
@@ -74,10 +74,10 @@ const HeaderCategoryMenu: React.FC<HeaderCategoryMenuProps> = ({
                 Chưa có danh mục
               </div>
             ) : (
-              categories.map((category) => (
+              categories.map(([categoryId, categoryName]) => (
                 <Link
-                  key={category}
-                  to={`/categories/${encodeURIComponent(category)}`}
+                  key={categoryId}
+                  to={`/categories/${encodeURIComponent(categoryId)}`}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -100,7 +100,7 @@ const HeaderCategoryMenu: React.FC<HeaderCategoryMenuProps> = ({
                   }}
                 >
                   <BookOutlined />
-                  <span>{category}</span>
+                  <span>{categoryName}</span>
                 </Link>
               ))
             )}

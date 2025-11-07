@@ -9,6 +9,7 @@ type AuthState = {
   user: User | null;
   loading: boolean;
   error: string | null;
+  isGoogleLogin: boolean;
 };
 
 const initialState: AuthState = {
@@ -22,6 +23,10 @@ const initialState: AuthState = {
       : null,
   loading: false,
   error: null,
+  isGoogleLogin:
+    typeof window !== "undefined"
+      ? localStorage.getItem("isGoogleLogin") === "true"
+      : false,
 };
 
 // Helper function for safe JSON parsing
@@ -129,12 +134,19 @@ export const fetchUserProfile = createAsyncThunk<
     }
 
     const user: any = await res.json();
+    console.log("fetchUserProfile - User data:", user);
+
+    // Normalize gender from backend (MALE/FEMALE to male/female)
+    const genderValue = user?.gender ? user.gender.toLowerCase() : undefined;
+
     return {
       userId: user?.userId,
       userName: user?.userName,
       fullName: user?.fullName,
       email: user?.email,
       phone: user?.phoneNumber,
+      gender: genderValue,
+      birthday: user?.dateOfBirth,
     };
   } catch (err) {
     return rejectWithValue((err as Error).message);
@@ -183,11 +195,20 @@ export const registerUser = createAsyncThunk<
 // Async thunk for updating user profile
 export const updateUser = createAsyncThunk<
   User,
-  { fullName?: string; email?: string; phone?: string },
+  {
+    fullName?: string;
+    email?: string;
+    phone?: string;
+    gender?: string;
+    dateOfBirth?: string;
+  },
   { rejectValue: string }
 >(
   "auth/updateUser",
-  async ({ fullName, email, phone }, { rejectWithValue, getState }) => {
+  async (
+    { fullName, email, phone, gender, dateOfBirth },
+    { rejectWithValue, getState }
+  ) => {
     try {
       const state = getState() as { auth: AuthState };
       const token = state.auth.token;
@@ -197,7 +218,20 @@ export const updateUser = createAsyncThunk<
       }
 
       console.log("updateUser - Token:", token);
-      console.log("updateUser - Data:", { fullName, email, phone });
+      console.log("updateUser - Data:", {
+        fullName,
+        email,
+        phone,
+        gender,
+        dateOfBirth,
+      });
+
+      const body: any = {};
+      if (fullName) body.fullName = fullName;
+      if (email) body.email = email;
+      if (phone) body.phone = phone;
+      if (gender) body.gender = gender;
+      if (dateOfBirth) body.dateOfBirth = dateOfBirth;
 
       const res = await fetch(`${API_BASE}/admin/profile`, {
         method: "PUT",
@@ -205,11 +239,7 @@ export const updateUser = createAsyncThunk<
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          fullName,
-          email,
-          phone,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
@@ -220,12 +250,21 @@ export const updateUser = createAsyncThunk<
       }
 
       const updatedUser: any = await res.json();
+      console.log("updateUser - Response:", updatedUser);
+
+      // Normalize gender from backend (MALE/FEMALE to male/female)
+      const genderValue = updatedUser?.gender
+        ? updatedUser.gender.toLowerCase()
+        : undefined;
+
       return {
         userId: updatedUser?.userId,
         userName: updatedUser?.userName,
         fullName: updatedUser?.fullName,
         email: updatedUser?.email,
         phone: updatedUser?.phoneNumber,
+        gender: genderValue,
+        birthday: updatedUser?.dateOfBirth,
       };
     } catch (err) {
       return rejectWithValue((err as Error).message);
@@ -347,6 +386,12 @@ export const googleLogin = createAsyncThunk<
           "Google login user profile from /admin/me: .............",
           user
         );
+
+        // Normalize gender from backend (MALE/FEMALE to male/female)
+        const genderValue = user?.gender
+          ? user.gender.toLowerCase()
+          : undefined;
+
         return {
           token,
           user: {
@@ -355,6 +400,8 @@ export const googleLogin = createAsyncThunk<
             fullName: user?.fullName,
             email: user?.email,
             phone: user?.phoneNumber,
+            gender: genderValue,
+            birthday: user?.dateOfBirth,
           },
         };
       } else {
@@ -405,11 +452,13 @@ const authSlice = createSlice({
       state.token = null;
       state.user = null;
       state.error = null;
+      state.isGoogleLogin = false;
       try {
         localStorage.removeItem("access_token");
         localStorage.removeItem("user_profile");
         localStorage.removeItem("user_fullName");
         localStorage.removeItem("remember_me");
+        localStorage.removeItem("isGoogleLogin");
       } catch {}
     },
   },
@@ -535,11 +584,13 @@ const authSlice = createSlice({
       .addCase(googleLogin.fulfilled, (state, action) => {
         state.loading = false;
         state.token = action.payload.token;
+        state.isGoogleLogin = true;
         if (action.payload.user) {
           state.user = action.payload.user;
         }
         try {
           localStorage.setItem("access_token", action.payload.token);
+          localStorage.setItem("isGoogleLogin", "true");
           if (action.payload.user) {
             localStorage.setItem(
               "user_profile",

@@ -19,7 +19,7 @@ import {
   RightOutlined,
   InfoCircleOutlined,
 } from "@ant-design/icons";
-import { CartItem, type CartItemType } from "../components/CartItem"; // Import component CartItem
+import { CartItem, type CartItemType } from "../components/CartItem";
 import type { CheckboxChangeEvent } from "antd/es/checkbox";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import {
@@ -27,6 +27,7 @@ import {
   addOrUpdateCartItem,
   removeCartItem,
 } from "../features/cart/cartSlice";
+import { useNavigate } from "react-router-dom";
 
 const { Title, Text, Link } = Typography;
 
@@ -35,18 +36,24 @@ const formatCurrency = (amount: number) => {
   const formatter = new Intl.NumberFormat("vi-VN", {
     style: "currency",
     currency: "VND",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   });
   return formatter.format(amount);
 };
 
 export const CartPage = () => {
+  const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const serverItems = useAppSelector((s) => s.cart.items || []);
   const [selectedItemIds, setSelectedItemIds] = useState<(string | number)[]>(
     []
   );
+
+  const handleCheckout = () => {
+    if (selectedItems.length === 0) return;
+    navigate("/checkout", { state: { items: selectedItems } });
+  };
 
   useEffect(() => {
     dispatch(fetchCart());
@@ -281,12 +288,13 @@ export const CartPage = () => {
                 type="primary"
                 block
                 size="large"
-                disabled={total === 0} // Vô hiệu hóa nếu giỏ hàng rỗng
+                disabled={total === 0}
                 style={{
                   marginTop: 16,
                   background: total > 0 ? "#d70018" : "",
                   height: 48,
                 }}
+                onClick={handleCheckout}
               >
                 THANH TOÁN
               </Button>

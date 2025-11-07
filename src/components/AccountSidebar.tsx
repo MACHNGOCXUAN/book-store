@@ -6,7 +6,6 @@ import {
 } from "@ant-design/icons";
 import { Avatar, Badge, Menu } from "antd";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAppSelector } from "../store/hooks";
 
 interface AccountSidebarProps {
@@ -20,19 +19,23 @@ const AccountSidebar = ({
   onMenuSelect,
 }: AccountSidebarProps) => {
   const authUser = useAppSelector((s) => s.auth.user);
-  const navigate = useNavigate();
+  const isGoogleLogin = useAppSelector((s) => s.auth.isGoogleLogin);
   const [fullname] = useState(authUser?.fullName || "");
+
+  const changePasswordItem = { key: "change-password", label: "Đổi mật khẩu" };
+
+  const accountInfoChildren = [
+    { key: "profile", label: "Hồ sơ cá nhân" },
+    { key: "address", label: "Số địa chỉ" },
+    ...(isGoogleLogin ? [] : [changePasswordItem]),
+  ];
 
   const menuItems = [
     {
       key: "account-info",
       icon: <UserOutlined />,
       label: "Thông tin tài khoản",
-      children: [
-        { key: "profile", label: "Hồ sơ cá nhân" },
-        { key: "address", label: "Số địa chỉ" },
-        { key: "change-password", label: "Đổi mật khẩu" },
-      ],
+      children: accountInfoChildren,
     },
     {
       key: "orders",
@@ -60,32 +63,6 @@ const AccountSidebar = ({
   ];
 
   const handleMenuSelect = ({ key }: { key: string }) => {
-    // Navigate to the appropriate route
-    switch (key) {
-      case "profile":
-        navigate(".");
-        break;
-      case "address":
-        navigate("address");
-        break;
-      case "change-password":
-        // Navigate to the change-password route (match route config)
-        navigate("change-password");
-        break;
-      case "vouchers":
-        // route path is "vouchers"
-        navigate("vouchers");
-        break;
-      case "favorites":
-        navigate("favorites");
-        break;
-      case "orders":
-        navigate("orders");
-        break;
-      default:
-        break;
-    }
-
     // Call the callback if provided
     if (onMenuSelect) {
       onMenuSelect(key);

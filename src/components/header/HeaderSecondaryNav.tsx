@@ -62,8 +62,8 @@ const HeaderSecondaryNav: React.FC = () => {
           >
             Giới thiệu
           </Link>
-          <a
-            href="#"
+          <Link
+            to="/membership"
             style={{
               color: "white",
               textDecoration: "none",
@@ -92,9 +92,10 @@ const HeaderSecondaryNav: React.FC = () => {
             >
               HOT
             </span>
-          </a>
-          <a
-            href="#"
+          </Link>
+
+          <Link
+            to="/reviews"
             style={{
               color: "white",
               textDecoration: "none",
@@ -106,7 +107,8 @@ const HeaderSecondaryNav: React.FC = () => {
             onMouseLeave={(e) => (e.currentTarget.style.color = "white")}
           >
             Review sách
-          </a>
+          </Link>
+
           <Link
             to="contact"
             style={{

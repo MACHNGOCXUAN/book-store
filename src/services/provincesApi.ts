@@ -1,29 +1,4 @@
-// API v1: Lấy dữ liệu phân cấp (Tỉnh/Huyện/Xã)
-export interface ProvinceV1 {
-  code: string | number;
-  name: string;
-  division_type?: string;
-  codename?: string;
-  phone_code?: number;
-  districts?: DistrictV1[];
-}
-
-export interface DistrictV1 {
-  code: string | number;
-  name: string;
-  division_type?: string;
-  codename?: string;
-  province_code?: string | number;
-  wards?: WardV1[];
-}
-
-export interface WardV1 {
-  code: string | number;
-  name: string;
-  division_type?: string;
-  codename?: string;
-  district_code?: string | number;
-}
+import type { ProvinceV1, ProvinceData } from "../types/Province";
 
 // Fetch dữ liệu từ API v1 (phân cấp cho "Trước sáp nhập")
 // depth=1: chỉ lấy tỉnh
@@ -68,10 +43,8 @@ export const fetchProvinceV1ByCode = async (
 };
 
 // Transform API v1 data thành object dễ dùng (Tỉnh → Quận → Xã)
-export const transformV1Data = (
-  provinces: ProvinceV1[]
-): Record<string, Record<string, string[]>> => {
-  const result: Record<string, Record<string, string[]>> = {};
+export const transformV1Data = (provinces: ProvinceV1[]): ProvinceData => {
+  const result: ProvinceData = {};
 
   provinces.forEach((province) => {
     result[province.name] = {};

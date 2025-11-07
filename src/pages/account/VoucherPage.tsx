@@ -82,7 +82,7 @@ const VoucherPage = ({ vouchers }: VoucherProps) => {
             position: "relative",
             opacity: isExpired || isUsed ? 0.6 : 1,
           }}
-          bodyStyle={{ padding: 0 }}
+          styles={{ body: { padding: 0 } }}
         >
           {/* Voucher Header */}
           <div

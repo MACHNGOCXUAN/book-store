@@ -172,41 +172,47 @@ const ProductBestSaler = () => {
               ) : (
                 <>
                   {activeTab === "week" &&
-                    booksWeek.map((book) => (
-                      <div
-                        key={book.bookId}
-                        style={{
-                          minWidth: 200,
-                          flex: "0 0 auto",
-                        }}
-                      >
-                        <ProductCard book={book} />
-                      </div>
-                    ))}
+                    booksWeek
+                      .filter((book) => book.stock > 0)
+                      .map((book) => (
+                        <div
+                          key={book.bookId}
+                          style={{
+                            minWidth: 200,
+                            flex: "0 0 auto",
+                          }}
+                        >
+                          <ProductCard book={book} />
+                        </div>
+                      ))}
                   {activeTab === "month" &&
-                    booksMonth.map((book) => (
-                      <div
-                        key={book.bookId}
-                        style={{
-                          minWidth: 200,
-                          flex: "0 0 auto",
-                        }}
-                      >
-                        <ProductCard book={book} />
-                      </div>
-                    ))}
+                    booksMonth
+                      .filter((book) => book.stock > 0)
+                      .map((book) => (
+                        <div
+                          key={book.bookId}
+                          style={{
+                            minWidth: 200,
+                            flex: "0 0 auto",
+                          }}
+                        >
+                          <ProductCard book={book} />
+                        </div>
+                      ))}
                   {activeTab === "year" &&
-                    booksYear.map((book) => (
-                      <div
-                        key={book.bookId}
-                        style={{
-                          minWidth: 200,
-                          flex: "0 0 auto",
-                        }}
-                      >
-                        <ProductCard book={book} />
-                      </div>
-                    ))}
+                    booksYear
+                      .filter((book) => book.stock > 0)
+                      .map((book) => (
+                        <div
+                          key={book.bookId}
+                          style={{
+                            minWidth: 200,
+                            flex: "0 0 auto",
+                          }}
+                        >
+                          <ProductCard book={book} />
+                        </div>
+                      ))}
                 </>
               )}
             </div>
@@ -279,23 +285,29 @@ const ProductBestSaler = () => {
         ) : (
           <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
             {activeTab === "week" &&
-              booksWeek.map((book) => (
-                <Col key={book.bookId} xs={12} sm={8} md={6} lg={4.8}>
-                  <ProductCard book={book} />
-                </Col>
-              ))}
+              booksWeek
+                .filter((book) => book.stock > 0)
+                .map((book) => (
+                  <Col key={book.bookId} xs={12} sm={8} md={6} lg={4.8}>
+                    <ProductCard book={book} />
+                  </Col>
+                ))}
             {activeTab === "month" &&
-              booksMonth.map((book) => (
-                <Col key={book.bookId} xs={12} sm={8} md={6} lg={4.8}>
-                  <ProductCard book={book} />
-                </Col>
-              ))}
+              booksMonth
+                .filter((book) => book.stock > 0)
+                .map((book) => (
+                  <Col key={book.bookId} xs={12} sm={8} md={6} lg={4.8}>
+                    <ProductCard book={book} />
+                  </Col>
+                ))}
             {activeTab === "year" &&
-              booksYear.map((book) => (
-                <Col key={book.bookId} xs={12} sm={8} md={6} lg={4.8}>
-                  <ProductCard book={book} />
-                </Col>
-              ))}
+              booksYear
+                .filter((book) => book.stock > 0)
+                .map((book) => (
+                  <Col key={book.bookId} xs={12} sm={8} md={6} lg={4.8}>
+                    <ProductCard book={book} />
+                  </Col>
+                ))}
           </Row>
         )}
       </Modal>
