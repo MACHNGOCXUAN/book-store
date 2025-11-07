@@ -33,4 +33,6 @@ public interface BookService {
     List<Book> getTop20BestsellerBooksByYear();
 
     List<Book> findByCategoryId(String categoryId);
+
+    public List<Book> searchBook(String search);
 }

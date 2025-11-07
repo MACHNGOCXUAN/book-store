@@ -37,7 +37,14 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 
         String requestPath = request.getRequestURI();
 
-        if (requestPath.startsWith("/api/auth/")) {
+        // Bỏ qua JWT filter cho các endpoint public
+        if (requestPath.startsWith("/api/auth/") ||
+            requestPath.startsWith("/api/books") ||
+            requestPath.startsWith("/api/categories") ||
+            requestPath.startsWith("/api/reviews") ||
+            requestPath.startsWith("/api/favorites") ||
+            requestPath.startsWith("/api/reports") ||
+            requestPath.startsWith("/ws/")) {
             filterChain.doFilter(request, response);
             return;
         }
