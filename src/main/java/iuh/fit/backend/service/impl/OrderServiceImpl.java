@@ -199,6 +199,18 @@ public class OrderServiceImpl implements OrderService {
         return convertToOrderFullDetailDTO(order);
     }
 
+    private String generateNextOrderHistoryId() {
+        String last = orderHistoryRepository.findMaxOrderHistoryId();
+        int next = 1;
+        if (last != null && !last.isBlank() && last.startsWith("ODH")) {
+            try {
+                next = Integer.parseInt(last.substring(3)) + 1;
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return "ODH" + String.format("%03d", next);
+    }
+
     @Override
     @Transactional
     public boolean updateOrderStatus(UpdateStatusOrderDTO updateStatusOrderDTO, User user) {
@@ -213,9 +225,10 @@ public class OrderServiceImpl implements OrderService {
         orderRepository.save(order);
 
         OrderHistory orderHistory = new OrderHistory();
+        orderHistory.setId(generateNextOrderHistoryId());
         orderHistory.setOrder(order);
         orderHistory.setStatus(updateStatusOrderDTO.getStatus());
-        orderHistory.setTimestamp(LocalDateTime.now());
+        // timestamp is handled by @CreationTimestamp
 
         orderHistoryRepository.save(orderHistory);
 
@@ -349,5 +362,45 @@ public class OrderServiceImpl implements OrderService {
             throw new RuntimeException("Order total must be at least " + code.getMinPriceToApply());
         }
     }
-}
 
+    @Override
+    @Transactional
+    public boolean cancelOrder(String orderId, User user) {
+        Order order = orderRepository.findById(orderId).orElse(null);
+        if (order == null) {
+            return false;
+        }
+
+        // Only allow cancel when order is PENDING
+        if (order.getStatus() != OrderStatus.PENDING) {
+            return false;
+        }
+
+        // If user is CUSTOMER, they can only cancel their own orders
+        if (user.getRole() == Role.CUSTOMER) {
+            if (!order.getCustomer().getUserId().equals(user.getUserId())) {
+                return false;
+            }
+        }
+
+        // Set status to CANCELLED and set staff if action by staff/admin
+        order.setStatus(OrderStatus.CANCELLED);
+        if (user.getRole() == Role.STAFF || user.getRole() == Role.ADMIN) {
+            Staff s = staffRepository.findById(user.getUserId()).orElse(null);
+            order.setStaff(s);
+        }
+
+        orderRepository.save(order);
+
+        // Add order history entry
+        OrderHistory h = new OrderHistory();
+        h.setId(generateNextOrderHistoryId());
+        h.setOrder(order);
+        h.setStatus(OrderStatus.CANCELLED);
+        // timestamp handled by @CreationTimestamp
+        orderHistoryRepository.save(h);
+
+        return true;
+    }
+
+}
