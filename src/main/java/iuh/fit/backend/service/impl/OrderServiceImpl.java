@@ -403,4 +403,40 @@ public class OrderServiceImpl implements OrderService {
         return true;
     }
 
+    @Override
+    @Transactional
+    public OrderFullDetailDTO reorderFromOrder(String existingOrderId, User user) {
+        Order existing = orderRepository.findOrderWithDetails(existingOrderId)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + existingOrderId));
+
+        // Only allow reorder if existing order is COMPLETED or CANCELLED
+        if (existing.getStatus() != OrderStatus.COMPLETED && existing.getStatus() != OrderStatus.CANCELLED) {
+            throw new RuntimeException("Only completed or cancelled orders can be reordered");
+        }
+
+        // If user is CUSTOMER, ensure they are the owner
+        if (user.getRole() == Role.CUSTOMER) {
+            if (!existing.getCustomer().getUserId().equals(user.getUserId())) {
+                throw new RuntimeException("You can only reorder your own orders");
+            }
+        }
+
+        // Build CreateOrderRequestDTO from existing orderDetails
+        CreateOrderRequestDTO req = new CreateOrderRequestDTO();
+        req.setCustomerId(existing.getCustomer().getUserId());
+        req.setDiscountCode(existing.getDiscountCode() != null ? existing.getDiscountCode().getDiscountCodeId() : null);
+
+        List<CreateOrderRequestDTO.OrderDetailRequest> details = existing.getOrderDetails().stream().map(od -> {
+            CreateOrderRequestDTO.OrderDetailRequest d = new CreateOrderRequestDTO.OrderDetailRequest();
+            d.setBookId(od.getBook().getBookId());
+            d.setQuantity(od.getQuantity());
+            return d;
+        }).toList();
+
+        req.setOrderDetails(details);
+
+        // Use existing createOrder logic (it will check stock, discount, update cart etc.)
+        return createOrder(req, user);
+    }
+
 }
