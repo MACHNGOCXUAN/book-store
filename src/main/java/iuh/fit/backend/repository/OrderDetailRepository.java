@@ -25,5 +25,7 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, Long> 
 
     @Query("SELECT MAX(o.orderDetailId) FROM OrderDetail o")
     String findMaxOrderDetailId();
-}
 
+    // Add: get list of OrderDetail by the parent Order's orderId
+    List<OrderDetail> findByOrderOrderId(String orderId);
+}

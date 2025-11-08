@@ -46,8 +46,37 @@ public class OrderServiceImpl implements OrderService {
             OrderFullDetailDTO.CustomerInfoDTO customerDTO = new OrderFullDetailDTO.CustomerInfoDTO();
             customerDTO.setUserId(order.getCustomer().getUserId());
             customerDTO.setFullName(order.getCustomer().getFullName());
+            // prefer receiver phone from main address if available, otherwise use customer's phone
             customerDTO.setPhoneNumber(order.getCustomer().getPhoneNumber());
             customerDTO.setEmail(order.getCustomer().getEmail());
+
+            // Build delivery address: choose main address (main == 1) when present, otherwise first address
+            List<Address> addresses = order.getCustomer().getAddresses();
+            if (addresses != null && !addresses.isEmpty()) {
+                Address chosen = addresses.stream().filter(a -> a.getMain() == 1).findFirst().orElse(addresses.get(0));
+                StringBuilder addr = new StringBuilder();
+                if (chosen.getSpecifics() != null && !chosen.getSpecifics().isBlank()) addr.append(chosen.getSpecifics());
+                if (chosen.getWard() != null && !chosen.getWard().isBlank()) {
+                    if (addr.length() > 0) addr.append(", ");
+                    addr.append(chosen.getWard());
+                }
+                if (chosen.getDistrict() != null && !chosen.getDistrict().isBlank()) {
+                    if (addr.length() > 0) addr.append(", ");
+                    addr.append(chosen.getDistrict());
+                }
+                if (chosen.getProvince() != null && !chosen.getProvince().isBlank()) {
+                    if (addr.length() > 0) addr.append(", ");
+                    addr.append(chosen.getProvince());
+                }
+
+                customerDTO.setAddress(addr.toString());
+
+                // If address has receiverPhone, prefer it as contact
+                if (chosen.getReceiverPhone() != null && !chosen.getReceiverPhone().isBlank()) {
+                    customerDTO.setPhoneNumber(chosen.getReceiverPhone());
+                }
+            }
+
             dto.setCustomer(customerDTO);
         }
 
@@ -164,7 +193,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderFullDetailDTO getOrderById(String orderId) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findOrderWithDetails(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
 
         return convertToOrderFullDetailDTO(order);
@@ -321,3 +350,4 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 }
+
