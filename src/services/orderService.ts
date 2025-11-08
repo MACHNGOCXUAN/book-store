@@ -143,3 +143,47 @@ export const fetchAllOrders = async (
     limit,
   });
 };
+
+/**
+ * Cancel an order (only PENDING status)
+ */
+export const cancelOrder = async (orderId: string): Promise<{ message: string }> => {
+  const token = localStorage.getItem("access_token");
+
+  if (!token) {
+    throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/orders/${orderId}/cancel`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      try {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.message ||
+            `Lỗi ${response.status}: Không thể hủy đơn hàng`
+        );
+      } catch (e) {
+        if (e instanceof Error && e.message.includes("Lỗi")) {
+          throw e;
+        }
+        throw new Error(
+          `Lỗi ${response.status}: Không thể hủy đơn hàng`
+        );
+      }
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error: any) {
+    console.error("❌ Error canceling order:", error);
+    throw error;
+  }
+};

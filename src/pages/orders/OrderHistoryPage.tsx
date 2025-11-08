@@ -1,6 +1,6 @@
 // src/pages/orders/OrderHistoryPage.tsx
 import { useEffect, useState } from "react";
-import { Tabs, Card, Spin, Empty } from "antd";
+import { Tabs, Card, Spin, Empty, App } from "antd";
 import { useSearchParams } from "react-router-dom";
 import OrderList from "../../components/OrderList";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
@@ -43,58 +43,71 @@ const OrderHistoryPage = () => {
     }
   }, [activeTab, dispatch]);
 
+  const handleOrderUpdated = () => {
+    // Refresh danh sách đơn hàng sau khi hủy
+    if (activeTab === "ALL") {
+      dispatch(getAllOrders({ page: 1, limit: 20 }));
+    } else {
+      dispatch(getOrdersByStatus({ status: activeTab, page: 1, limit: 20 }));
+    }
+  };
+
   const onChangeTab = (key: string) => {
     setActiveTab(key);
     setSearchParams(key === "ALL" ? {} : { status: key });
   };
 
   return (
-    <div style={{ background: "transparent", minHeight: "100vh" }}>
-      <Card
-        bordered={false}
-        bodyStyle={{ padding: "0 20px" }}
-        style={{
-          borderRadius: 8,
-          marginBottom: 20,
-          boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-        }}
-      >
-        <Tabs
-          activeKey={activeTab}
-          onChange={onChangeTab}
-          items={items}
-          tabBarStyle={{ marginBottom: 0 }}
-          size="large"
-        />
-      </Card>
-
-      {/* Loading state */}
-      {loading && (
-        <div style={{ textAlign: "center", padding: "50px 20px" }}>
-          <Spin size="large" />
-        </div>
-      )}
-
-      {/* Error state */}
-      {error && !loading && (
-        <Card style={{ borderColor: "#ff4d4f", marginBottom: 20 }}>
-          <div style={{ color: "#ff4d4f" }}>
-            <strong>Lỗi:</strong> {error}
-          </div>
+    <App>
+      <div style={{ background: "transparent", minHeight: "100vh" }}>
+        <Card
+          bordered={false}
+          bodyStyle={{ padding: "0 20px" }}
+          style={{
+            borderRadius: 8,
+            marginBottom: 20,
+            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+          }}
+        >
+          <Tabs
+            activeKey={activeTab}
+            onChange={onChangeTab}
+            items={items}
+            tabBarStyle={{ marginBottom: 0 }}
+            size="large"
+          />
         </Card>
-      )}
 
-      {/* Empty state */}
-      {!loading && orders.length === 0 && !error && (
-        <Empty
-          description="Không có đơn hàng"
-          style={{ marginTop: "50px", marginBottom: "50px" }}
-        />
-      )}
+        {/* Loading state */}
+        {loading && (
+          <div style={{ textAlign: "center", padding: "50px 20px" }}>
+            <Spin size="large" />
+          </div>
+        )}
 
-      {/* Order list */}
-      {!loading && orders.length > 0 && <OrderList orders={orders} />}
-    </div>
+        {/* Error state */}
+        {error && !loading && (
+          <Card style={{ borderColor: "#ff4d4f", marginBottom: 20 }}>
+            <div style={{ color: "#ff4d4f" }}>
+              <strong>Lỗi:</strong> {error}
+            </div>
+          </Card>
+        )}
+
+        {/* Empty state */}
+        {!loading && orders.length === 0 && !error && (
+          <Empty
+            description="Không có đơn hàng"
+            style={{ marginTop: "50px", marginBottom: "50px" }}
+          />
+        )}
+
+        {/* Order list */}
+        {!loading && orders.length > 0 && (
+          <OrderList orders={orders} onOrderUpdated={handleOrderUpdated} />
+        )}
+      </div>
+    </App>
   );
 };
 

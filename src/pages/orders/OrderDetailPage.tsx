@@ -12,13 +12,21 @@ import {
   Spin,
   Tag,
   Image,
+  Modal,
+  message,
 } from "antd";
 import {
   PhoneOutlined,
   MailOutlined,
   EnvironmentOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
-import { fetchOrderById } from "../../services/orderService";
+import { fetchOrderById, cancelOrder } from "../../services/orderService";
+import { useAppDispatch } from "../../store/hooks";
+import {
+  getAllOrders,
+  getOrdersByStatus,
+} from "../../features/orders/ordersSlice";
 import type {
   OrderDataType,
   OrderDetail,
@@ -56,9 +64,12 @@ const getStatusInfo = (status: string) => {
 export default function OrderDetailPage() {
   const { orderId } = useParams();
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const [order, setOrder] = useState<OrderDataType | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   useEffect(() => {
     if (!orderId) return;
@@ -74,6 +85,63 @@ export default function OrderDetailPage() {
       })
       .finally(() => setLoading(false));
   }, [orderId]);
+
+  const handleCancelOrder = () => {
+    console.log("🔵 handleCancelOrder called", { orderId, order });
+    if (!orderId || !order) {
+      console.log("❌ Missing orderId or order");
+      return;
+    }
+    setShowCancelModal(true);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!orderId) return;
+
+    console.log("🟢 User confirmed, starting cancel...");
+    setCancelLoading(true);
+    try {
+      console.log("📡 Calling cancelOrder API...");
+      const response = await cancelOrder(orderId);
+      console.log("✅ Cancel success:", response);
+      message.success(response.message || "Đã hủy đơn hàng thành công!");
+
+      // Đợi một chút để backend cập nhật database
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Reload order data để cập nhật status
+      console.log("🔄 Reloading order data...");
+      const updatedOrder = await fetchOrderById(orderId);
+      setOrder(updatedOrder as OrderDataType);
+
+      // Reload TẤT CẢ các danh sách để đảm bảo đồng bộ
+      console.log("🔄 Reloading all order lists...");
+
+      // Reload PENDING list - đơn hàng sẽ biến mất
+      await dispatch(
+        getOrdersByStatus({ status: "PENDING", page: 1, limit: 20 })
+      ).unwrap();
+
+      // Reload CANCELLED list - đơn hàng sẽ xuất hiện
+      await dispatch(
+        getOrdersByStatus({ status: "CANCELLED", page: 1, limit: 20 })
+      ).unwrap();
+
+      // Reload ALL list
+      await dispatch(getAllOrders({ page: 1, limit: 20 })).unwrap();
+
+      console.log("✅ All done!");
+
+      setShowCancelModal(false);
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Không thể hủy đơn hàng";
+      console.error("❌ Error canceling order:", err);
+      message.error(errorMessage);
+    } finally {
+      setCancelLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -163,6 +231,23 @@ export default function OrderDetailPage() {
                 >
                   {getStatusInfo(order.status).text}
                 </Tag>
+                {order.status === "PENDING" && (
+                  <Button
+                    danger
+                    loading={cancelLoading}
+                    style={{
+                      backgroundColor: "#fff",
+                      borderColor: "#ff4d4f",
+                      color: "#ff4d4f",
+                      fontWeight: 600,
+                      borderRadius: 6,
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                    }}
+                    onClick={handleCancelOrder}
+                  >
+                    ❌ Hủy đơn hàng
+                  </Button>
+                )}
                 <Button
                   style={{
                     backgroundColor: "#ffffff",
@@ -871,6 +956,31 @@ export default function OrderDetailPage() {
           </Card>
         </Col>
       </Row>
+
+      {/* Modal xác nhận hủy đơn hàng */}
+      <Modal
+        title="Xác nhận hủy đơn hàng"
+        open={showCancelModal}
+        onOk={handleConfirmCancel}
+        onCancel={() => setShowCancelModal(false)}
+        okText="Hủy đơn hàng"
+        cancelText="Đóng"
+        okButtonProps={{ danger: true, loading: cancelLoading }}
+        confirmLoading={cancelLoading}
+      >
+        <div style={{ padding: "20px 0" }}>
+          <p style={{ fontSize: 15, marginBottom: 12 }}>
+            <ExclamationCircleOutlined
+              style={{ color: "#ff4d4f", marginRight: 8, fontSize: 18 }}
+            />
+            Bạn có chắc chắn muốn hủy đơn hàng{" "}
+            <strong style={{ color: "#ff4d4f" }}>{orderId}</strong> không?
+          </p>
+          <p style={{ color: "#8c8c8c", fontSize: 13, marginBottom: 0 }}>
+            Lưu ý: Chỉ có thể hủy đơn hàng đang ở trạng thái "Chờ xác nhận"
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 }
