@@ -10,7 +10,6 @@ import {
   Image,
   Row,
   Col,
-  Modal,
   message,
   App,
 } from "antd";
@@ -23,6 +22,8 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { cancelOrder } from "../services/orderService";
+import { useAppDispatch } from "../store/hooks";
+import { addOrUpdateCartItem, fetchCart } from "../features/cart/cartSlice";
 
 const { Text, Title } = Typography;
 
@@ -34,7 +35,9 @@ interface OrderListProps {
 
 const OrderList: React.FC<OrderListProps> = ({ orders, onOrderUpdated }) => {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const [cancelLoading, setCancelLoading] = useState<string | null>(null);
+  const [reorderLoading, setReorderLoading] = useState<string | null>(null);
   const { modal } = App.useApp();
 
   const getStatusTagColor = (status: string) => {
@@ -122,6 +125,64 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onOrderUpdated }) => {
     } catch (error) {
       console.error("❌ Error creating modal:", error);
     }
+  };
+
+  const handleReorder = async (order: any) => {
+    modal.confirm({
+      title: "Xác nhận mua lại",
+      icon: <ExclamationCircleOutlined style={{ color: "#1890ff" }} />,
+      content: (
+        <div>
+          <p>
+            Bạn có chắc chắn muốn mua lại đơn hàng{" "}
+            <strong>{order.orderId}</strong> không?
+          </p>
+          <p style={{ color: "#8c8c8c", fontSize: 13 }}>
+            Các sản phẩm sẽ được thêm vào giỏ hàng và bạn có thể kiểm tra lại
+            thông tin trước khi đặt hàng.
+          </p>
+        </div>
+      ),
+      okText: "Mua lại",
+      okType: "primary",
+      cancelText: "Hủy",
+      onOk: async () => {
+        setReorderLoading(order.orderId);
+        try {
+          console.log("🛒 Adding items to cart...");
+
+          // Thêm từng sản phẩm vào giỏ hàng
+          for (const detail of order.orderDetails) {
+            if (detail.book?.bookId) {
+              await dispatch(
+                addOrUpdateCartItem({
+                  bookId: detail.book.bookId,
+                  quantity: detail.quantity,
+                })
+              ).unwrap();
+            }
+          }
+
+          // Refresh cart
+          await dispatch(fetchCart()).unwrap();
+
+          message.success("Đã thêm sản phẩm vào giỏ hàng!");
+
+          // Chuyển đến trang checkout sau 500ms
+          setTimeout(() => {
+            navigate("/checkout");
+          }, 500);
+        } catch (err: any) {
+          const errorMessage =
+            err instanceof Error
+              ? err.message
+              : "Không thể thêm sản phẩm vào giỏ hàng";
+          message.error(errorMessage);
+        } finally {
+          setReorderLoading(null);
+        }
+      },
+    });
   };
 
   if (orders.length === 0) {
@@ -275,10 +336,31 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onOrderUpdated }) => {
                 {order.status === "COMPLETED" && (
                   <>
                     <Button>Đánh giá</Button>
-                    <Button type="primary" danger>
-                      Mua lại
+                    <Button
+                      type="primary"
+                      style={{
+                        backgroundColor: "#1890ff",
+                        borderColor: "#1890ff",
+                      }}
+                      loading={reorderLoading === order.orderId}
+                      onClick={() => handleReorder(order)}
+                    >
+                      🔄 Mua lại
                     </Button>
                   </>
+                )}
+                {order.status === "CANCELLED" && (
+                  <Button
+                    type="primary"
+                    style={{
+                      backgroundColor: "#1890ff",
+                      borderColor: "#1890ff",
+                    }}
+                    loading={reorderLoading === order.orderId}
+                    onClick={() => handleReorder(order)}
+                  >
+                    🔄 Mua lại
+                  </Button>
                 )}
                 {order.status === "PENDING" && (
                   <Button

@@ -27,6 +27,7 @@ import {
   getAllOrders,
   getOrdersByStatus,
 } from "../../features/orders/ordersSlice";
+import { addOrUpdateCartItem, fetchCart } from "../../features/cart/cartSlice";
 import type {
   OrderDataType,
   OrderDetail,
@@ -69,7 +70,9 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [reorderLoading, setReorderLoading] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showReorderModal, setShowReorderModal] = useState(false);
 
   useEffect(() => {
     if (!orderId) return;
@@ -140,6 +143,51 @@ export default function OrderDetailPage() {
       message.error(errorMessage);
     } finally {
       setCancelLoading(false);
+    }
+  };
+
+  const handleReorder = () => {
+    if (!order) return;
+    setShowReorderModal(true);
+  };
+  const handleConfirmReorder = async () => {
+    if (!order) return;
+
+    setReorderLoading(true);
+    try {
+      console.log("🛒 Adding items to cart...");
+
+      // Thêm từng sản phẩm vào giỏ hàng
+      for (const detail of order.orderDetails) {
+        if (detail.book?.bookId) {
+          await dispatch(
+            addOrUpdateCartItem({
+              bookId: detail.book.bookId,
+              quantity: detail.quantity,
+            })
+          ).unwrap();
+        }
+      }
+
+      // Refresh cart
+      await dispatch(fetchCart()).unwrap();
+
+      message.success("Đã thêm sản phẩm vào giỏ hàng!");
+      setShowReorderModal(false);
+
+      // Chuyển đến trang checkout sau 500ms
+      setTimeout(() => {
+        navigate("/checkout");
+      }, 500);
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Không thể thêm sản phẩm vào giỏ hàng";
+      console.error("❌ Error adding to cart:", err);
+      message.error(errorMessage);
+    } finally {
+      setReorderLoading(false);
     }
   };
 
@@ -231,6 +279,8 @@ export default function OrderDetailPage() {
                 >
                   {getStatusInfo(order.status).text}
                 </Tag>
+
+                {/* Nút Hủy đơn hàng - chỉ hiện với PENDING */}
                 {order.status === "PENDING" && (
                   <Button
                     danger
@@ -248,6 +298,26 @@ export default function OrderDetailPage() {
                     ❌ Hủy đơn hàng
                   </Button>
                 )}
+
+                {/* Nút Mua lại - chỉ hiện với COMPLETED hoặc CANCELLED */}
+                {(order.status === "COMPLETED" ||
+                  order.status === "CANCELLED") && (
+                  <Button
+                    type="primary"
+                    loading={reorderLoading}
+                    style={{
+                      backgroundColor: "#1890ff",
+                      borderColor: "#1890ff",
+                      fontWeight: 600,
+                      borderRadius: 6,
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                    }}
+                    onClick={handleReorder}
+                  >
+                    🔄 Mua lại
+                  </Button>
+                )}
+
                 <Button
                   style={{
                     backgroundColor: "#ffffff",
@@ -978,6 +1048,32 @@ export default function OrderDetailPage() {
           </p>
           <p style={{ color: "#8c8c8c", fontSize: 13, marginBottom: 0 }}>
             Lưu ý: Chỉ có thể hủy đơn hàng đang ở trạng thái "Chờ xác nhận"
+          </p>
+        </div>
+      </Modal>
+
+      {/* Modal xác nhận mua lại */}
+      <Modal
+        title="Xác nhận mua lại"
+        open={showReorderModal}
+        onOk={handleConfirmReorder}
+        onCancel={() => setShowReorderModal(false)}
+        okText="Mua lại"
+        cancelText="Hủy"
+        okButtonProps={{ type: "primary", loading: reorderLoading }}
+        confirmLoading={reorderLoading}
+      >
+        <div style={{ padding: "20px 0" }}>
+          <p style={{ fontSize: 15, marginBottom: 12 }}>
+            <ExclamationCircleOutlined
+              style={{ color: "#1890ff", marginRight: 8, fontSize: 18 }}
+            />
+            Bạn có chắc chắn muốn mua lại đơn hàng{" "}
+            <strong style={{ color: "#1890ff" }}>{orderId}</strong> không?
+          </p>
+          <p style={{ color: "#8c8c8c", fontSize: 13, marginBottom: 0 }}>
+            Các sản phẩm sẽ được thêm vào giỏ hàng và bạn có thể kiểm tra lại
+            thông tin trước khi đặt hàng.
           </p>
         </div>
       </Modal>

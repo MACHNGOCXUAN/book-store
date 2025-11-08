@@ -187,3 +187,51 @@ export const cancelOrder = async (orderId: string): Promise<{ message: string }>
     throw error;
   }
 };
+
+/**
+ * Reorder - Tạo đơn hàng mới dựa trên đơn hàng cũ
+ * Chỉ áp dụng cho đơn hàng có status COMPLETED hoặc CANCELLED
+ */
+export const reorder = async (orderId: string): Promise<any> => {
+  const token = localStorage.getItem("access_token");
+
+  if (!token) {
+    throw new Error("Không tìm thấy token. Vui lòng đăng nhập lại.");
+  }
+
+  try {
+    console.log(`📡 Calling reorder API for order: ${orderId}`);
+    const response = await fetch(`${API_BASE}/orders/${orderId}/reorder`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      try {
+        const errorData = await response.json();
+        console.error("❌ Reorder error response:", errorData);
+        throw new Error(
+          errorData.message ||
+            `Lỗi ${response.status}: Không thể tạo đơn hàng mới`
+        );
+      } catch (e) {
+        if (e instanceof Error && e.message.includes("Lỗi")) {
+          throw e;
+        }
+        throw new Error(
+          `Lỗi ${response.status}: Không thể tạo đơn hàng mới`
+        );
+      }
+    }
+
+    const data = await response.json();
+    console.log("✅ Reorder success:", data);
+    return data;
+  } catch (error: any) {
+    console.error("❌ Error reordering:", error);
+    throw error;
+  }
+};
