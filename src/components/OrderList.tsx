@@ -229,9 +229,7 @@ const OrderList: React.FC<OrderListProps> = ({ orders }) => {
                   <Button disabled>Đã nhận được hàng</Button>
                 )}
                 <Button>Liên hệ người bán</Button>
-                <Button
-                  onClick={() => navigate(`/account/orders/${order.orderId}`)}
-                >
+                <Button onClick={() => navigate(`/orders/${order.orderId}`)}>
                   Xem chi tiết
                 </Button>
               </Space>
