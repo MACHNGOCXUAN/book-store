@@ -320,4 +320,37 @@ public class OrderServiceImpl implements OrderService {
             throw new RuntimeException("Order total must be at least " + code.getMinPriceToApply());
         }
     }
+
+    @Override
+    @Transactional
+    public boolean cancelOrder(String orderId, User user) {
+        Order order = orderRepository.findById(orderId).orElse(null);
+        if (order == null) {
+            return false;
+        }
+
+        // Chỉ có thể hủy đơn hàng ở trạng thái PENDING
+        if (order.getStatus() != OrderStatus.PENDING) {
+            return false;
+        }
+
+        // Kiểm tra người dùng có quyền hủy đơn hàng này không
+        // Chỉ khách hàng sở hữu đơn hàng mới có thể hủy
+        if (!order.getCustomer().getUserId().equals(user.getUserId())) {
+            return false;
+        }
+
+        // Cập nhật trạng thái sang CANCELLED
+        order.setStatus(OrderStatus.CANCELLED);
+        orderRepository.save(order);
+
+        // Ghi lại lịch sử
+        OrderHistory orderHistory = new OrderHistory();
+        orderHistory.setOrder(order);
+        orderHistory.setStatus(OrderStatus.CANCELLED);
+        orderHistory.setTimestamp(LocalDateTime.now());
+        orderHistoryRepository.save(orderHistory);
+
+        return true;
+    }
 }

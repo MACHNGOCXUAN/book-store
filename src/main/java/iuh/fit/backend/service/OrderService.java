@@ -11,7 +11,12 @@ import org.springframework.data.domain.Page;
 
 public interface OrderService {
     Page<OrderFullDetailDTO> getOrdersFilter(OrderFilter orderFilter, User user);
+
     OrderFullDetailDTO getOrderById(String orderId);
+
     boolean updateOrderStatus(UpdateStatusOrderDTO updateStatusOrderDTO, User user);
+
     OrderFullDetailDTO createOrder(CreateOrderRequestDTO request, User user);
+
+    boolean cancelOrder(String orderId, User user);
 }
