@@ -10,9 +10,9 @@ import {
   Image,
   Row,
   Col,
-  message,
   App,
 } from "antd";
+import { toast } from "react-toastify";
 import {
   CarOutlined,
   ShopOutlined,
@@ -103,7 +103,14 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onOrderUpdated }) => {
             console.log("🟡 Calling cancelOrder API...");
             const response = await cancelOrder(orderId);
             console.log("✅ Cancel order success:", response);
-            message.success(response.message || "Đã hủy đơn hàng thành công!");
+            toast.success(response.message || "Đã hủy đơn hàng thành công!", {
+              position: "top-right",
+              autoClose: 3000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+            });
 
             // Gọi callback để refresh danh sách
             if (onOrderUpdated) {
@@ -114,7 +121,14 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onOrderUpdated }) => {
             const errorMessage =
               err instanceof Error ? err.message : "Không thể hủy đơn hàng";
             console.error("❌ Error canceling order:", err);
-            message.error(errorMessage);
+            toast.error(errorMessage, {
+              position: "top-right",
+              autoClose: 3000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+            });
           } finally {
             setCancelLoading(null);
           }
@@ -166,7 +180,14 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onOrderUpdated }) => {
           // Refresh cart
           await dispatch(fetchCart()).unwrap();
 
-          message.success("Đã thêm sản phẩm vào giỏ hàng!");
+          toast.success("Đã thêm sản phẩm vào giỏ hàng!", {
+            position: "top-right",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          });
 
           // Chuyển đến trang checkout sau 500ms
           setTimeout(() => {
@@ -177,7 +198,14 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onOrderUpdated }) => {
             err instanceof Error
               ? err.message
               : "Không thể thêm sản phẩm vào giỏ hàng";
-          message.error(errorMessage);
+          toast.error(errorMessage, {
+            position: "top-right",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          });
         } finally {
           setReorderLoading(null);
         }
