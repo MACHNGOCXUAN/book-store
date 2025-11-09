@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Card,
   Typography,
@@ -10,24 +10,35 @@ import {
   Image,
   Row,
   Col,
+  message,
+  App,
 } from "antd";
 import {
   CarOutlined,
   ShopOutlined,
   DollarOutlined,
   TruckOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import { cancelOrder } from "../services/orderService";
+import { useAppDispatch } from "../store/hooks";
+import { addOrUpdateCartItem, fetchCart } from "../features/cart/cartSlice";
 
 const { Text, Title } = Typography;
 
 // Định nghĩa kiểu dữ liệu cho props (nếu bạn dùng TypeScript chặt chẽ)
 interface OrderListProps {
   orders: any[]; // Thay any bằng interface Order thực tế của bạn nếu có
+  onOrderUpdated?: () => void; // Callback để refresh danh sách sau khi hủy
 }
 
-const OrderList: React.FC<OrderListProps> = ({ orders }) => {
+const OrderList: React.FC<OrderListProps> = ({ orders, onOrderUpdated }) => {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const [cancelLoading, setCancelLoading] = useState<string | null>(null);
+  const [reorderLoading, setReorderLoading] = useState<string | null>(null);
+  const { modal } = App.useApp();
 
   const getStatusTagColor = (status: string) => {
     switch (status) {
@@ -61,6 +72,117 @@ const OrderList: React.FC<OrderListProps> = ({ orders }) => {
       default:
         return status;
     }
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    console.log("🔵 handleCancelOrder called with orderId:", orderId);
+
+    try {
+      // Sử dụng modal instance từ App.useApp()
+      modal.confirm({
+        title: "Xác nhận hủy đơn hàng",
+        icon: <ExclamationCircleOutlined />,
+        content: (
+          <div>
+            <p>
+              Bạn có chắc chắn muốn hủy đơn hàng <strong>{orderId}</strong>{" "}
+              không?
+            </p>
+            <p style={{ color: "#ff4d4f", fontSize: 13 }}>
+              Lưu ý: Chỉ có thể hủy đơn hàng đang ở trạng thái "Chờ xác nhận"
+            </p>
+          </div>
+        ),
+        okText: "Hủy đơn hàng",
+        okType: "danger",
+        cancelText: "Không",
+        onOk: async () => {
+          console.log("🟢 User confirmed cancel order:", orderId);
+          setCancelLoading(orderId);
+          try {
+            console.log("🟡 Calling cancelOrder API...");
+            const response = await cancelOrder(orderId);
+            console.log("✅ Cancel order success:", response);
+            message.success(response.message || "Đã hủy đơn hàng thành công!");
+
+            // Gọi callback để refresh danh sách
+            if (onOrderUpdated) {
+              console.log("🔄 Refreshing order list...");
+              onOrderUpdated();
+            }
+          } catch (err: any) {
+            const errorMessage =
+              err instanceof Error ? err.message : "Không thể hủy đơn hàng";
+            console.error("❌ Error canceling order:", err);
+            message.error(errorMessage);
+          } finally {
+            setCancelLoading(null);
+          }
+        },
+      });
+
+      console.log("📌 Modal.confirm called");
+    } catch (error) {
+      console.error("❌ Error creating modal:", error);
+    }
+  };
+
+  const handleReorder = async (order: any) => {
+    modal.confirm({
+      title: "Xác nhận mua lại",
+      icon: <ExclamationCircleOutlined style={{ color: "#1890ff" }} />,
+      content: (
+        <div>
+          <p>
+            Bạn có chắc chắn muốn mua lại đơn hàng{" "}
+            <strong>{order.orderId}</strong> không?
+          </p>
+          <p style={{ color: "#8c8c8c", fontSize: 13 }}>
+            Các sản phẩm sẽ được thêm vào giỏ hàng và bạn có thể kiểm tra lại
+            thông tin trước khi đặt hàng.
+          </p>
+        </div>
+      ),
+      okText: "Mua lại",
+      okType: "primary",
+      cancelText: "Hủy",
+      onOk: async () => {
+        setReorderLoading(order.orderId);
+        try {
+          console.log("🛒 Adding items to cart...");
+
+          // Thêm từng sản phẩm vào giỏ hàng
+          for (const detail of order.orderDetails) {
+            if (detail.book?.bookId) {
+              await dispatch(
+                addOrUpdateCartItem({
+                  bookId: detail.book.bookId,
+                  quantity: detail.quantity,
+                })
+              ).unwrap();
+            }
+          }
+
+          // Refresh cart
+          await dispatch(fetchCart()).unwrap();
+
+          message.success("Đã thêm sản phẩm vào giỏ hàng!");
+
+          // Chuyển đến trang checkout sau 500ms
+          setTimeout(() => {
+            navigate("/checkout");
+          }, 500);
+        } catch (err: any) {
+          const errorMessage =
+            err instanceof Error
+              ? err.message
+              : "Không thể thêm sản phẩm vào giỏ hàng";
+          message.error(errorMessage);
+        } finally {
+          setReorderLoading(null);
+        }
+      },
+    });
   };
 
   if (orders.length === 0) {
@@ -214,13 +336,39 @@ const OrderList: React.FC<OrderListProps> = ({ orders }) => {
                 {order.status === "COMPLETED" && (
                   <>
                     <Button>Đánh giá</Button>
-                    <Button type="primary" danger>
-                      Mua lại
+                    <Button
+                      type="primary"
+                      style={{
+                        backgroundColor: "#1890ff",
+                        borderColor: "#1890ff",
+                      }}
+                      loading={reorderLoading === order.orderId}
+                      onClick={() => handleReorder(order)}
+                    >
+                      🔄 Mua lại
                     </Button>
                   </>
                 )}
+                {order.status === "CANCELLED" && (
+                  <Button
+                    type="primary"
+                    style={{
+                      backgroundColor: "#1890ff",
+                      borderColor: "#1890ff",
+                    }}
+                    loading={reorderLoading === order.orderId}
+                    onClick={() => handleReorder(order)}
+                  >
+                    🔄 Mua lại
+                  </Button>
+                )}
                 {order.status === "PENDING" && (
-                  <Button type="primary" danger>
+                  <Button
+                    type="primary"
+                    danger
+                    loading={cancelLoading === order.orderId}
+                    onClick={() => handleCancelOrder(order.orderId)}
+                  >
                     Hủy đơn hàng
                   </Button>
                 )}
@@ -229,9 +377,7 @@ const OrderList: React.FC<OrderListProps> = ({ orders }) => {
                   <Button disabled>Đã nhận được hàng</Button>
                 )}
                 <Button>Liên hệ người bán</Button>
-                <Button
-                  onClick={() => navigate(`/account/orders/${order.orderId}`)}
-                >
+                <Button onClick={() => navigate(`/orders/${order.orderId}`)}>
                   Xem chi tiết
                 </Button>
               </Space>
