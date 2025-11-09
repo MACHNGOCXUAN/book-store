@@ -214,6 +214,13 @@ const ordersSlice = createSlice({
       state.payment = null;
       state.error = null;
     },
+    // Xóa đơn hàng khỏi danh sách khi hủy
+    removeOrderFromList: (state, action) => {
+      state.orders = state.orders.filter(
+        (order) => order.orderId !== action.payload
+      );
+      state.pagination.totalRows = Math.max(0, state.pagination.totalRows - 1);
+    },
   },
   extraReducers: (builder) => {
     // Create Order
@@ -305,6 +312,6 @@ const ordersSlice = createSlice({
   },
 });
 
-export const { clearCurrentOrder, clearOrders, clearOrder } =
+export const { clearCurrentOrder, clearOrders, clearOrder, removeOrderFromList } =
   ordersSlice.actions;
 export default ordersSlice.reducer;

@@ -3,7 +3,7 @@
  * Reusable component for all order status pages (PENDING, PROCESSING, SHIPPING, COMPLETED, CANCELLED)
  */
 import React, { useEffect } from "react";
-import { Spin, Empty, Card } from "antd";
+import { Spin, Empty, Card, App } from "antd";
 import OrderList from "./OrderList";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { getOrdersByStatus } from "../features/orders/ordersSlice";
@@ -27,35 +27,44 @@ const OrderStatusPage: React.FC<OrderStatusPageProps> = ({
     dispatch(getOrdersByStatus({ status, page: 1, limit: 20 }));
   }, [status, dispatch]);
 
+  const handleOrderUpdated = () => {
+    // Refresh danh sách đơn hàng sau khi hủy
+    dispatch(getOrdersByStatus({ status, page: 1, limit: 20 }));
+  };
+
   return (
-    <div>
-      {/* Loading state */}
-      {loading && (
-        <div style={{ textAlign: "center", padding: "50px 20px" }}>
-          <Spin size="large" />
-        </div>
-      )}
-
-      {/* Error state */}
-      {error && !loading && (
-        <Card style={{ borderColor: "#ff4d4f", marginBottom: 20 }}>
-          <div style={{ color: "#ff4d4f" }}>
-            <strong>Lỗi:</strong> {error}
+    <App>
+      <div>
+        {/* Loading state */}
+        {loading && (
+          <div style={{ textAlign: "center", padding: "50px 20px" }}>
+            <Spin size="large" />
           </div>
-        </Card>
-      )}
+        )}
 
-      {/* Empty state */}
-      {!loading && orders.length === 0 && !error && (
-        <Empty
-          description={emptyText}
-          style={{ marginTop: "50px", marginBottom: "50px" }}
-        />
-      )}
+        {/* Error state */}
+        {error && !loading && (
+          <Card style={{ borderColor: "#ff4d4f", marginBottom: 20 }}>
+            <div style={{ color: "#ff4d4f" }}>
+              <strong>Lỗi:</strong> {error}
+            </div>
+          </Card>
+        )}
 
-      {/* Order list */}
-      {!loading && orders.length > 0 && <OrderList orders={orders} />}
-    </div>
+        {/* Empty state */}
+        {!loading && orders.length === 0 && !error && (
+          <Empty
+            description={emptyText}
+            style={{ marginTop: "50px", marginBottom: "50px" }}
+          />
+        )}
+
+        {/* Order list */}
+        {!loading && orders.length > 0 && (
+          <OrderList orders={orders} onOrderUpdated={handleOrderUpdated} />
+        )}
+      </div>
+    </App>
   );
 };
 
