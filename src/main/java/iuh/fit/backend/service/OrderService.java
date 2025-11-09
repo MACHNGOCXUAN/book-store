@@ -19,4 +19,6 @@ public interface OrderService {
     OrderFullDetailDTO createOrder(CreateOrderRequestDTO request, User user);
 
     boolean cancelOrder(String orderId, User user);
+
+    OrderFullDetailDTO reorderFromOrder(String existingOrderId, User user);
 }

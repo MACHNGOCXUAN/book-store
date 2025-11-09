@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, String>, JpaSpecificationExecutor<Order> {
@@ -152,4 +153,9 @@ public interface OrderRepository extends JpaRepository<Order, String>, JpaSpecif
     List<Object[]> sumOrdersByDateRangeForStaff(@Param("staffId") String staffId,
                                                 @Param("start") LocalDateTime start,
                                                 @Param("end") LocalDateTime end);
+
+    // Add: fetch an Order together with its orderDetails
+    @Query("SELECT o FROM Order o LEFT JOIN FETCH o.orderDetails WHERE o.orderId = :orderId")
+    Optional<Order> findOrderWithDetails(@Param("orderId") String orderId);
+
 }

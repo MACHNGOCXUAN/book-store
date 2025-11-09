@@ -123,6 +123,35 @@ public class OrderController {
         }
     }
 
+    // New endpoint: cancel order when still PENDING
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<?> cancelOrder(@PathVariable("id") String id,
+                                         @RequestHeader("Authorization") String authHeader) {
+        try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Missing Authorization header"));
+            }
+
+            String token = authHeader.substring(7);
+            String userId = jwtUtils.getUserIdFromToken(token);
+            User user = userService.findUserById(userId);
+
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "User not found"));
+            }
+
+            boolean success = orderService.cancelOrder(id, user);
+            if (success) {
+                return ResponseEntity.ok(Map.of("message", "Đã hủy đơn thành công"));
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Không thể hủy đơn. Đơn phải ở trạng thái PENDING và phải là đơn của bạn (nếu bạn là khách)."));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "Lỗi server: " + e.getMessage()));
+        }
+    }
+
     @PostMapping("/createOrder")
     public ResponseEntity<?> createOrder(
             @RequestBody CreateOrderRequestDTO request,
@@ -231,6 +260,35 @@ public class OrderController {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Failed to checkout: " + e.getMessage()));
+        }
+    }
+
+    // New endpoint: reorder from an existing order (completed or cancelled)
+    @PostMapping("/{id}/reorder")
+    public ResponseEntity<?> reorder(@PathVariable("id") String id,
+                                     @RequestHeader("Authorization") String authHeader) {
+        try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Missing Authorization header"));
+            }
+
+            String token = authHeader.substring(7);
+            String userId = jwtUtils.getUserIdFromToken(token);
+            User user = userService.findUserById(userId);
+
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "User not found"));
+            }
+
+            try {
+                OrderFullDetailDTO newOrder = orderService.reorderFromOrder(id, user);
+                return ResponseEntity.status(HttpStatus.CREATED).body(newOrder);
+            } catch (RuntimeException e) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "Lỗi server: " + e.getMessage()));
         }
     }
 
