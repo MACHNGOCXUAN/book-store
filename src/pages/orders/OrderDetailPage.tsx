@@ -13,8 +13,8 @@ import {
   Tag,
   Image,
   Modal,
-  message,
 } from "antd";
+import { toast } from "react-toastify";
 import {
   PhoneOutlined,
   MailOutlined,
@@ -107,7 +107,14 @@ export default function OrderDetailPage() {
       console.log("📡 Calling cancelOrder API...");
       const response = await cancelOrder(orderId);
       console.log("✅ Cancel success:", response);
-      message.success(response.message || "Đã hủy đơn hàng thành công!");
+      toast.success(response.message || "Đã hủy đơn hàng thành công!", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
 
       // Đợi một chút để backend cập nhật database
       await new Promise((resolve) => setTimeout(resolve, 500));
@@ -140,7 +147,14 @@ export default function OrderDetailPage() {
       const errorMessage =
         err instanceof Error ? err.message : "Không thể hủy đơn hàng";
       console.error("❌ Error canceling order:", err);
-      message.error(errorMessage);
+      toast.error(errorMessage, {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     } finally {
       setCancelLoading(false);
     }
@@ -172,7 +186,14 @@ export default function OrderDetailPage() {
       // Refresh cart
       await dispatch(fetchCart()).unwrap();
 
-      message.success("Đã thêm sản phẩm vào giỏ hàng!");
+      toast.success("Đã thêm sản phẩm vào giỏ hàng!", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
       setShowReorderModal(false);
 
       // Chuyển đến trang checkout sau 500ms
@@ -185,7 +206,14 @@ export default function OrderDetailPage() {
           ? err.message
           : "Không thể thêm sản phẩm vào giỏ hàng";
       console.error("❌ Error adding to cart:", err);
-      message.error(errorMessage);
+      toast.error(errorMessage, {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     } finally {
       setReorderLoading(false);
     }
