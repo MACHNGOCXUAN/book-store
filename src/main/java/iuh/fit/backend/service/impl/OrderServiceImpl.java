@@ -46,8 +46,37 @@ public class OrderServiceImpl implements OrderService {
             OrderFullDetailDTO.CustomerInfoDTO customerDTO = new OrderFullDetailDTO.CustomerInfoDTO();
             customerDTO.setUserId(order.getCustomer().getUserId());
             customerDTO.setFullName(order.getCustomer().getFullName());
+            // prefer receiver phone from main address if available, otherwise use customer's phone
             customerDTO.setPhoneNumber(order.getCustomer().getPhoneNumber());
             customerDTO.setEmail(order.getCustomer().getEmail());
+
+            // Build delivery address: choose main address (main == 1) when present, otherwise first address
+            List<Address> addresses = order.getCustomer().getAddresses();
+            if (addresses != null && !addresses.isEmpty()) {
+                Address chosen = addresses.stream().filter(a -> a.getMain() == 1).findFirst().orElse(addresses.get(0));
+                StringBuilder addr = new StringBuilder();
+                if (chosen.getSpecifics() != null && !chosen.getSpecifics().isBlank()) addr.append(chosen.getSpecifics());
+                if (chosen.getWard() != null && !chosen.getWard().isBlank()) {
+                    if (addr.length() > 0) addr.append(", ");
+                    addr.append(chosen.getWard());
+                }
+                if (chosen.getDistrict() != null && !chosen.getDistrict().isBlank()) {
+                    if (addr.length() > 0) addr.append(", ");
+                    addr.append(chosen.getDistrict());
+                }
+                if (chosen.getProvince() != null && !chosen.getProvince().isBlank()) {
+                    if (addr.length() > 0) addr.append(", ");
+                    addr.append(chosen.getProvince());
+                }
+
+                customerDTO.setAddress(addr.toString());
+
+                // If address has receiverPhone, prefer it as contact
+                if (chosen.getReceiverPhone() != null && !chosen.getReceiverPhone().isBlank()) {
+                    customerDTO.setPhoneNumber(chosen.getReceiverPhone());
+                }
+            }
+
             dto.setCustomer(customerDTO);
         }
 
@@ -164,10 +193,22 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderFullDetailDTO getOrderById(String orderId) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findOrderWithDetails(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
 
         return convertToOrderFullDetailDTO(order);
+    }
+
+    private String generateNextOrderHistoryId() {
+        String last = orderHistoryRepository.findMaxOrderHistoryId();
+        int next = 1;
+        if (last != null && !last.isBlank() && last.startsWith("ODH")) {
+            try {
+                next = Integer.parseInt(last.substring(3)) + 1;
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return "ODH" + String.format("%03d", next);
     }
 
     @Override
@@ -184,9 +225,10 @@ public class OrderServiceImpl implements OrderService {
         orderRepository.save(order);
 
         OrderHistory orderHistory = new OrderHistory();
+        orderHistory.setId(generateNextOrderHistoryId());
         orderHistory.setOrder(order);
         orderHistory.setStatus(updateStatusOrderDTO.getStatus());
-        orderHistory.setTimestamp(LocalDateTime.now());
+        // timestamp is handled by @CreationTimestamp
 
         orderHistoryRepository.save(orderHistory);
 
@@ -320,4 +362,81 @@ public class OrderServiceImpl implements OrderService {
             throw new RuntimeException("Order total must be at least " + code.getMinPriceToApply());
         }
     }
+
+    @Override
+    @Transactional
+    public boolean cancelOrder(String orderId, User user) {
+        Order order = orderRepository.findById(orderId).orElse(null);
+        if (order == null) {
+            return false;
+        }
+
+        // Only allow cancel when order is PENDING
+        if (order.getStatus() != OrderStatus.PENDING) {
+            return false;
+        }
+
+        // If user is CUSTOMER, they can only cancel their own orders
+        if (user.getRole() == Role.CUSTOMER) {
+            if (!order.getCustomer().getUserId().equals(user.getUserId())) {
+                return false;
+            }
+        }
+
+        // Set status to CANCELLED and set staff if action by staff/admin
+        order.setStatus(OrderStatus.CANCELLED);
+        if (user.getRole() == Role.STAFF || user.getRole() == Role.ADMIN) {
+            Staff s = staffRepository.findById(user.getUserId()).orElse(null);
+            order.setStaff(s);
+        }
+
+        orderRepository.save(order);
+
+        // Add order history entry
+        OrderHistory h = new OrderHistory();
+        h.setId(generateNextOrderHistoryId());
+        h.setOrder(order);
+        h.setStatus(OrderStatus.CANCELLED);
+        // timestamp handled by @CreationTimestamp
+        orderHistoryRepository.save(h);
+
+        return true;
+    }
+
+    @Override
+    @Transactional
+    public OrderFullDetailDTO reorderFromOrder(String existingOrderId, User user) {
+        Order existing = orderRepository.findOrderWithDetails(existingOrderId)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + existingOrderId));
+
+        // Only allow reorder if existing order is COMPLETED or CANCELLED
+        if (existing.getStatus() != OrderStatus.COMPLETED && existing.getStatus() != OrderStatus.CANCELLED) {
+            throw new RuntimeException("Only completed or cancelled orders can be reordered");
+        }
+
+        // If user is CUSTOMER, ensure they are the owner
+        if (user.getRole() == Role.CUSTOMER) {
+            if (!existing.getCustomer().getUserId().equals(user.getUserId())) {
+                throw new RuntimeException("You can only reorder your own orders");
+            }
+        }
+
+        // Build CreateOrderRequestDTO from existing orderDetails
+        CreateOrderRequestDTO req = new CreateOrderRequestDTO();
+        req.setCustomerId(existing.getCustomer().getUserId());
+        req.setDiscountCode(existing.getDiscountCode() != null ? existing.getDiscountCode().getDiscountCodeId() : null);
+
+        List<CreateOrderRequestDTO.OrderDetailRequest> details = existing.getOrderDetails().stream().map(od -> {
+            CreateOrderRequestDTO.OrderDetailRequest d = new CreateOrderRequestDTO.OrderDetailRequest();
+            d.setBookId(od.getBook().getBookId());
+            d.setQuantity(od.getQuantity());
+            return d;
+        }).toList();
+
+        req.setOrderDetails(details);
+
+        // Use existing createOrder logic (it will check stock, discount, update cart etc.)
+        return createOrder(req, user);
+    }
+
 }

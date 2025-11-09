@@ -14,4 +14,6 @@ public interface OrderService {
     OrderFullDetailDTO getOrderById(String orderId);
     boolean updateOrderStatus(UpdateStatusOrderDTO updateStatusOrderDTO, User user);
     OrderFullDetailDTO createOrder(CreateOrderRequestDTO request, User user);
+    boolean cancelOrder(String orderId, User user);
+    OrderFullDetailDTO reorderFromOrder(String existingOrderId, User user);
 }
