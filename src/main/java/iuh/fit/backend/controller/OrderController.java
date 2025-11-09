@@ -303,44 +303,5 @@ public class OrderController {
         return request.getRemoteAddr();
     }
 
-    /**
-     * Cancel an order - only PENDING orders can be cancelled
-     */
-    @PostMapping("/{orderId}/cancel")
-    public ResponseEntity<?> cancelOrder(@PathVariable("orderId") String orderId,
-            @RequestHeader("Authorization") String authHeader) {
-        try {
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("message", "Missing Authorization header"));
-            }
 
-            String token = authHeader.substring(7);
-            String userId = jwtUtils.getUserIdFromToken(token);
-            User user = userService.findUserById(userId);
-
-            if (user == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("message", "User not found"));
-            }
-
-            System.out.println("📤 Cancel order: " + orderId + " by user: " + userId);
-
-            boolean isSuccess = orderService.cancelOrder(orderId, user);
-            if (isSuccess) {
-                System.out.println("✅ Order " + orderId + " cancelled successfully");
-                return ResponseEntity.ok(Map.of("message", "Đơn hàng đã được hủy"));
-            } else {
-                System.out.println("❌ Failed to cancel order: " + orderId);
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message",
-                                "Không thể hủy đơn hàng. Chỉ có thể hủy đơn hàng ở trạng thái chờ xác nhận."));
-            }
-        } catch (Exception e) {
-            System.err.println("❌ Error canceling order: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Lỗi server: " + e.getMessage()));
-        }
-    }
 }
