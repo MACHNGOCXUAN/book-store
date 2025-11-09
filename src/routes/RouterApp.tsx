@@ -23,6 +23,7 @@ import OrderPendingPage from "../pages/orders/OrderPendingPage";
 import OrderProcessingPage from "../pages/orders/OrderProcessingPage";
 import OrderShippingPage from "../pages/orders/OrderShippingPage";
 import OrderCancelledPage from "../pages/orders/OrderCancelledPage";
+import OrderCompletedPage from "../pages/orders/OrderCompletedPage";
 
 const router = createBrowserRouter([
   {
@@ -103,7 +104,7 @@ const router = createBrowserRouter([
               },
               {
                 path: "completed",
-                element: <OrderShippingPage />,
+                element: <OrderCompletedPage />,
               },
               {
                 path: "cancelled",
