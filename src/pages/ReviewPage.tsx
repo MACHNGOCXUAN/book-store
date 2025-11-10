@@ -15,7 +15,7 @@ interface BookReview {
   book_title: string;
   book_author: string;
   book_cover?: string;
-  rating: number;
+  avg_rating: number;
   price: number;
   discount_percent: number;
   stock: number;
@@ -26,39 +26,27 @@ const ReviewPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const dispatch = useAppDispatch();
 
-  useEffect(() => {
-    const fetchReviews = async () => {
-      try {
-        const res = await fetch("http://localhost:8080/api/reviews");
-        if (!res.ok) throw new Error("Không thể tải dữ liệu review");
-        const data = await res.json();
+useEffect(() => {
+  const fetchTopBooks = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("http://localhost:8080/api/reviews/top10");
+      if (!res.ok) throw new Error("Không thể tải dữ liệu top 10 sách");
+      const data: BookReview[] = await res.json();
 
-        const uniqueBooks: Record<string, BookReview> = {};
-        data.forEach((r: any) => {
-          const bookId = r.book_id;
-          if (!uniqueBooks[bookId] || r.rating > uniqueBooks[bookId].rating) {
-            uniqueBooks[bookId] = {
-              book_id: r.book_id,
-              book_title: r.book_title,
-              book_author: r.book_author,
-              book_cover: r.book_cover,
-              rating: r.rating,
-              price: r.book_price,
-              discount_percent: r.book_discount_percent,
-              stock: r.stock,
-            };
-          }
-        });
+      console.log("Top 10 books from backend:", data);
+      // Backend đã trả sẵn top 10 sách, không cần lọc gì nữa
+      setReviews(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        setReviews(Object.values(uniqueBooks));
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchReviews();
-  }, []);
+  fetchTopBooks();
+}, []);
+
 
   const handleViewDetails = (bookId: string) => {
     window.location.href = `/books/${bookId}`;
@@ -160,7 +148,7 @@ const ReviewPage: React.FC = () => {
                         <Text type="secondary" style={{ display: "block", fontSize: 14, marginBottom: 8 }}>
                           {book.book_author}
                         </Text>
-                        <Rate disabled value={book.rating} style={{ fontSize: 16, color: "#fadb14" }} />
+                        <Rate disabled value={book.avg_rating} style={{ fontSize: 16, color: "#fadb14" }} />
                       </div>
 
                       <div style={{ marginTop: "auto" }}>
