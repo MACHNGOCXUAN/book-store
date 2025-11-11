@@ -4,6 +4,7 @@ import iuh.fit.backend.dto.requests.CreateReviewRequest;
 import iuh.fit.backend.dto.requests.UpdateReviewRequest;
 import iuh.fit.backend.dto.responses.ReviewDto;
 import iuh.fit.backend.dto.responses.ReviewStatisticsDto;
+import iuh.fit.backend.dto.responses.TopBookDto;
 import iuh.fit.backend.model.Book;
 import iuh.fit.backend.model.Customer;
 import iuh.fit.backend.model.Review;
@@ -14,6 +15,7 @@ import iuh.fit.backend.service.ReviewService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -220,4 +222,36 @@ public class ReviewServiceImpl implements ReviewService {
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
+
+
+    @Override
+    public List<TopBookDto> getTop10Books() {
+        // Giới hạn 10 sách bằng PageRequest
+        List<Object[]> topBooks = reviewRepository.findTopBooks(PageRequest.of(0, 10));
+
+        return topBooks.stream().map(obj -> {
+            String bookId = (String) obj[0];
+            Book book = bookRepository.findById(bookId)
+                    .orElseThrow(() -> new RuntimeException("Book not found with id: " + bookId));
+
+            Double avgRating = obj[4] != null ? ((Double) obj[4]) : 0.0;
+            Long reviewCount = obj[5] != null ? ((Number) obj[5]).longValue() : 0L;
+
+            return new TopBookDto(
+                    book.getBookId(),
+                    book.getTitle(),
+                    book.getAuthor(),
+                    book.getCoverImage(),
+                    avgRating,
+                    reviewCount,
+                    book.getPrice(),
+                    book.getDiscountPercent(),
+                    book.getStock()
+            );
+        }).collect(Collectors.toList());
+    }
+
+
+
+
 }

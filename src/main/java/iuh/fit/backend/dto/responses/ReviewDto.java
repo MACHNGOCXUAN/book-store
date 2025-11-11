@@ -46,4 +46,5 @@ public class ReviewDto {
 
     @JsonProperty("book_discount_percent")
     private Integer bookDiscountPercent;
+
 }
