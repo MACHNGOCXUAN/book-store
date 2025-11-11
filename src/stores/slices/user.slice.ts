@@ -1,4 +1,5 @@
 import http from "@/lib/utils/api";
+import { UserDataType } from "@/types/users";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { da } from "zod/locales";
 
@@ -90,6 +91,14 @@ export const searchUserByPhone = createAsyncThunk(
   }
 )
 
+export const getUserById = createAsyncThunk(
+  "user/getUserById",
+  async (id: string) => {
+    const response = await http.get(`user/${id}`);
+    return response;
+  }
+);
+
 const pagination = {
   curPage: 1,
   limitPage: 10,
@@ -104,7 +113,8 @@ type initialStatetype = {
   pagination: any;
   message?: any;
   staff?: any;
-  user?: any
+  user?: any,
+  userDetail?: UserDataType | null;
 };
 
 const initialState: initialStatetype = {
@@ -121,6 +131,9 @@ export const userSlice = createSlice({
     resetMessage: (state) => {
       state.message = undefined;
     },
+    clearStaffDetail: (state) => {
+      state.staff = null;
+    }
   },
   extraReducers: (builder) => {
     builder
@@ -306,8 +319,21 @@ export const userSlice = createSlice({
           state.loading = false;
           state.user = null;
         })
+
+      builder
+      .addCase(getUserById.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(getUserById.fulfilled, (state, action) => {
+        state.userDetail = action.payload.data;
+        state.loading = false;
+      })
+      .addCase(getUserById.rejected, (state) => {
+        state.userDetail = null;
+        state.loading = false;
+      });
   },
 });
 
 export default userSlice.reducer;
-export const { resetMessage } = userSlice.actions;
+export const { resetMessage, clearStaffDetail } = userSlice.actions;

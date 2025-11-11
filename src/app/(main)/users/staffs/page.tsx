@@ -17,16 +17,18 @@ import React, { use, useEffect, useState } from "react";
 import {
   DeleteOutlined,
   EditOutlined,
+  EyeOutlined,
   LockOutlined,
   UnlockOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import { useAppDispatch, useAppSelector } from "@/stores/hooks";
-import { deleteStaff, getStaffById, getUserStaffFilter, resetMessage, updateStatusStaff } from "@/stores/slices/user.slice";
+import { clearStaffDetail, deleteStaff, getStaffById, getUserById, getUserStaffFilter, resetMessage, updateStatusStaff } from "@/stores/slices/user.slice";
 import { Table } from "@/components/table/table";
 import { UserDataType } from "@/types/users";
 import ModelAddUser from "@/components/Model/model-add-user";
 import { useMyNotification } from "@/hooks/notification";
+import UserDetailModal from "@/components/Model/model-detail-user";
 
 export default function StaffPage() {
   const [form] = Form.useForm();
@@ -114,7 +116,10 @@ export default function StaffPage() {
     },
   ];
 
+  const [mode, setMode] = useState<"add" | "edit">("add");
+
   const handleOpenModelEdit = (id: string) => {
+    setMode("edit");
     dispatch(getStaffById(id));
     setIsModalOpen(true);
   };
@@ -137,12 +142,27 @@ export default function StaffPage() {
     dispatch(deleteStaff(id));
   }
 
+  const [isModalOpenDetail, setIsModalOpenDetail] = useState(false);
+  const { userDetail, loading: isLoading } = useAppSelector((state) => state.user);
+  const handleViewDetail = (id: string) => {
+    dispatch(getUserById(id));
+    setIsModalOpenDetail(true);
+  };
+
   const columns: TableProps<UserDataType>["columns"] = [
     {
-      title: "Họ và tên",
-      dataIndex: "userName",
-      key: "userName",
+      title: "Mã nhân viên",
+      dataIndex: "userId",
+      key: "userId",
       render: (text) => <a>{text}</a>,
+      width: 100,
+    },
+    {
+      title: "Họ và tên",
+      dataIndex: "fullName",
+      key: "fullName",
+      render: (text) => <a>{text}</a>,
+      width: 200,
     },
     {
       title: "Email",
@@ -202,11 +222,18 @@ export default function StaffPage() {
               onClick={() => handleLockAccount(record.userId)}
             />
           )}
-          <Button
+          {/* <Button
             style={{ color: "white", background: "red", outline: "none" }}
             icon={<DeleteOutlined />}
             onClick={() => handleDeleteStaff(record.userId)}
+          /> */}
+
+          <Button
+            type="default"
+            icon={<EyeOutlined />}
+            onClick={() => handleViewDetail(record.userId)}
           />
+
           <Button
             type="primary"
             icon={<EditOutlined />}
@@ -219,7 +246,9 @@ export default function StaffPage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handerOpenStaff = () => {
+  const handleOpenStaff = () => {
+    setMode("add");
+    dispatch(clearStaffDetail());
     setIsModalOpen(true);
   };
 
@@ -229,7 +258,7 @@ export default function StaffPage() {
       <div className="boxItemPage flex justify-between items-center">
         <h5 className="font-bold text-sm">Quản lý người dùng</h5>
         <div>
-          <Button type="primary" size="middle" onClick={handerOpenStaff}>
+          <Button type="primary" size="middle" onClick={handleOpenStaff}>
             Thêm người dùng mới
           </Button>
         </div>
@@ -256,7 +285,14 @@ export default function StaffPage() {
         />
       </div>
 
-      <ModelAddUser isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen} />
+      <ModelAddUser isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen} mode={mode} />
+
+      <UserDetailModal
+        isModalOpen={isModalOpenDetail}
+        handleCancel={() => setIsModalOpenDetail(false)}
+        userData={userDetail}
+        isLoading={isLoading}
+      />
     </div>
   );
 }

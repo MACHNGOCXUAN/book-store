@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import AuthGuard from "@/components/auth/AuthGuard";
 import { Image as ImageLogo } from "@/assets/images";
 import Image from "next/image";
+import NextTopLoader from "nextjs-toploader";
 
 const { Header, Sider, Content } = Layout;
 
@@ -85,6 +86,7 @@ export default function MainLayout({
   return (
     <AuthGuard requireAuth={true}>
       <Layout style={{ minHeight: "100vh" }}>
+        {/* <NextTopLoader color="#5750F1" showSpinner={false}/> */}
         <Sider
           trigger={null}
           collapsible
