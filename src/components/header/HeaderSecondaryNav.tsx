@@ -108,21 +108,6 @@ const HeaderSecondaryNav: React.FC = () => {
           >
             Review sách
           </Link>
-
-          <Link
-            to="contact"
-            style={{
-              color: "white",
-              textDecoration: "none",
-              fontSize: 15,
-              fontWeight: 500,
-              transition: "color 0.3s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#000")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "white")}
-          >
-            Liên hệ
-          </Link>
         </div>
       </div>
     </div>

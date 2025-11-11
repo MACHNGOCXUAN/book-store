@@ -3,7 +3,6 @@ import App from "../App";
 import AboutPage from "../pages/AboutPage";
 import AccountLayout from "../pages/account/AccountLayout";
 import { CartPage } from "../pages/CartPage";
-import ContactPage from "../pages/ContactPage";
 
 import AccountInfoPage from "../pages/account/AccountInfoPage";
 import AddressPage from "../pages/account/AddressPage";
@@ -34,10 +33,6 @@ const router = createBrowserRouter([
       {
         index: true,
         element: <HomePage />,
-      },
-      {
-        path: "contact",
-        element: <ContactPage />,
       },
       {
         path: "about",

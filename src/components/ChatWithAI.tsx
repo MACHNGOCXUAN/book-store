@@ -1,16 +1,11 @@
 "use client";
 import { CloseOutlined, SendOutlined } from "@ant-design/icons";
-import {
-  Avatar,
-  Button,
-  Flex,
-  Input,
-  Spin,
-  Typography
-} from "antd";
+import { Avatar, Button, Flex, Input, Spin, Typography } from "antd";
 import { useEffect, useRef, useState } from "react";
+import { useChat } from "../context/ChatContext";
 import chatIcon from "../assets/icon_chat.png";
 import chatIcon1 from "../assets/icon_chat_1.jpg";
+import "../styles/chatAnimation.css";
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -23,7 +18,7 @@ interface Message {
 }
 
 const ChatPopoverWidget = () => {
-  const [open, setOpen] = useState(false);
+  const { openAI, setOpenAI } = useChat();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "bot",
@@ -96,7 +91,7 @@ const ChatPopoverWidget = () => {
               type="text"
               shape="circle"
               icon={<CloseOutlined />}
-              onClick={() => setOpen(false)}
+              onClick={() => setOpenAI(false)}
             />
           </Flex>
         </div>
@@ -193,21 +188,24 @@ const ChatPopoverWidget = () => {
   );
 
   return (
-    <div style={{ position: 'fixed', right: 32, bottom: 70, zIndex: 999 }}>
+    <div style={{ position: "relative" }}>
       {/* Chat Window Popover */}
-      {open && (
+      {openAI && (
         <div
+          className="chat-modal-enter"
           style={{
-            position: 'absolute',
+            position: "absolute",
             right: 80,
-            bottom: 0,
-            background: 'white',
+            bottom: -10,
+            background: "white",
             borderRadius: 12,
-            boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
-            overflow: 'hidden',
+            boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
+            overflow: "hidden",
             width: 340,
-            maxHeight: '70vh',
+            maxHeight: "70vh",
             height: 500,
+            transformOrigin: "bottom right",
+            zIndex: 1000,
           }}
         >
           {ChatWindow}
@@ -216,38 +214,38 @@ const ChatPopoverWidget = () => {
 
       {/* Chat Button */}
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => setOpenAI(!openAI)}
         title="Chat với AI"
         style={{
-          position: 'relative',
           width: 58,
           height: 58,
-          borderRadius: '50%',
-          border: 'none',
-          cursor: 'pointer',
+          borderRadius: "50%",
+          border: "none",
+          cursor: "pointer",
           padding: 0,
-          overflow: 'hidden',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-          background: 'white',
-          transition: 'transform 0.2s',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center'
+          overflow: "hidden",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+          background: "white",
+          transition: "transform 0.2s",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
         }}
+        className={openAI ? "chat-button-active" : ""}
         onMouseEnter={(e) => {
-          (e.target as HTMLElement).style.transform = 'scale(1.05)';
+          (e.target as HTMLElement).style.transform = "scale(1.05)";
         }}
         onMouseLeave={(e) => {
-          (e.target as HTMLElement).style.transform = 'scale(1)';
+          (e.target as HTMLElement).style.transform = "scale(1)";
         }}
       >
         <img
           src={chatIcon}
           alt="Chat Icon"
           style={{
-            width: '80%',
-            height: '80%',
-            objectFit: 'cover',
+            width: "80%",
+            height: "80%",
+            objectFit: "cover",
           }}
         />
       </button>
