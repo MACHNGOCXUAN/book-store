@@ -22,6 +22,6 @@ public interface ReviewRepository extends JpaRepository<Review, String> {
     @Query("SELECT COUNT(r) FROM Review r WHERE r.book.bookId = :bookId AND r.rating = :rating")
     Integer findCountByBookIdAndRating(@Param("bookId") String bookId, @Param("rating") int rating);
 
-    @Query("SELECT r FROM Review r WHERE r.customer.id = :customerId ORDER BY r.ratingDate DESC")
+    @Query("SELECT r FROM Review r WHERE r.customer.userId = :customerId ORDER BY r.ratingDate DESC")
     List<Review> findByCustomerId(@Param("customerId") String customerId);
 }
