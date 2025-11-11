@@ -4,11 +4,9 @@ import {
   Avatar,
   Button,
   Flex,
-  FloatButton,
   Input,
-  Popover,
   Spin,
-  Typography,
+  Typography
 } from "antd";
 import { useEffect, useRef, useState } from "react";
 import chatIcon from "../assets/icon_chat.png";
@@ -195,43 +193,65 @@ const ChatPopoverWidget = () => {
   );
 
   return (
-    <Popover
-      content={ChatWindow}
-      trigger="click"
-      open={open}
-      onOpenChange={setOpen}
-      placement="topLeft"
-      overlayStyle={{ paddingTop: 16 }}
-      styles={{
-        body: {
-          padding: 0,
-          borderRadius: 12,
-          overflow: "hidden",
-        },
-      }}
-    >
-      <FloatButton
-        icon={
-          <img
-            src={chatIcon}
-            alt="Chat Icon"
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              borderRadius: "50%",
-            }}
-          />
-        }
+    <div style={{ position: 'fixed', right: 32, bottom: 70, zIndex: 999 }}>
+      {/* Chat Window Popover */}
+      {open && (
+        <div
+          style={{
+            position: 'absolute',
+            right: 80,
+            bottom: 0,
+            background: 'white',
+            borderRadius: 12,
+            boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
+            overflow: 'hidden',
+            width: 340,
+            maxHeight: '70vh',
+            height: 500,
+          }}
+        >
+          {ChatWindow}
+        </div>
+      )}
+
+      {/* Chat Button */}
+      <button
+        onClick={() => setOpen(!open)}
+        title="Chat với AI"
         style={{
-          right: 32,
-          bottom: 32,
+          position: 'relative',
           width: 58,
           height: 58,
+          borderRadius: '50%',
+          border: 'none',
+          cursor: 'pointer',
+          padding: 0,
+          overflow: 'hidden',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          background: 'white',
+          transition: 'transform 0.2s',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center'
         }}
-        tooltip="Trò chuyện với AI"
-      />
-    </Popover>
+        onMouseEnter={(e) => {
+          (e.target as HTMLElement).style.transform = 'scale(1.05)';
+        }}
+        onMouseLeave={(e) => {
+          (e.target as HTMLElement).style.transform = 'scale(1)';
+        }}
+      >
+        <img
+          src={chatIcon}
+          alt="Chat Icon"
+          style={{
+            width: '80%',
+            height: '80%',
+            objectFit: 'cover',
+          }}
+        />
+      </button>
+    </div>
   );
 };
 

@@ -1,9 +1,13 @@
 import { Outlet } from "react-router-dom";
 import "./App.css";
+import ChatEmail from "./components/ChatEmail";
+import ChatWithAI from "./components/ChatWithAI";
+import ChatWithEmployee from "./components/ChatWithEmployee";
 import Footer from "./components/Footer";
 import Header from "./components/Header";
-import ChatPopoverWidget from "./components/LiveChatWidget";
+import IconMap from "./components/IconMap";
 import RouteLoadingOverlay from "./components/RouteLoadingOverlay";
+
 
 const App = () => {
   return (
@@ -22,7 +26,10 @@ const App = () => {
         <Outlet />
       </div>
       <Footer />
-      <ChatPopoverWidget />
+      <ChatWithAI />
+      <ChatWithEmployee />
+      <ChatEmail />
+      <IconMap />
     </div>
   );
 };
