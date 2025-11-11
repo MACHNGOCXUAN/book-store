@@ -116,7 +116,7 @@ public class CustomerServiceImpl implements CustomerService {
             List<Predicate> preds = new ArrayList<>();
 
             if (!name.isEmpty()) {
-                preds.add(cb.like(cb.lower(root.get("userName")), "%" + name.toLowerCase() + "%"));
+                preds.add(cb.like(cb.lower(root.get("fullName")), "%" + name.toLowerCase() + "%"));
             }
 
             // So sánh enum Role.CUSTOMER
@@ -130,7 +130,7 @@ public class CustomerServiceImpl implements CustomerService {
             return cb.and(preds.toArray(new Predicate[0]));
         };
 
-        Pageable pageable = PageRequest.of(page, limit, Sort.by(Sort.Direction.ASC, "userName"));
+        Pageable pageable = PageRequest.of(page, limit, Sort.by(Sort.Direction.ASC, "fullName"));
         return customerRepository.findAll(spec, pageable);
     }
 

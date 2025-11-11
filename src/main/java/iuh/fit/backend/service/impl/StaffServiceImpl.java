@@ -3,6 +3,7 @@ package iuh.fit.backend.service.impl;
 import iuh.fit.backend.model.ChatSession;
 import iuh.fit.backend.model.Customer;
 import iuh.fit.backend.model.Staff;
+import iuh.fit.backend.model.enums.Gender;
 import iuh.fit.backend.model.enums.Role;
 import iuh.fit.backend.repository.ChatSessionRepository;
 import iuh.fit.backend.repository.StaffRepository;
@@ -53,7 +54,7 @@ public class StaffServiceImpl implements StaffService {
             List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
 
             if (!name.isEmpty()) {
-                predicates.add(cb.like(root.get("userName"), "%" + name + "%"));
+                predicates.add(cb.like(root.get("fullName"), "%" + name + "%"));
             }
 
             predicates.add((cb.equal(root.get("role"), "STAFF")));
@@ -66,7 +67,7 @@ public class StaffServiceImpl implements StaffService {
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         };
 
-        return staffRepository.findAll(spec, PageRequest.of(page, limit, Sort.by("userName").ascending()));
+        return staffRepository.findAll(spec, PageRequest.of(page, limit, Sort.by("userId").descending()));
     }
 
     @Override
@@ -90,9 +91,12 @@ public class StaffServiceImpl implements StaffService {
                 String newId = "USER" + String.format("%03d", nextNum);
                 staff.setUserId(newId);
             }
+            staff.setFullName(staffInput.getFullName());
+            staff.setGender(Gender.valueOf(String.valueOf(staffInput.getGender())));
             staff.setEmail(staffInput.getEmail());
             staff.setPhoneNumber(staffInput.getPhoneNumber());
             staff.setShift(staffInput.getShift());
+            staff.setDateOfBirth(staffInput.getDateOfBirth());
 
             staff.setDepartment(
                     staffInput.getDepartment() != null ? staffInput.getDepartment() : "Support"
@@ -121,6 +125,9 @@ public class StaffServiceImpl implements StaffService {
                 return false;
             }
 
+            staff.setFullName(staffCreateDto.getFullName());
+            staff.setGender(Gender.valueOf(String.valueOf(staffCreateDto.getGender())));
+            staff.setDateOfBirth(staffCreateDto.getDateOfBirth());
             staff.setEmail(staffCreateDto.getEmail());
             staff.setPhoneNumber(staffCreateDto.getPhoneNumber());
             staff.setDepartment(staffCreateDto.getDepartment());
