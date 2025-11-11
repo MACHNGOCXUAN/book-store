@@ -63,7 +63,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
             aspectRatio: "3/4",
             borderBottom: "1px solid #f0f0f0",
             padding: "12px",
-            height: "220px", // 👈 giảm chiều cao (mặc định bạn đang để full tỷ lệ)
+            height: "220px", 
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
