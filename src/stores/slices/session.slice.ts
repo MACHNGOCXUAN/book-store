@@ -1,7 +1,7 @@
 import http from "@/lib/utils/api";
 import { ChatSessionType } from "@/types/chat-session.type";
 import { MessageResponse } from "@/types/message.types";
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export const getCustomerMessageStaff = createAsyncThunk(
   "session/getCustomerMessageStaff",
@@ -25,23 +25,63 @@ export const getStaffMessageCustomer = createAsyncThunk(
     const response = await http.get("messages/staff/customers/staff");
     return response;
   }
-)
+);
 
 type initialStateType = {
-  loading: Boolean,
-  listCustomer: ChatSessionType[],
-  messages?: MessageResponse[],
+  loading: Boolean;
+  listCustomer: ChatSessionType[];
+  messages?: MessageResponse[];
 };
 
 const initialState: initialStateType = {
   loading: false,
-  listCustomer: []
+  listCustomer: [],
 };
 
 export const sessionSlice = createSlice({
   name: "session",
   initialState,
-  reducers: {},
+  reducers: {
+    updateSessionHasStaff: (
+      state,
+      action: PayloadAction<{ sessionId: string; hasStaff: boolean }>
+    ) => {
+      const { sessionId, hasStaff } = action.payload;
+      const session = state.listCustomer.find((s) => s.sessionId === sessionId);
+
+      if (session) {
+        session.customer.hasStaff = hasStaff;
+      }
+    },
+
+    updateSessionLastMessage: (
+      state,
+      action: PayloadAction<{
+        sessionId: string;
+        lastMessageTime: string;
+        lastMessage?: string;
+      }>
+    ) => {
+      const { sessionId, lastMessageTime, lastMessage } = action.payload;
+      const session = state.listCustomer.find((s) => s.sessionId === sessionId);
+
+      if (session) {
+        session.lastMessageTime = lastMessageTime;
+        if (lastMessage !== undefined) {
+          session.lastMessage = lastMessage;
+        }
+        state.listCustomer.sort((a, b) => {
+          const timeA = a.lastMessageTime
+            ? new Date(a.lastMessageTime).getTime()
+            : 0;
+          const timeB = b.lastMessageTime
+            ? new Date(b.lastMessageTime).getTime()
+            : 0;
+          return timeB - timeA;
+        });
+      }
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(getCustomerMessageStaff.pending, (state) => {
@@ -56,18 +96,17 @@ export const sessionSlice = createSlice({
         state.listCustomer = [];
       });
 
-
     builder
-      .addCase(getMessagesBySession.pending, state => {
-        state.loading = true
+      .addCase(getMessagesBySession.pending, (state) => {
+        state.loading = true;
       })
       .addCase(getMessagesBySession.fulfilled, (state, action) => {
         state.loading = false;
-        state.messages = action.payload.data
+        state.messages = action.payload.data;
       })
-      .addCase(getMessagesBySession.rejected, state => {
+      .addCase(getMessagesBySession.rejected, (state) => {
         state.loading = false;
-      })
+      });
 
     builder
       .addCase(getStaffMessageCustomer.pending, (state) => {
@@ -85,3 +124,5 @@ export const sessionSlice = createSlice({
 });
 
 export default sessionSlice.reducer;
+export const { updateSessionHasStaff, updateSessionLastMessage } =
+  sessionSlice.actions;

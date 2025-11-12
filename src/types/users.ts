@@ -11,5 +11,6 @@ export type UserDataType = {
   address?: string;
   dateOfBirth?: string;
   loyaltyPoints?: string;
-  password?: string
+  password?: string;
+  hasStaff?: boolean
 }
