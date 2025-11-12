@@ -62,6 +62,7 @@ import { formatCurrency, formatDate } from "@/lib/utils/format";
 const statusLabel: Record<OrderStatus, string> = {
   PENDING: "Vừa tạo",
   PROCESSING: "Đang xử lý",
+  SHIPPING: "Đang giao hàng",
   COMPLETED: "Đã giao",
   CANCELLED: "Đã hủy",
 };
@@ -69,6 +70,7 @@ const statusLabel: Record<OrderStatus, string> = {
 const statusColor: Record<OrderStatus, string> = {
   PENDING: "gold",
   PROCESSING: "blue",
+  SHIPPING: "cyan",
   COMPLETED: "green",
   CANCELLED: "red",
 };
@@ -78,6 +80,8 @@ const getAvailableStatuses = (currentStatus: OrderStatus): OrderStatus[] => {
     case "PENDING":
       return ["PROCESSING", "CANCELLED"];
     case "PROCESSING":
+      return ["SHIPPING", "CANCELLED"];
+    case "SHIPPING":
       return ["COMPLETED", "CANCELLED"];
     case "COMPLETED":
       return [];
@@ -90,7 +94,7 @@ const getAvailableStatuses = (currentStatus: OrderStatus): OrderStatus[] => {
 
 export const orderColumns = (
   onViewDetail: (orderId: string) => void,
-  onUpdateStatus: (orderId: string, newStatus: OrderStatus) => void,
+  onUpdateStatus: (orderId: string, newStatus: OrderStatus) => void
   // onCancelOrder: (orderId: string) => void
 ): TableProps<OrderDataType>["columns"] => [
   {
@@ -125,11 +129,13 @@ export const orderColumns = (
     render: (_, record: OrderDataType) => (
       <div>
         <div style={{ fontWeight: 500 }}>
-          {record.orderDetails.length} sản phẩm
+          {record.orderDetails ? record.orderDetails.length : 0} sản phẩm
         </div>
         <div style={{ fontSize: "12px", color: "#666" }}>
           Tổng SL:{" "}
-          {record.orderDetails.reduce((sum, item) => sum + item.quantity, 0)}
+          {record.orderDetails
+            ? record.orderDetails.reduce((sum, item) => sum + item.quantity, 0)
+            : 0}
         </div>
       </div>
     ),
@@ -140,14 +146,18 @@ export const orderColumns = (
     width: 120,
     render: (_, record: OrderDataType) => (
       <div>
-        {record.payments.map((payment) => (
-          <Tag
-            key={payment.paymentId}
-            color={payment.method === "ONLINE" ? "blue" : "orange"}
-          >
-            {payment.method}
-          </Tag>
-        ))}
+        {record.payments && record.payments.length > 0 ? (
+          record.payments.map((payment) => (
+            <Tag
+              key={payment.paymentId}
+              color={payment.method === "ONLINE" ? "blue" : "orange"}
+            >
+              {payment.method}
+            </Tag>
+          ))
+        ) : (
+          <span style={{ color: "#999" }}>Chưa có</span>
+        )}
       </div>
     ),
   },
@@ -210,7 +220,7 @@ export const orderColumns = (
                   //   fromStatus: record.status,
                   //   toStatus: key,
                   // });
-                  onUpdateStatus(record.orderId, key)
+                  onUpdateStatus(record.orderId, key);
                 },
               }}
               trigger={["click"]}

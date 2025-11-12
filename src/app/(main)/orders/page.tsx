@@ -85,7 +85,7 @@ export default function OrderPage() {
         textSearch: searchText,
         status: statusFilter === "ALL" ? null : statusFilter,
         startTime,
-        endTime
+        endTime,
       })
     );
   };
@@ -178,6 +178,7 @@ export default function OrderPage() {
                     { value: "ALL", label: "Tất cả" },
                     { value: "PENDING", label: "Chờ xử lý" },
                     { value: "PROCESSING", label: "Đang xử lý" },
+                    { value: "SHIPPING", label: "Đang giao" },
                     { value: "COMPLETED", label: "Đã giao" },
                     { value: "CANCELLED", label: "Đã hủy" },
                   ]}

@@ -4,11 +4,24 @@ import { ReduxProvider } from "@/stores/provider";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
 import NextTopLoader from "nextjs-toploader";
 
+// Suppress Antd React 19 compatibility warning
+if (typeof window !== "undefined") {
+  const originalError = console.error;
+  console.error = (...args: any[]) => {
+    if (
+      args[0]?.includes?.("antd v5 support React is 16 ~ 18") ||
+      (typeof args[0] === "string" && args[0].includes("antd v5 support React"))
+    ) {
+      return;
+    }
+    originalError.call(console, ...args);
+  };
+}
 
 export const metadata: Metadata = {
   title: "Books",
   icons: {
-    icon: "/logo.png"
+    icon: "/logo.png",
   },
 };
 
