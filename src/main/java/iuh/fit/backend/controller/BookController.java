@@ -37,8 +37,8 @@ public class BookController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<Book>> search(@RequestParam("q") String q) {
-        return ResponseEntity.ok(service.searchByTitle(q));
+    public ResponseEntity<List<Book>> search(@RequestParam("search") String search) {
+        return ResponseEntity.ok(service.searchBook(search));
     }
 
     @GetMapping("/{id}")

@@ -20,6 +20,8 @@ public class Customer extends User {
 
     private Integer loyaltyPoints;
 
+    private Boolean hasStaff;
+
     @OneToOne(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     private Cart cart;   // KHÔNG dùng @JoinColumn ở đây

@@ -149,4 +149,9 @@ public class BookServiceImpl implements BookService {
     public List<Book> findByCategoryId(String categoryId) {
         return repo.findByCategoryCategoryId(categoryId);
     }
+
+    @Override
+    public List<Book> searchBook(String search){
+        return repo.findByTitleContainingIgnoreCase(search);
+    }
 }

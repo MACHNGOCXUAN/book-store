@@ -4,7 +4,6 @@ import iuh.fit.backend.model.enums.OrderStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.GenericGenerator;
 
 import java.time.LocalDateTime;
 
@@ -17,8 +16,6 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class OrderHistory {
     @Id
-    @GeneratedValue(generator = "uuid")
-    @GenericGenerator(name = "uuid", strategy = "uuid2")
     private String id;
 
     @Enumerated(EnumType.STRING)

@@ -9,7 +9,9 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Date;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +20,8 @@ public class ReportRevenueImpl implements ReportRevenueService {
     private final ReportRevenueRepository orderRepository;
     private final BookRepository bookRepository;
     private final ReportCustomerRepository customerRepository;
+    private final OrderRepository orderRepository2;
+    private final OrderDetailRepository orderDetailRepository;
 
     // =====================================================
     // 🔹 1️⃣ Tổng quan (overview) - hôm nay / tất cả
@@ -130,6 +134,109 @@ public class ReportRevenueImpl implements ReportRevenueService {
         result.put("summary", summary);
         return result;
     }
+
+    @Override
+    public Map<String, Object> getOverViewForStaff(String userId, String mode) {
+
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        LocalDateTime now = LocalDateTime.now();
+
+        // ✅ Lấy danh sách đơn thuộc về nhân viên
+        List<Order> orders = orderRepository2.findAllByStaffId(userId);
+
+        // ✅ Nếu chọn chế độ "Hôm nay" → lọc đơn tạo hôm nay
+        if (mode.equalsIgnoreCase("today")) {
+            orders = orders.stream()
+                    .filter(o -> !o.getOrderDate().isBefore(todayStart) && !o.getOrderDate().isAfter(now))
+                    .toList();
+        }
+
+        // ✅ Tổng doanh thu tạo ra (chỉ tính đơn hoàn thành)
+        double revenue = orders.stream()
+                .filter(o -> o.getStatus() == OrderStatus.COMPLETED)
+                .mapToDouble(Order::getTotalAmount)
+                .sum();
+
+        // ✅ Tổng đơn hoàn thành
+        long completedOrders = orders.stream()
+                .filter(o -> o.getStatus() == OrderStatus.COMPLETED)
+                .count();
+
+        // ✅ Tổng đơn phụ trách
+        long totalOrders = orders.size();
+
+        // ✅ Đơn đang xử lý / chờ
+        long pendingOrders = orders.stream()
+                .filter(o -> o.getStatus() == OrderStatus.PENDING || o.getStatus() == OrderStatus.PROCESSING)
+                .count();
+
+        // ✅ Tổng sách đã bán (sum quantity từ orderDetails)
+        int soldBooks = orders.stream()
+                .flatMap(o -> o.getOrderDetails().stream())
+                .mapToInt(od -> od.getQuantity())
+                .sum();
+
+        return Map.of(
+                "mode", mode.equals("today") ? "Hôm nay" : "Tất cả",
+                "date", LocalDate.now().toString(),
+                "revenue", revenue,
+                "completedOrders", completedOrders,
+                "totalOrders", totalOrders,
+                "pendingOrders", pendingOrders,
+                "soldBooks", soldBooks
+        );
+    }
+
+    // nhân viên
+
+    @Override
+    public Map<String, Object> getStaffRevenue(String staffId, String type, Integer year, Integer month, String startDate, String endDate) {
+
+        List<Map<String, Object>> chart = new ArrayList<>();
+
+        if (type.equals("month")) {
+            // Theo tháng trong năm
+            year = (year == null) ? LocalDate.now().getYear() : year;
+            List<Object[]> rs = orderRepository2.sumRevenueByMonthInYearForStaff(staffId, year);
+
+            rs.forEach(row -> chart.add(Map.of(
+                    "label", "Tháng " + row[0],
+                    "revenue", ((Number) row[1]).doubleValue()
+            )));
+        }
+
+        else if (type.equals("monthnumber")) {
+            year = (year == null) ? LocalDate.now().getYear() : year;
+            List<Object[]> rs = orderRepository2.sumRevenueByDayInMonthForStaff(staffId, year, month);
+
+            rs.forEach(row -> chart.add(Map.of(
+                    "label", "Ngày " + row[0],
+                    "revenue", ((Number) row[1]).doubleValue()
+            )));
+        }
+
+        else if (type.equals("year")) {
+            List<Object[]> rs = orderRepository2.sumRevenueByMonthInYearForStaff(staffId, year);
+
+            rs.forEach(row -> chart.add(Map.of(
+                    "label", "Tháng " + row[0],
+                    "revenue", ((Number) row[1]).doubleValue()
+            )));
+        }
+
+        else if (type.equals("range")) {
+            LocalDateTime start = LocalDate.parse(startDate).atStartOfDay();
+            LocalDateTime end = LocalDate.parse(endDate).atTime(23, 59, 59);
+            List<Object[]> rs = orderRepository2.sumRevenueByDateForStaff(staffId, start, end);
+
+            rs.forEach(row -> chart.add(Map.of(
+                    "label", row[0].toString(),
+                    "revenue", ((Number) row[1]).doubleValue()
+            )));
+        }
+        return Map.of("chartData", chart);
+    }
+
 
     // =====================================================
     // 🔹 3️⃣ Các hàm phụ cho từng loại thống kê

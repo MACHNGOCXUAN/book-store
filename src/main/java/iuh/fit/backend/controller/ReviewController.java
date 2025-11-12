@@ -4,6 +4,7 @@ import iuh.fit.backend.dto.requests.CreateReviewRequest;
 import iuh.fit.backend.dto.requests.UpdateReviewRequest;
 import iuh.fit.backend.dto.responses.ReviewDto;
 import iuh.fit.backend.dto.responses.ReviewStatisticsDto;
+import iuh.fit.backend.dto.responses.TopBookDto;
 import iuh.fit.backend.service.ReviewService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -140,4 +141,11 @@ public class ReviewController {
     public ResponseEntity<List<ReviewDto>> getAllReviews() {
         return ResponseEntity.ok(reviewService.getAllReviews());
     }
+
+    @GetMapping("/top10")
+    public ResponseEntity<List<TopBookDto>> getTop10Books() {
+        return ResponseEntity.ok(reviewService.getTop10Books());
+    }
+
+
 }

@@ -19,6 +19,8 @@ public interface StaffService {
     boolean deleteStaff(String staffId);
     boolean updateStatusStaff(UserUpdateStatusDto staffUpdateStatusDto);
     List<ChatSession> getSessionsByStaffId(String staffId);
+
     List<ChatSession> getCustomersChattingWithStaff(String staffId);
+
     List<ChatSession> getStaffsChattingWithCustomer(String customerId);
 }

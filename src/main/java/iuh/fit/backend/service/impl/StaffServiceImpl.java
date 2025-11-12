@@ -183,8 +183,16 @@ public class StaffServiceImpl implements StaffService {
         List<ChatSession> chatSessions = chatSessionRepository.findActiveSessionsByStaffId(staffId);
 
         List<Customer> customersChattingWithStaff = new ArrayList<>();
+
         for (ChatSession chatSession : chatSessions) {
-            customersChattingWithStaff.add(chatSession.getCustomer());
+            Customer customer = chatSession.getCustomer();
+            if (chatSession.getStaff() != null) {
+                customer.setHasStaff(true);
+                customersChattingWithStaff.add(customer);
+            } else {
+                customer.setHasStaff(false);
+                customersChattingWithStaff.add(customer);
+            }
         }
         return chatSessions;
     }
