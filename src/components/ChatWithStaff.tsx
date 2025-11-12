@@ -6,62 +6,92 @@ import { useChat } from "../context/ChatContext";
 import chatIcon1 from "../assets/iconchatnv.jpg";
 import chatIcon from "../assets/iconmessage.png";
 import "../styles/chatAnimation.css";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import {
+  getChatSessionByCustomerId,
+  getMessagesBySession,
+} from "../features/session/session.slice";
+import { useStompClient } from "../hooks/useStompClient";
 
 const { Text } = Typography;
 const { TextArea } = Input;
 const PRIMARY_RED = "#d70018";
 
-// --- Kiểu dữ liệu ChatMessage (từ ContactPage) ---
 interface ChatMessage {
   messageId: string;
-  sender: {
-    userId: string;
-    fullName: string;
-    email?: string;
-  };
-  receiver: {
-    userId: string;
-    fullName: string;
-    email?: string;
-  };
+  senderId: string;
+  receiverId: string;
   content: string;
-  timestamp: Date;
-  messageType: "TEXT" | "IMAGE" | "VIDEO" | "FILE";
-  fileUrl?: string;
-  fileName?: string;
-  fileSize?: string;
-  isRead: boolean;
-  chatSessionId?: string;
+  messageType: string | null;
+  fileUrl: string | null;
+  fileName: string | null;
+  fileSize: number | null;
+  timestamp: string;
+  sessionId: string;
+  read: boolean;
 }
 
 const ChatPopoverWidget = () => {
   const { openEmployee, setOpenEmployee } = useChat();
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      messageId: "1",
-      sender: {
-        userId: "staff-1",
-        fullName: "Nhân viên hỗ trợ",
-        email: "support@bookstore.vn",
-      },
-      receiver: {
-        userId: "customer-1",
-        fullName: "Bạn",
-        email: "",
-      },
-      content: "Xin chào! 👋 Tôi có thể giúp gì cho bạn?",
-      timestamp: new Date(),
-      messageType: "TEXT",
-      isRead: true,
-      chatSessionId: "session-1",
-    },
-  ]);
+  const authUser = useAppSelector((s) => s.auth.user);
+  const userId = authUser?.userId;
+
+  const { client: stompClient, connected } = useStompClient(userId || "");
+
+  const {
+    messages: dataMessage,
+    chatSession,
+    loading: loadingMessages,
+  } = useAppSelector((state) => state.session);
+  const dispatch = useAppDispatch();
+
+  const sessionId = chatSession?.sessionId;
+  const receiverId = chatSession?.staff?.userId;
+
+  useEffect(() => {
+    if (authUser?.userId) {
+      dispatch(getChatSessionByCustomerId(authUser.userId));
+    }
+  }, [dispatch, authUser?.userId]);
+
+  useEffect(() => {
+    if (openEmployee && sessionId) {
+      dispatch(getMessagesBySession(sessionId));
+    }
+  }, [dispatch, sessionId, openEmployee]);
+
+  useEffect(() => {
+    if (!stompClient || !connected || !userId) {
+      return;
+    }
+
+    const subscription = stompClient.subscribe(
+      `/topic/messages/${userId}`,
+      (message) => {
+        const newMsg = JSON.parse(message.body);
+        setMessages((prev) => [...prev, newMsg]);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, [stompClient, connected, userId]);
+
+  const [messages, setMessages] = useState<ChatMessage[]>(dataMessage || []);
+
+  useEffect(() => {
+    if (dataMessage) {
+      setMessages(dataMessage);
+    }
+  }, [dataMessage]);
+
+  if (!loadingMessages) {
+    console.log("Loading check: ", messages);
+  }
 
   const [inputMessage, setInputMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const chatBodyRef = useRef<HTMLDivElement | null>(null);
 
-  // --- Cuộn xuống cuối khi có tin nhắn mới ---
   useEffect(() => {
     chatBodyRef.current?.scrollTo({
       top: chatBodyRef.current.scrollHeight,
@@ -69,63 +99,32 @@ const ChatPopoverWidget = () => {
     });
   }, [messages, loading]);
 
-  // --- Gửi tin nhắn từ khách hàng ---
-  const handleSendMessage = () => {
+  const handleSend = () => {
     if (!inputMessage.trim()) return;
 
-    const currentUserId = "customer-1";
-    const staffId = "staff-1";
-
-    const newMsg: ChatMessage = {
-      messageId: String(messages.length + 1),
-      sender: { userId: currentUserId, fullName: "Bạn" },
-      receiver: {
-        userId: staffId,
-        fullName: "Nhân viên hỗ trợ",
-        email: "support@bookstore.vn",
-      },
+    const newMsg = {
+      senderId: userId,
+      receiverId: receiverId,
       content: inputMessage,
-      timestamp: new Date(),
-      messageType: "TEXT",
-      isRead: false,
-      chatSessionId: "session-1",
+      time: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      sessionId: sessionId || null,
+      files: null,
     };
 
-    setMessages((prev) => [...prev, newMsg]);
-    setInputMessage("");
-    setLoading(true);
+    stompClient?.publish({
+      destination: "/app/chat.send",
+      body: JSON.stringify(newMsg),
+    });
 
-    // Giả lập phản hồi của nhân viên sau 1s
-    setTimeout(() => {
-      const staffReply: ChatMessage = {
-        messageId: String(messages.length + 2),
-        sender: {
-          userId: staffId,
-          fullName: "Nhân viên hỗ trợ",
-          email: "support@bookstore.vn",
-        },
-        receiver: {
-          userId: currentUserId,
-          fullName: "Bạn",
-          email: "",
-        },
-        content:
-          "Cảm ơn bạn đã liên hệ! Chúng tôi sẽ hỗ trợ bạn trong thời gian sớm nhất.",
-        timestamp: new Date(),
-        messageType: "TEXT",
-        isRead: false,
-        chatSessionId: "session-1",
-      };
-      setMessages((prev) => [...prev, staffReply]);
-      setLoading(false);
-    }, 1000);
+    setInputMessage("");
   };
 
-  // --- Giao diện cửa sổ Chat ---
   const ChatWindow = (
     <div style={{ width: 340, maxHeight: "70vh", height: 500 }}>
       <Flex vertical justify="space-between" style={{ height: "100%" }}>
-        {/* Header */}
         <div
           style={{
             padding: "12px 16px",
@@ -145,7 +144,6 @@ const ChatPopoverWidget = () => {
           </Flex>
         </div>
 
-        {/* Body */}
         <div
           ref={chatBodyRef}
           style={{
@@ -157,7 +155,7 @@ const ChatPopoverWidget = () => {
         >
           <Flex vertical gap="small">
             {messages.map((msg, i) => {
-              const isCustomer = msg.sender.userId === "customer-1";
+              const isCustomer = msg.senderId === userId;
               return isCustomer ? (
                 <Flex key={i} justify="flex-end" align="flex-start" gap="small">
                   <div
@@ -193,10 +191,7 @@ const ChatPopoverWidget = () => {
                         opacity: 0.7,
                       }}
                     >
-                      {msg.timestamp.toLocaleTimeString("vi-VN", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {msg.timestamp}
                     </div>
                   </div>
                 </Flex>
@@ -212,7 +207,6 @@ const ChatPopoverWidget = () => {
           </Flex>
         </div>
 
-        {/* Footer */}
         <div
           style={{
             padding: "12px 16px",
@@ -230,14 +224,14 @@ const ChatPopoverWidget = () => {
               }
               onPressEnter={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
                 e.preventDefault();
-                handleSendMessage();
+                handleSend();
               }}
             />
             <Button
               type="primary"
               icon={<SendOutlined />}
               style={{ backgroundColor: PRIMARY_RED }}
-              onClick={handleSendMessage}
+              onClick={handleSend}
               loading={loading}
             />
           </Flex>
@@ -248,7 +242,6 @@ const ChatPopoverWidget = () => {
 
   return (
     <div style={{ position: "relative" }}>
-      {/* Chat Window Popover */}
       {openEmployee && (
         <div
           className="chat-modal-enter"
@@ -270,8 +263,6 @@ const ChatPopoverWidget = () => {
           {ChatWindow}
         </div>
       )}
-
-      {/* Chat Button */}
       <button
         onClick={() => setOpenEmployee(!openEmployee)}
         title="Chat với nhân viên"
