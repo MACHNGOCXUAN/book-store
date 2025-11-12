@@ -4,6 +4,7 @@ import iuh.fit.backend.dto.requests.CreateReviewRequest;
 import iuh.fit.backend.dto.requests.UpdateReviewRequest;
 import iuh.fit.backend.dto.responses.ReviewDto;
 import iuh.fit.backend.dto.responses.ReviewStatisticsDto;
+import iuh.fit.backend.dto.responses.TopBookDto;
 
 import java.util.List;
 
@@ -17,4 +18,7 @@ public interface ReviewService {
     List<ReviewDto> getReviewsByCustomerId(String customerId);
     ReviewDto getReviewByIdAndCustomerId(String reviewId, String customerId);
     List<ReviewDto> getAllReviews();
+
+    List<TopBookDto> getTop10Books();
+
 }

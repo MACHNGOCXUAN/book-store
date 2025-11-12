@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,28 +26,72 @@ public class MessageServiceImpl implements MessageService {
     private final UserRepository userRepository;
 
     @Override
+    @Transactional
     public MessageDTO saveMessage(MessageDTO messageDTO) {
+        if (messageDTO.getSenderId() == null) {
+            throw new IllegalArgumentException("SenderId must not be null");
+        }
         User sender = userRepository.findById(messageDTO.getSenderId())
                 .orElseThrow(() -> new RuntimeException("Sender not found"));
-        User receiver = userRepository.findById(messageDTO.getReceiverId())
-                .orElseThrow(() -> new RuntimeException("Receiver not found"));
 
-        // Tìm hoặc tạo chat session
-        ChatSession session = chatSessionRepository
-                .findSessionBetweenUsers(sender.getUserId(), receiver.getUserId())
-                .orElseGet(() -> createNewSession(sender, receiver));
+        User receiver;
+        if (messageDTO.getReceiverId() != null) {
+            receiver = userRepository.findById(messageDTO.getReceiverId())
+                    .orElseThrow(() -> new RuntimeException("Receiver not found"));
+        } else {
+            receiver = null;
+        }
 
-        // Update last message time
+        ChatSession session;
+
+        if (sender instanceof Staff staffSender) {
+            session = chatSessionRepository
+                    .findSessionBetweenCustomerAndStaff(
+                            receiver.getUserId(),
+                            sender.getUserId()
+                    ).orElse(null);
+
+            if (session == null) {
+                session = createNewSession(receiver, sender);
+            } else if (session.getStaff() == null) {
+                session.setStaff(staffSender);
+                chatSessionRepository.save(session);
+            }
+
+            List<Message> oldMessages = messageRepository.findBySessionId(session.getSessionId());
+            for (Message m : oldMessages) {
+                if (m.getReceiver() == null || !(m.getReceiver() instanceof Staff)) {
+                    m.setReceiver(staffSender);
+                    messageRepository.save(m);
+                }
+            }
+        } else if (sender instanceof Admin) {
+            session = chatSessionRepository
+                    .findSessionBetweenCustomerAndStaff(
+                            sender.getUserId(),
+                            receiver != null ? receiver.getUserId() : null
+                    )
+                    .orElseGet(() -> createNewSession(receiver, sender));
+        } else {
+            session = chatSessionRepository
+                    .findSessionBetweenCustomerAndStaff(
+                            sender.getUserId(),
+                            receiver != null ? receiver.getUserId() : null
+                    )
+                    .orElseGet(() -> createNewSession(sender, receiver));
+        }
+
         session.setLastMessageTime(LocalDateTime.now());
-        chatSessionRepository.save(session);
+        session.setLastMessage(messageDTO.getContent());
+        session = chatSessionRepository.save(session);
 
-        // Tạo message
         Message message = new Message();
         message.setSender(sender);
         message.setReceiver(receiver);
         message.setContent(messageDTO.getContent());
-        message.setMessageType(messageDTO.getMessageType() != null ?
-                messageDTO.getMessageType() : MessageType.TEXT);
+        message.setMessageType(
+                messageDTO.getMessageType() != null ? messageDTO.getMessageType() : MessageType.TEXT
+        );
         message.setFileUrl(messageDTO.getFileUrl());
         message.setFileName(messageDTO.getFileName());
         message.setFileSize(messageDTO.getFileSize());
@@ -55,7 +100,6 @@ public class MessageServiceImpl implements MessageService {
         message.setChatSession(session);
 
         Message savedMessage = messageRepository.save(message);
-
         return convertToDTO(savedMessage);
     }
 
@@ -63,13 +107,15 @@ public class MessageServiceImpl implements MessageService {
     public ChatSession createNewSession(User user1, User user2) {
         ChatSession session = new ChatSession();
 
-        // Xác định ai là customer, ai là staff
         if (user1 instanceof Customer) {
             session.setCustomer((Customer) user1);
-            session.setStaff((Staff) user2);
-        } else {
+            session.setStaff(user2 instanceof Staff ? (Staff) user2 : null);
+        } else if (user2 instanceof Customer) {
             session.setCustomer((Customer) user2);
-            session.setStaff((Staff) user1);
+            session.setStaff(user1 instanceof Staff ? (Staff) user1 : null);
+        } else {
+            session.setCustomer(null);
+            session.setStaff(user1 instanceof Staff ? (Staff) user1 : null);
         }
 
         session.setStartTime(LocalDateTime.now());
@@ -113,11 +159,16 @@ public class MessageServiceImpl implements MessageService {
         return messageRepository.findUnreadMessagesByReceiver(receiverId).size();
     }
 
+    @Override
+    public Optional<ChatSession> getChatSession(String customerId) {
+        return chatSessionRepository.findActiveSessionByCustomerId(customerId);
+    }
+
     private MessageDTO convertToDTO(Message message) {
         MessageDTO dto = new MessageDTO();
         dto.setMessageId(message.getMessageId());
         dto.setSenderId(message.getSender().getUserId());
-        dto.setReceiverId(message.getReceiver().getUserId());
+        dto.setReceiverId(message.getReceiver() != null ? message.getReceiver().getUserId() : null);
         dto.setContent(message.getContent());
         dto.setMessageType(message.getMessageType());
         dto.setFileUrl(message.getFileUrl());
