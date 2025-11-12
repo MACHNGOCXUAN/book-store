@@ -40,6 +40,11 @@ export default function ChatBox({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  console.log("njnkjnkjnkjn: ", messages);
+  console.log("jnjk: ", selectedCustomer);
+  
+  
+
   const handleSend = () => {
     if (!input.trim() && fileList.length === 0) return;
 
@@ -81,7 +86,7 @@ export default function ChatBox({
       
       <MessageList
         messages={messages}
-        customerAvatar={"xuan.jpg"}
+        customerAvatar={"https://cdn2.fptshop.com.vn/unsafe/1920x0/filters:format(webp):quality(75)/2023_5_24_638205649868370260_frame-218.png"}
         onPreview={onPreview}
         messagesEndRef={messagesEndRef}
       />
