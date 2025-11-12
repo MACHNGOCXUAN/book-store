@@ -20,9 +20,14 @@ export const getOrderById = createAsyncThunk(
 
 export const updateStatusOrder = createAsyncThunk(
   "order/updateStatusOrder",
-  async (data: any) => {
-    const response = await http.put("/orders/update-status", data);
-    return response;
+  async (data: any, { rejectWithValue }) => {
+    try {
+      const response = await http.put("/orders/update-status", data);
+      return response;
+    } catch (error: any) {
+      console.error("Error updating order status:", error);
+      return rejectWithValue(error.message || "Cập nhật trạng thái thất bại");
+    }
   }
 );
 
@@ -95,15 +100,15 @@ export const orderSlice = createSlice({
           message: "Cập nhật thành công!",
         };
       })
-      .addCase(updateStatusOrder.rejected, (state) => {
+      .addCase(updateStatusOrder.rejected, (state, action) => {
         state.loading = false;
         state.message = {
           type: "error",
-          message: "Cập nhật thất bại!",
+          message: action.payload || "Cập nhật thất bại!",
         };
       });
   },
 });
 
 export default orderSlice.reducer;
-export const { resetMessage } = orderSlice.actions
+export const { resetMessage } = orderSlice.actions;

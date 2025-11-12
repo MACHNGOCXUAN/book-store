@@ -72,11 +72,22 @@ class HttpClient {
     const response: Response = await fetch(url, config);
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || `HTTP Error: ${response.status}`);
+      try {
+        const error = await response.json();
+        throw new Error(error.message || `HTTP Error: ${response.status}`);
+      } catch (e) {
+        const errorMsg =
+          e instanceof Error ? e.message : `HTTP Error: ${response.status}`;
+        throw new Error(errorMsg);
+      }
     }
 
-    return response.json();
+    try {
+      return await response.json();
+    } catch (e) {
+      console.error("Failed to parse response as JSON:", e);
+      throw new Error("Invalid response format from server");
+    }
   }
 
   get(endpoint: string, options?: HttpOptions) {

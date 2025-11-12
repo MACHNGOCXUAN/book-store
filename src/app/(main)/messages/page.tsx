@@ -1,10 +1,9 @@
 "use client";
-import React, { useState, useEffect, useContext, use } from "react";
-import { Modal, Image } from "antd";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { Modal, Image, Empty } from "antd";
 import MessageSidebar from "@/components/messages/MessageSidebar";
 import ChatBox from "@/components/messages/ChatBox";
-import { customers } from "@/data/mockCustomers";
-import { Message, MessageResponse } from "@/types/message.types";
+import { MessageResponse } from "@/types/message.types";
 import type { UploadFile } from "antd";
 import "@/styles/message.css";
 import { useAppDispatch, useAppSelector } from "@/stores/hooks";
@@ -12,6 +11,8 @@ import {
   getCustomerMessageStaff,
   getMessagesBySession,
   getStaffMessageCustomer,
+  updateSessionHasStaff,
+  updateSessionLastMessage,
 } from "@/stores/slices/session.slice";
 import { useStompClient } from "@/hooks/useStompClient";
 import { searchUserByPhone } from "@/stores/slices/user.slice";
@@ -25,98 +26,141 @@ export default function MessagePage() {
     messages: dataMessage,
   } = useAppSelector((state) => state.session);
   const { user } = useAppSelector((state) => state.auth);
-  const { user: dataUser } = useAppSelector(state => state.user)
+
   const userId = user?.userId || "";
+  const userRole = user?.role;
   const { client: stompClient, connected } = useStompClient(userId);
 
-  const [searchResult, setSearchResult] = useState<ChatSessionType | null>(null);
   const [selectedId, setSelectedId] = useState("");
   const [input, setInput] = useState("");
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
-  const [messages, setMessages] = useState<MessageResponse[]>(
-    dataMessage || []
+  const [messages, setMessages] = useState<MessageResponse[]>([]);
+
+  const selectedCustomer = useMemo(
+    () => listCustomer?.find((c) => c.sessionId === selectedId),
+    [listCustomer, selectedId]
   );
 
-  const selectedCustomer = listCustomer.find((c) => c.sessionId === selectedId);
+  const hasCustomers = listCustomer && listCustomer.length > 0;
 
-  // danh sach khach hang nhan tin cho nhan vien
   useEffect(() => {
-    if (user?.role === "CUSTOMER") {
-      console.log("khach hang");
+    if (userRole === "CUSTOMER") {
       dispatch(getStaffMessageCustomer());
-    } else {
-      console.log("nhan vien");
+    } else if (userRole) {
       dispatch(getCustomerMessageStaff());
     }
-  }, []);
+  }, [dispatch, userRole]);
 
-  // mac dinh se hien thi tin nhan nguoi nhan tin cuoi cung
   useEffect(() => {
-    if (listCustomer.length > 0) {
+    if (hasCustomers && !selectedId) {
       setSelectedId(listCustomer[0].sessionId);
     }
-  }, [listCustomer]);
+  }, [hasCustomers, listCustomer, selectedId]);
 
-  // lay danh sach tin nhan cua 1 session
   useEffect(() => {
     if (selectedId) {
       dispatch(getMessagesBySession(selectedId));
     }
-  }, [selectedId]);
+  }, [dispatch, selectedId]);
 
-  // xac nhan tin nhan khi gui va hien thi len giao dien
   useEffect(() => {
     if (!stompClient || !connected || !userId) {
       return;
     }
 
-    // const subscription = stompClient.subscribe(
-    //   `/user/${userId}/queue/messages`,
-    //   (message) => {
-
-    //     console.log("message send: ", message);
-
-    //     const newMsg = JSON.parse(message.body);
-
-    //     setMessages((prev) => [...prev, newMsg]);
-    //   }
-    // );
-
     const subscription = stompClient.subscribe(
-      `/topic/messages/${userId}`, // topic riêng cho user
+      `/topic/messages/${userId}`,
       (message) => {
         const newMsg = JSON.parse(message.body);
         setMessages((prev) => [...prev, newMsg]);
+
+        dispatch(
+          updateSessionLastMessage({
+            sessionId: newMsg.sessionId,
+            lastMessageTime: newMsg.timestamp || new Date().toISOString(),
+            lastMessage: newMsg.content || newMsg.message || "", // Thêm content
+          })
+        );
+
+        if (userRole === "STAFF" && newMsg.senderId === userId) {
+          const session = listCustomer?.find(
+            (c) => c.sessionId === newMsg.sessionId
+          );
+          if (session && !session.customer.hasStaff) {
+            dispatch(
+              updateSessionHasStaff({
+                sessionId: newMsg.sessionId,
+                hasStaff: true,
+              })
+            );
+          }
+        }
+
+        if (userRole === "CUSTOMER" && newMsg.senderRole === "STAFF") {
+          const session = listCustomer?.find(
+            (c) => c.sessionId === newMsg.sessionId
+          );
+          if (session && !session.customer.hasStaff) {
+            dispatch(
+              updateSessionHasStaff({
+                sessionId: newMsg.sessionId,
+                hasStaff: true,
+              })
+            );
+          }
+        }
       }
     );
 
     return () => subscription.unsubscribe();
   }, [stompClient, connected, userId]);
 
-  // set lai input va message khi chon mot khach hang khang nhan tin
   useEffect(() => {
     setMessages(dataMessage || []);
+  }, [dataMessage]);
+
+  useEffect(() => {
     setFileList([]);
     setInput("");
-  }, [selectedId, dataMessage]);
+  }, [selectedId]);
 
-  const handleSend = (newMessage: any) => {
-    // setMessages((prev) => [...prev, newMessage]);
-    stompClient?.publish({
-      destination: "/app/chat.send",
-      body: JSON.stringify(newMessage),
-    });
-  };
+  const handleSend = useCallback(
+    (newMessage: any) => {
+      stompClient?.publish({
+        destination: "/app/chat.send",
+        body: JSON.stringify(newMessage),
+      });
+    },
+    [stompClient]
+  );
 
-  const handlePreview = (url: string) => {
+  const handlePreview = useCallback((url: string) => {
     setPreviewImage(url);
     setPreviewOpen(true);
-  };
+  }, []);
 
-  const handleSearch = (phone: string) => {
-    dispatch(searchUserByPhone(phone))
+  const handleSearch = useCallback(
+    (phone: string) => {
+      dispatch(searchUserByPhone(phone));
+    },
+    [dispatch]
+  );
+
+  const handleClosePreview = useCallback(() => {
+    setPreviewOpen(false);
+  }, []);
+
+  if (!hasCustomers && !loading) {
+    return (
+      <div className="message-page-container">
+        <Empty
+          description="Bạn chưa có tin nhắn nào"
+          style={{ marginTop: "20%" }}
+        />
+      </div>
+    );
   }
 
   return (
@@ -144,7 +188,7 @@ export default function MessagePage() {
       <Modal
         open={previewOpen}
         footer={null}
-        onCancel={() => setPreviewOpen(false)}
+        onCancel={handleClosePreview}
         width="80%"
         centered
       >

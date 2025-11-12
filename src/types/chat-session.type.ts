@@ -7,4 +7,5 @@ export interface ChatSessionType {
   startTime: string;
   lastMessageTime?: string | null;
   active: boolean;
+  lastMessage?: string;
 }

@@ -26,4 +26,5 @@ export type AddressType = {
   ward: string;
   specifics: string;
   main: number;
+  hasStaff?: boolean
 }
