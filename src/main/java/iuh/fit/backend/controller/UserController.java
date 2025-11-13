@@ -284,4 +284,11 @@ public class UserController {
         }
     }
 
+    @GetMapping("/user/{id}")
+    public ResponseEntity<?> getDetailUser(@PathVariable String id) {
+        User user = userService.findUserById(id);
+        Map<String, Object> response = new HashMap<>();
+        response.put("data", user);
+        return ResponseEntity.ok(response);
+    }
 }
