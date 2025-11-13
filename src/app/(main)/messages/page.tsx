@@ -80,7 +80,7 @@ export default function MessagePage() {
           updateSessionLastMessage({
             sessionId: newMsg.sessionId,
             lastMessageTime: newMsg.timestamp || new Date().toISOString(),
-            lastMessage: newMsg.content || newMsg.message || "", // Thêm content
+            lastMessage: newMsg.content || newMsg.message || "",
           })
         );
 
@@ -152,6 +152,10 @@ export default function MessagePage() {
     setPreviewOpen(false);
   }, []);
 
+  const handleRefreshList = () => {
+    dispatch(getCustomerMessageStaff());
+  };
+
   if (!hasCustomers && !loading) {
     return (
       <div className="message-page-container">
@@ -171,6 +175,7 @@ export default function MessagePage() {
           selectedId={selectedId}
           onSelectCustomer={setSelectedId}
           onSearchPhone={handleSearch}
+          onRefreshList={handleRefreshList}
         />
 
         <ChatBox
