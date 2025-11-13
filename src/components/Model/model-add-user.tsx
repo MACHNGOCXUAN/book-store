@@ -24,14 +24,25 @@ const { Option } = Select;
 
 interface ModelAddUserProps {
   isModalOpen: boolean;
-  handleOk: () => void;
-  handleCancel: () => void;
+  setIsModalOpen: (open: boolean) => void;
+  mode?: "add" | "edit";
 }
 
-const ModelAddUser = ({ isModalOpen, setIsModalOpen }: any) => {
+const ModelAddUser = ({
+  isModalOpen,
+  setIsModalOpen,
+  mode,
+}: ModelAddUserProps) => {
   const dispatch = useAppDispatch();
   const [form] = Form.useForm<UserDataType>();
   const { loading, message, staff } = useAppSelector((state) => state.user);
+
+  const title =
+    mode === "add" ? (
+      <h3 className="font-semibold text-lg">Thêm người dùng mới</h3>
+    ) : (
+      <h3 className="font-semibold text-lg">Chỉnh sửa người dùng</h3>
+    );
 
   const onFinish = (values: UserDataType) => {
     let payload = { ...values };
@@ -57,6 +68,9 @@ const ModelAddUser = ({ isModalOpen, setIsModalOpen }: any) => {
     }
   }, [dispatch, message]);
 
+  console.log("xuanjhnjknk: ", staff);
+  
+
   useEffect(() => {
     if (isModalOpen) {
       if (staff) {
@@ -69,7 +83,7 @@ const ModelAddUser = ({ isModalOpen, setIsModalOpen }: any) => {
 
   return (
     <Modal
-      title={<h3 className="font-semibold text-lg">Thêm người dùng mới</h3>}
+      title={title}
       open={isModalOpen}
       onCancel={handleCancel}
       footer={null}
@@ -89,7 +103,7 @@ const ModelAddUser = ({ isModalOpen, setIsModalOpen }: any) => {
           <Col span={12}>
             <Form.Item
               label="Họ và tên"
-              name="userName"
+              name="fullName"
               rules={[{ required: true, message: "Vui lòng nhập họ và tên" }]}
             >
               <Input placeholder="Nhập họ và tên" />
@@ -153,6 +167,30 @@ const ModelAddUser = ({ isModalOpen, setIsModalOpen }: any) => {
                     : "Nhập mật khẩu"
                 }
               />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              label="Giới tính"
+              name="gender"
+              rules={[{ required: true, message: "Vui lòng chọn giới tính!" }]}
+            >
+              <Select placeholder="Chọn giới tính" allowClear>
+                <Select.Option value="MALE">Nam</Select.Option>
+                <Select.Option value="FEMALE">Nữ</Select.Option>
+              </Select>
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              label="Ngày sinh"
+              name="dateOfBirth"
+              rules={[{ required: true, message: "Vui lòng chọn ngày sinh!" }]}
+            >
+              <Input type="date" placeholder="Chọn ngày sinh" />
             </Form.Item>
           </Col>
         </Row>

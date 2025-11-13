@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ReduxProvider } from "@/stores/provider";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
-import { Image } from "@/assets/images";
+import NextTopLoader from "nextjs-toploader";
 
 // Suppress Antd React 19 compatibility warning
 if (typeof window !== "undefined") {
@@ -34,6 +34,15 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
         <AntdRegistry>
+          <NextTopLoader 
+            color="#5750F1" 
+            showSpinner={false}
+            height={3}
+            crawlSpeed={200}
+            speed={200}
+            easing="ease"
+            shadow="0 0 10px #5750F1,0 0 5px #5750F1"
+          />
           <ReduxProvider>{children}</ReduxProvider>
         </AntdRegistry>
       </body>

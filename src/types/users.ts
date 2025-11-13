@@ -1,6 +1,5 @@
 export type UserDataType = {
   userId: string;
-  userName: string;
   email: string;
   phoneNumber: string;
   role: string;
@@ -12,5 +11,20 @@ export type UserDataType = {
   dateOfBirth?: string;
   loyaltyPoints?: string;
   password?: string;
+  gender?: string;
+  registrationDate?: string;
+  addresses?: AddressType[];
+}
+
+
+export type AddressType = {
+  id: number;
+  receiverName: string;
+  receiverPhone: string;
+  province: string;
+  district: string;
+  ward: string;
+  specifics: string;
+  main: number;
   hasStaff?: boolean
 }

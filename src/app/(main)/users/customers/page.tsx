@@ -15,6 +15,7 @@ import {
 import React, { useEffect, useState } from "react";
 import {
   DeleteOutlined,
+  EyeOutlined,
   LockOutlined,
   UnlockOutlined,
   UserOutlined,
@@ -22,6 +23,7 @@ import {
 import { useAppDispatch, useAppSelector } from "@/stores/hooks";
 import {
   deleteCustomer,
+  getUserById,
   getUserCustomerFilter,
   getUserStaffFilter,
   resetMessage,
@@ -30,6 +32,7 @@ import {
 import { Table } from "@/components/table/table";
 import { UserDataType } from "@/types/users";
 import { useMyNotification } from "@/hooks/notification";
+import UserDetailModal from "@/components/Model/model-detail-user";
 
 export default function UserPage() {
   const [form] = Form.useForm();
@@ -89,11 +92,18 @@ export default function UserPage() {
     dispatch(deleteCustomer(id));
   };
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { userDetail, loading: isLoading } = useAppSelector((state) => state.user);
+  const handleViewDetail = (id: string) => {
+    dispatch(getUserById(id));
+    setIsModalOpen(true);
+  };
+
   const columns: TableProps<UserDataType>["columns"] = [
     {
-      title: "Tên đăng nhập",
-      dataIndex: "userName",
-      key: "userName",
+      title: "Mã khách hàng",
+      dataIndex: "userId",
+      key: "userId",
       render: (text) => <a>{text}</a>,
     },
     {
@@ -134,9 +144,9 @@ export default function UserPage() {
       ),
     },
     {
-      title: "Địa chỉ",
-      dataIndex: "address",
-      key: "address",
+      title: "Giới tính",
+      dataIndex: "gender",
+      key: "gender",
     },
     {
       title: "Ngày sinh",
@@ -164,10 +174,15 @@ export default function UserPage() {
               onClick={() => handleLockAccount(record.userId)}
             />
           )}
-          <Button
+          {/* <Button
             style={{ color: "white", background: "red", outline: "none" }}
             icon={<DeleteOutlined />}
             onClick={() => handleDeleteCustomer(record.userId)}
+          /> */}
+          <Button
+            type="default"
+            icon={<EyeOutlined />}
+            onClick={() => handleViewDetail(record.userId)}
           />
         </Space>
       ),
@@ -259,6 +274,14 @@ export default function UserPage() {
           }}
         />
       </div>
+
+
+      <UserDetailModal 
+        isModalOpen={isModalOpen}
+        handleCancel={() => setIsModalOpen(false)}
+        userData={userDetail}
+        isLoading={isLoading}
+      />
     </div>
   );
 }
