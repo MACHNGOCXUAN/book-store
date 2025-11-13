@@ -46,7 +46,6 @@ const ChatPopoverWidget = () => {
   const dispatch = useAppDispatch();
 
   const sessionId = chatSession?.sessionId;
-  const receiverId = chatSession?.staff?.userId;
 
   useEffect(() => {
     if (authUser?.userId) {
@@ -70,19 +69,49 @@ const ChatPopoverWidget = () => {
       (message) => {
         const newMsg = JSON.parse(message.body);
         setMessages((prev) => [...prev, newMsg]);
+
+        if(!chatSession?.staff?.userId) {
+          dispatch(getChatSessionByCustomerId(userId));
+        }
       }
     );
 
     return () => subscription.unsubscribe();
-  }, [stompClient, connected, userId]);
+  }, [stompClient, connected, userId, dispatch, chatSession?.staff]);
 
   const [messages, setMessages] = useState<ChatMessage[]>(dataMessage || []);
+  const [hasShownGreeting, setHasShownGreeting] = useState(false);
+
+  // Thêm tin nhắn chào mừng khi mở chat lần đầu
+useEffect(() => {
+  if (openEmployee && !hasShownGreeting && messages.length === 0) {
+    const greetingMessage: ChatMessage = {
+      messageId: "greeting",
+      senderId: "system",
+      receiverId: userId || "",
+      content: "Xin chào! 👋 Tôi có thể giúp gì cho bạn?",
+      messageType: "text",
+      fileUrl: null,
+      fileName: null,
+      fileSize: null,
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      sessionId: sessionId || "",
+      read: false,
+    };
+    setMessages([greetingMessage]);
+    setHasShownGreeting(true);
+  }
+}, [openEmployee, hasShownGreeting, messages.length, userId, sessionId]);
 
   useEffect(() => {
-    if (dataMessage) {
-      setMessages(dataMessage);
-    }
-  }, [dataMessage]);
+  if (dataMessage && dataMessage.length > 0) {
+    setMessages(dataMessage);
+    setHasShownGreeting(true);
+  }
+}, [dataMessage]);
 
   if (!loadingMessages) {
     console.log("Loading check: ", messages);
@@ -102,6 +131,7 @@ const ChatPopoverWidget = () => {
   const handleSend = () => {
     if (!inputMessage.trim()) return;
 
+    const receiverId = chatSession?.staff?.userId;
     const newMsg = {
       senderId: userId,
       receiverId: receiverId,
@@ -118,6 +148,29 @@ const ChatPopoverWidget = () => {
       destination: "/app/chat.send",
       body: JSON.stringify(newMsg),
     });
+
+    if (!chatSession?.staff?.userId) {
+    const autoReplyMessage: ChatMessage = {
+      messageId: `auto-reply-${Date.now()}`,
+      senderId: "system",
+      receiverId: userId || "",
+      content: "Cảm ơn bạn đã liên hệ! Chúng tôi sẽ hỗ trợ bạn trong thời gian sớm nhất.",
+      messageType: "text",
+      fileUrl: null,
+      fileName: null,
+      fileSize: null,
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      sessionId: sessionId || "",
+      read: false,
+    };
+    
+    setTimeout(() => {
+      setMessages((prev) => [...prev, autoReplyMessage]);
+    }, 500);
+  }
 
     setInputMessage("");
   };
@@ -156,6 +209,28 @@ const ChatPopoverWidget = () => {
           <Flex vertical gap="small">
             {messages.map((msg, i) => {
               const isCustomer = msg.senderId === userId;
+              const isSystemMessage = msg.senderId === "system";
+
+              if (isSystemMessage) {
+  return (
+    <Flex key={i} gap="small" align="flex-start">
+      <Avatar src={chatIcon1} size={32} />
+      <div
+        style={{
+          background: "#f0f2f5",
+          padding: "8px 12px",
+          borderRadius: 16,
+          maxWidth: 240,
+        }}
+      >
+        <Text style={{ whiteSpace: "pre-line" }}>
+          {msg.content}
+        </Text>
+      </div>
+    </Flex>
+  );
+}
+
               return isCustomer ? (
                 <Flex key={i} justify="flex-end" align="flex-start" gap="small">
                   <div
