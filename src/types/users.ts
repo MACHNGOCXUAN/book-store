@@ -14,6 +14,7 @@ export type UserDataType = {
   gender?: string;
   registrationDate?: string;
   addresses?: AddressType[];
+  hasStaff?: boolean;
 }
 
 
@@ -26,5 +27,4 @@ export type AddressType = {
   ward: string;
   specifics: string;
   main: number;
-  hasStaff?: boolean
 }
