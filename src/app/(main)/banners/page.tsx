@@ -8,6 +8,7 @@ import { getFilterBanner, resetMessage, createBanner, getBannerId, updateBanner 
 import BannerForm from "@/components/banners/BannerForm";
 import { useMyNotification } from "@/hooks/notification";
 import { Table } from "@/components/table/table";
+import { get } from "http";
 
 export default function BannerPage() {
   const router = useRouter();
@@ -61,7 +62,7 @@ export default function BannerPage() {
     { title: "Tiêu đề", dataIndex: "title", key: "title" },
     { title: "Ảnh", dataIndex: "imageUrl", key: "imageUrl", render: (src: string) => (<Image src={src} width={140} height={80} />) },
     { title: "Thứ tự", dataIndex: "displayOrder", key: "displayOrder", width: 100 },
-    { title: "Hiển thị", dataIndex: "isVisible", key: "isVisible", width: 100, render: (v: boolean) => (v ? "Có" : "Ẩn") },
+    { title: "Hiển thị", dataIndex: "visible", key: "visible", width: 100, render: (v: any) => (String(v) === "true" || v === 1 || v === true ? "Có" : "Ẩn") },
     { title: "Hành động", key: "action", width: 120, render: (_: any, record: any) => (
       <Space>
         <Button icon={<EditOutlined />} onClick={() => handleEdit(record.bannerId)} />

@@ -9,7 +9,7 @@ export interface BannerFormValues {
   title: string;
   imageUrl?: string; // base64 or url
   displayOrder?: number;
-  isVisible?: boolean;
+  visible?: boolean;
   url?: string;
 }
 
@@ -24,28 +24,74 @@ export default function BannerForm({ mode, initialValues, onSubmit, onCancel }: 
   const [form] = Form.useForm();
   const [fileList, setFileList] = React.useState<UploadFile[]>([]);
 
-  useEffect(() => {
-    if (mode === "edit" && initialValues) {
-      form.setFieldsValue({
-        title: initialValues.title,
-        displayOrder: initialValues.displayOrder,
-        isVisible: initialValues.isVisible,
-        url: initialValues.url,
-      });
+  // useEffect(() => {
+  //   if (mode === "edit" && initialValues) {
+  //     form.setFieldsValue({
+  //       title: initialValues.title,
+  //       displayOrder: initialValues.displayOrder,
+  //       isVisible: initialValues.isVisible,
+  //       url: initialValues.url,
+  //     });
 
-      if (initialValues.imageUrl) {
-        setFileList([
-          {
-            uid: "-1",
-            name: "banner.jpg",
-            status: "done",
-            url: initialValues.imageUrl,
-          },
-        ]);
-      }
-    } else {
-      form.resetFields();
+  //     if (initialValues.imageUrl) {
+  //       setFileList([
+  //         {
+  //           uid: "-1",
+  //           name: "banner.jpg",
+  //           status: "done",
+  //           url: initialValues.imageUrl,
+  //         },
+  //       ]);
+  //     }
+  //   } else {
+  //     form.setFieldsValue({
+  //       title: "",
+  //       displayOrder: 0,
+  //       isVisible: true, // ⭐️ Đặt mặc định là "Hiển thị" ở đây
+  //       url: "",
+  //     });
+  //     setFileList([]);
+  //   }
+  // }, [mode, initialValues, form]);
+
+  useEffect(() => {
+    if (mode === "create") {
+      // 1. CHẾ ĐỘ TẠO MỚI
+      form.setFieldsValue({
+        title: "",
+        displayOrder: 0,
+        isVisible: true, // Mặc định là 'true'
+        url: "",
+      });
       setFileList([]);
+
+    } else if (mode === "edit") {
+      if (initialValues) {
+        form.setFieldsValue({
+          title: initialValues.title,
+          displayOrder: initialValues.displayOrder,
+          visible: initialValues.visible, // Lấy giá trị 'true' hoặc 'false' từ data
+          url: initialValues.url,
+        });
+
+        // Xử lý ảnh
+        if (initialValues.imageUrl) {
+          setFileList([
+            {
+              uid: "-1",
+              name: "banner.jpg",
+              status: "done",
+              url: initialValues.imageUrl,
+            },
+          ]);
+        } else {
+          setFileList([]);
+        }
+
+      } else {
+        form.resetFields(); 
+        setFileList([]);
+      }
     }
   }, [mode, initialValues, form]);
 
@@ -56,30 +102,6 @@ export default function BannerForm({ mode, initialValues, onSubmit, onCancel }: 
       reader.onload = () => resolve(reader.result as string);
       reader.onerror = (error) => reject(error);
     });
-
-  // const beforeUpload = async (file: File) => {
-  //   const isImage = file.type.startsWith("image/");
-  //   if (!isImage) return false;
-  //   const isLt5M = file.size / 1024 / 1024 < 5;
-  //   if (!isLt5M) return false;
-
-  //   try {
-  //     const base64 = await getBase64(file);
-  //     setFileList([
-  //       {
-  //         uid: String(Date.now()),
-  //         name: file.name,
-  //         status: "done",
-  //         url: base64,
-  //       },
-  //     ]);
-  //   } catch (e) {
-  //     // ignore
-  //   }
-
-  //   // Prevent auto upload
-  //   return false;
-  // };
 
   const beforeUpload = (file: File) => {
     const isImage = file.type.startsWith("image/");
@@ -126,8 +148,8 @@ export default function BannerForm({ mode, initialValues, onSubmit, onCancel }: 
         </Col>
 
         <Col span={8}>
-          <Form.Item label="Hiển thị" name="isVisible" valuePropName="checked">
-            <Switch defaultChecked />
+          <Form.Item label="Hiển thị" name="visible" valuePropName="checked">
+            <Switch />
           </Form.Item>
         </Col>
 
