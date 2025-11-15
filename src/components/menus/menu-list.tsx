@@ -75,4 +75,14 @@ export const MenuItems = [
     ),
     roles: ['ADMIN', 'STAFF']
   },
+  {
+    key: "/banners",
+    label: "Quản lý banner",
+    icon: (
+      <span style={{ display: 'inline-block', width: 20, height: 20 }}>
+        <Image src={ImageIcon.BannerIcon} alt="banner" width={20} height={20} />
+      </span>
+    ),
+    roles: ['ADMIN', 'STAFF']
+  },
 ];

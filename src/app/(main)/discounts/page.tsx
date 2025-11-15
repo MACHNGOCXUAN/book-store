@@ -28,6 +28,7 @@ import {
 
 // THÊM VÀO: Import Modal
 import ModalAddDiscount from "@/components/Model/model-add-discount"; // <-- Cập nhật đường dẫn này
+import { get } from "http";
 
 // ... (Interface DiscountDataType giữ nguyên) ...
 interface DiscountDataType {
@@ -58,6 +59,7 @@ export default function DiscountPage() {
 
   useEffect(() => {
     dispatch(getDiscountsFilter({}));
+    console.log(getDiscountsFilter({}));
   }, [dispatch]);
 
   const handlePageChange = (page: number, pageSize: number) => {
@@ -130,7 +132,7 @@ export default function DiscountPage() {
       key: "quantity",
       render: (quantity, record) => (
         <span>
-          {quantity - (record.maxQuantityCanUse || 0)}/{quantity}
+          {quantity || 0}/{record.maxQuantityCanUse}
         </span>
       ),
     },

@@ -2,6 +2,7 @@ import { configureStore } from '@reduxjs/toolkit'
 import authReducer from './slices/auth.slice'
 import userReducer from "./slices/user.slice"
 import productReducer from "./slices/product.slice"
+import bannerReducer from "./slices/banner.slice"
 import sessionReducer from "./slices/session.slice"
 import discountReducer from "./slices/discount.slice"
 import orderReducer from "./slices/order.slice"
@@ -13,6 +14,7 @@ export const makeStore = () => {
       auth: authReducer,
       user: userReducer,
       product: productReducer,
+      banner: bannerReducer,
       session: sessionReducer,
       discount: discountReducer,
       order: orderReducer,

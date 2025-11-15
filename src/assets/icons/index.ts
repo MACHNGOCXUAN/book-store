@@ -5,6 +5,7 @@ import OrderProductIcon from "@/assets/icons/order-product.png"
 import ProductIcon from "@/assets/icons/product.png"
 import StatisticalIcon from "@/assets/icons/statistical.png"
 import UserIcon from "@/assets/icons/user.png"
+import BannerIcon from "@/assets/icons/banner.png"
 
 export const ImageIcon = {
   DiscountIcon,
@@ -13,5 +14,6 @@ export const ImageIcon = {
   OrderProductIcon,
   ProductIcon,
   StatisticalIcon,
-  UserIcon
+  UserIcon,
+  BannerIcon,
 }

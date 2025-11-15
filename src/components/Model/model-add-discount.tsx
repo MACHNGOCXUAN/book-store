@@ -62,6 +62,7 @@ const ModalAddDiscount = ({ isModalOpen, setIsModalOpen }: any) => {
         })
       );
     } else {
+      payload.maxQuantityCanUse = payload.quantity;
       dispatch(createDiscount(payload));
     }
   };
