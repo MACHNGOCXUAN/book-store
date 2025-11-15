@@ -24,7 +24,8 @@ public class Banner {
     @Column(nullable = false, length = 255)
     private String title;
 
-    @Column(nullable = false, length = 500)
+    @Lob
+    @Column(nullable = false, columnDefinition = "MEDIUMTEXT")
     private String imageUrl;
 
     @Column(columnDefinition = "INT DEFAULT 0")
