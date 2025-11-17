@@ -31,4 +31,9 @@ public class ChatSessionServiceImpl implements ChatSessionService {
                     .orElseGet(() -> chatSessionRepository.save(chatSession));
         }
     }
+
+    @Override
+    public ChatSession findById(String id) {
+        return chatSessionRepository.findById(id).orElse(null);
+    }
 }

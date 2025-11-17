@@ -26,40 +26,25 @@ public class ChatController {
 
     @MessageMapping("/chat.send")
     public void sendMessage(@Payload MessageDTO messageDTO, Principal principal) {
-//        if (messageDTO.getSessionId() == null) {
-//            ChatSession chatSession = new ChatSession();
-//
-//            System.out.println("chat 1 2: " + messageDTO);
-//
-//            chatSession.setStaff(null);
-//            Customer customer = customerService.findCustomerById(messageDTO.getSenderId());
-//            chatSession.setCustomer(customer);
-//            chatSession.setActive(true);
-//            chatSession.setStartTime(LocalDateTime.now());
-//            chatSession.setLastMessageTime(LocalDateTime.now());
-//
-//            ChatSession savedChatSession = chatSessionService.save(chatSession);
-//            messageDTO.setSessionId(savedChatSession.getSessionId());
-//        }
 
         MessageDTO savedMessage = messageService.saveMessage(messageDTO);
 
-        // Gửi cho người nhận theo userId
         simpMessagingTemplate.convertAndSend(
                 "/topic/messages/" + messageDTO.getReceiverId(),
                 savedMessage
         );
 
-        // Gửi confirm cho sender
         simpMessagingTemplate.convertAndSend(
                 "/topic/messages/" + messageDTO.getSenderId(),
                 savedMessage
         );
+
+        simpMessagingTemplate.convertAndSend(
+                "/topic/session-refresh",
+                Map.of("action", "refresh", "timestamp", System.currentTimeMillis())
+        );
     }
 
-    /**
-     * User typing indicator
-     */
     @MessageMapping("/chat.typing")
     public void userTyping(@Payload Map<String, String> payload) {
         String receiverId = payload.get("receiverId");
