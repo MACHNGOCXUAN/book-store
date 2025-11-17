@@ -14,10 +14,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -143,5 +140,13 @@ public class MessageController {
         int exp = (int) (Math.log(bytes) / Math.log(1024));
         String pre = "KMGTPE".charAt(exp - 1) + "";
         return String.format("%.1f %sB", bytes / Math.pow(1024, exp), pre);
+    }
+
+    @GetMapping("/chat-session/user/{userId}")
+    private ResponseEntity<?>  getSessionCustomer(@PathVariable String userId) {
+        Optional<ChatSession> optionalChatSession = messageService.getChatSession(userId);
+        ChatSession chatSession = optionalChatSession.get();
+
+        return ResponseEntity.ok(Map.of("data", chatSession));
     }
 }

@@ -19,11 +19,12 @@ public class ChatSession {
     private Customer customer;
 
     @ManyToOne
-    @JoinColumn(name = "staff_id")
+    @JoinColumn(name = "staff_id", nullable = true)
     private Staff staff;
 
     private LocalDateTime startTime;
     private LocalDateTime lastMessageTime;
+    private String lastMessage;
     private boolean isActive;
 
     @PrePersist

@@ -1,6 +1,10 @@
 package iuh.fit.backend.controller;
 
 import iuh.fit.backend.dto.requests.MessageDTO;
+import iuh.fit.backend.model.ChatSession;
+import iuh.fit.backend.model.Customer;
+import iuh.fit.backend.service.ChatSessionService;
+import iuh.fit.backend.service.CustomerService;
 import iuh.fit.backend.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.*;
@@ -8,6 +12,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @Controller
@@ -15,30 +20,29 @@ import java.util.Map;
 public class ChatController {
 
     private final MessageService messageService;
+    private final ChatSessionService chatSessionService;
     private final SimpMessagingTemplate simpMessagingTemplate;
+    private final CustomerService customerService;
 
     @MessageMapping("/chat.send")
     public void sendMessage(@Payload MessageDTO messageDTO, Principal principal) {
-        System.out.println("xuan: " + principal);
-        // Lưu message vào DB
+//        if (messageDTO.getSessionId() == null) {
+//            ChatSession chatSession = new ChatSession();
+//
+//            System.out.println("chat 1 2: " + messageDTO);
+//
+//            chatSession.setStaff(null);
+//            Customer customer = customerService.findCustomerById(messageDTO.getSenderId());
+//            chatSession.setCustomer(customer);
+//            chatSession.setActive(true);
+//            chatSession.setStartTime(LocalDateTime.now());
+//            chatSession.setLastMessageTime(LocalDateTime.now());
+//
+//            ChatSession savedChatSession = chatSessionService.save(chatSession);
+//            messageDTO.setSessionId(savedChatSession.getSessionId());
+//        }
+
         MessageDTO savedMessage = messageService.saveMessage(messageDTO);
-
-//        System.out.println("receiver: /user/" + messageDTO.getReceiverId() + "/queue/messages");
-//        simpMessagingTemplate.convertAndSendToUser(
-//                messageDTO.getReceiverId(),
-//                "/queue/messages",
-//                savedMessage
-//        );
-//
-//        // Gửi cho SENDER (confirm)
-//        System.out.println("sender: /user/" + messageDTO.getSenderId() + "/queue/messages");
-//        simpMessagingTemplate.convertAndSendToUser(
-//                messageDTO.getSenderId(),
-//                "/queue/messages",
-//                savedMessage
-//        );
-//
-
 
         // Gửi cho người nhận theo userId
         simpMessagingTemplate.convertAndSend(
