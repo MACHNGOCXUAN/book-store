@@ -42,12 +42,15 @@ interface DiscountDataType {
   minPriceToApply: number;
   discountType: "ONE_TIME" | "MANY_TIME";
   maxQuantityCanUse: number;
+  isPublic: boolean;
+  redeemable: boolean;
+  redeemCost?: number;
+  minTierRequired?: "NEW_USER" | "REGULAR" | "VIP" | "DIAMOND";
 }
-
 
 export default function DiscountPage() {
   const [form] = Form.useForm();
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filters, setFilters] = useState<any>({});
 
@@ -92,7 +95,7 @@ export default function DiscountPage() {
   };
 
   const columns: TableProps<DiscountDataType>["columns"] = [
-     {
+    {
       title: "Tên mã",
       dataIndex: "name",
       key: "name",
@@ -102,9 +105,10 @@ export default function DiscountPage() {
       title: "Mô tả",
       dataIndex: "description",
       key: "description",
+      ellipsis: true,
     },
     {
-      title: "Loại giảm",
+      title: "Loại",
       dataIndex: "discountType",
       key: "discountType",
       render: (type) => (
@@ -114,10 +118,11 @@ export default function DiscountPage() {
       ),
     },
     {
-      title: "Giá trị giảm",
+      title: "Giảm",
       dataIndex: "percent",
       key: "percent",
-      render: (value) => <span>{value?.toLocaleString("vi-VN")}%</span>,
+      render: (value) => <span>{value}%</span>,
+      width: 80,
     },
     {
       title: "Giá tối thiểu",
@@ -125,7 +130,33 @@ export default function DiscountPage() {
       key: "minPriceToApply",
       render: (value) => <span>{value?.toLocaleString("vi-VN")}đ</span>,
     },
-    // ...
+    {
+      title: "Công khai",
+      dataIndex: "isPublic",
+      key: "isPublic",
+      render: (isPublic) => (
+        <Tag color={isPublic ? "blue" : "orange"}>
+          {isPublic ? "Công khai" : "Riêng tư"}
+        </Tag>
+      ),
+    },
+    {
+      title: "Đổi điểm",
+      dataIndex: "redeemable",
+      key: "redeemable",
+      render: (redeemable) => (
+        <Tag color={redeemable ? "purple" : "default"}>
+          {redeemable ? "Có" : "Không"}
+        </Tag>
+      ),
+    },
+    {
+      title: "Tier tối thiểu",
+      dataIndex: "minTierRequired",
+      key: "minTierRequired",
+      render: (tier) =>
+        tier ? <Tag color="cyan">{tier}</Tag> : <span>-</span>,
+    },
     {
       title: "Số lượng",
       dataIndex: "quantity",
@@ -139,16 +170,15 @@ export default function DiscountPage() {
     {
       title: "Thao tác",
       key: "action",
+      width: 80,
       render: (_, record) => (
-          <EditOutlined
-            style={{ color: "blue", cursor: "pointer" }}
-            onClick={() => handleEditDiscount(record.discountCodeId)}
-          />
+        <EditOutlined
+          style={{ color: "blue", cursor: "pointer", fontSize: "16px" }}
+          onClick={() => handleEditDiscount(record.discountCodeId)}
+        />
       ),
     },
-  ];
-
-  // ... (const items giữ nguyên) ...
+  ]; // ... (const items giữ nguyên) ...
   const items: CollapseProps["items"] = [
     {
       key: "1",
@@ -163,54 +193,53 @@ export default function DiscountPage() {
         >
           {/* ... (các Col, Form.Item) ... */}
           <Row gutter={16}>
-             <Col span={8}>
-               <Form.Item
-                 label="Tên mã"
-                 name="discountCode"
-                 rules={[{ required: false }]}
-               >
-                 <Input placeholder="Nhập tên mã giảm giá" />
-               </Form.Item>
-             </Col>
+            <Col span={8}>
+              <Form.Item
+                label="Tên mã"
+                name="discountCode"
+                rules={[{ required: false }]}
+              >
+                <Input placeholder="Nhập tên mã giảm giá" />
+              </Form.Item>
+            </Col>
 
-             <Col span={8}>
-               <Form.Item label="Loại giảm" name="type">
-                 <Select placeholder="Chọn loại giảm" allowClear>
-                   <Select.Option value="tat_ca">Tất cả</Select.Option>
-                   <Select.Option value="ONE_TIME">Một lần</Select.Option>
-                   <Select.Option value="MANY_TIME">Nhiều lần</Select.Option>
-                 </Select>
-               </Form.Item>
-             </Col>
+            <Col span={8}>
+              <Form.Item label="Loại giảm" name="type">
+                <Select placeholder="Chọn loại giảm" allowClear>
+                  <Select.Option value="tat_ca">Tất cả</Select.Option>
+                  <Select.Option value="ONE_TIME">Một lần</Select.Option>
+                  <Select.Option value="MANY_TIME">Nhiều lần</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
 
-             <Col span={8}>
-               <Form.Item
-                 label="Mô tả"
-                 name="description"
-                 rules={[{ required: false }]}
-               >
-                 <Input placeholder="Nhập mô tả" />
-               </Form.Item>
-             </Col>
+            <Col span={8}>
+              <Form.Item
+                label="Mô tả"
+                name="description"
+                rules={[{ required: false }]}
+              >
+                <Input placeholder="Nhập mô tả" />
+              </Form.Item>
+            </Col>
 
-             <Col span={24}>
-               <Form.Item>
-                 <div className="flex gap-5">
-                   <Button type="primary" htmlType="submit">
-                     Tìm kiếm
-                   </Button>
-                   <Button type="default" onClick={onReset}>
-                     Đặt lại
-                   </Button>
-                 </div>
-               </Form.Item>
-             </Col>
-           </Row>
+            <Col span={24}>
+              <Form.Item>
+                <div className="flex gap-5">
+                  <Button type="primary" htmlType="submit">
+                    Tìm kiếm
+                  </Button>
+                  <Button type="default" onClick={onReset}>
+                    Đặt lại
+                  </Button>
+                </div>
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       ),
     },
   ];
-
 
   return (
     <div className="boxpage">
@@ -219,11 +248,7 @@ export default function DiscountPage() {
         <h5 className="font-bold text-sm">Quản lý mã giảm giá</h5>
         <div>
           {/* SỬA ĐỔI: Thêm onClick */}
-          <Button
-            type="primary"
-            size="middle"
-            onClick={handleOpenAddModal}
-          >
+          <Button type="primary" size="middle" onClick={handleOpenAddModal}>
             Thêm mã giảm giá mới
           </Button>
         </div>
@@ -238,19 +263,20 @@ export default function DiscountPage() {
           rowKey="discountCodeId"
           pagination={{
             // ... (pagination config giữ nguyên) ...
-             showQuickJumper: false,
-             showSizeChanger: true,
-             pageSizeOptions: ["10", "20", "50", "100"],
-             current: pagination ? pagination.curPage : 1,
-             pageSize: pagination ? pagination.limitPage : 10,
-             total: pagination ? pagination.totalRows : (listDiscount?.length ?? 0),
-             onChange: (page, pageSize) => {
-               handlePageChange(page, pageSize);
-             },
+            showQuickJumper: false,
+            showSizeChanger: true,
+            pageSizeOptions: ["10", "20", "50", "100"],
+            current: pagination ? pagination.curPage : 1,
+            pageSize: pagination ? pagination.limitPage : 10,
+            total: pagination
+              ? pagination.totalRows
+              : listDiscount?.length ?? 0,
+            onChange: (page, pageSize) => {
+              handlePageChange(page, pageSize);
+            },
           }}
         />
       </div>
-
       {/* THÊM VÀO: Render Modal */}
       <ModalAddDiscount
         isModalOpen={isModalOpen}
