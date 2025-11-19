@@ -216,7 +216,7 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onOrderUpdated }) => {
   if (orders.length === 0) {
     return (
       <Card
-        bordered={false}
+        variant="borderless"
         style={{
           textAlign: "center",
           borderRadius: 8,
@@ -229,7 +229,7 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onOrderUpdated }) => {
           width={200}
           preview={false}
           src="https://deo.shopeemobile.com/shopee/shopee-pcmall-live-sg/5fafbb923393b712b96488590b8f781f.png"
-          fallback="https://via.placeholder.com/200x200?text=No+Orders"
+          fallback="https://placeholder.co/200x200?text=No+Orders"
         />
         <Title level={5} style={{ marginTop: 20, color: "#888" }}>
           Chưa có đơn hàng
@@ -249,7 +249,7 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onOrderUpdated }) => {
             boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
           }}
           bodyStyle={{ padding: "16px 24px" }}
-          bordered={false}
+          variant="borderless"
         >
           {/* Header đơn hàng */}
           <Row
@@ -303,7 +303,7 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onOrderUpdated }) => {
                       width={80}
                       height={80}
                       src={detail.book?.coverImage}
-                      fallback="https://via.placeholder.com/80"
+                      fallback="https://placeholder.co/80x80?text=No+Image"
                       preview={false}
                       style={{ borderRadius: 4, border: "1px solid #f0f0f0" }}
                     />
@@ -346,6 +346,29 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onOrderUpdated }) => {
               borderBottomRightRadius: 8,
             }}
           >
+            {/* Discount Information */}
+            {order.discountCode && (
+              <Row
+                justify="space-between"
+                align="middle"
+                style={{ marginBottom: 12 }}
+              >
+                <Space>
+                  <Text type="secondary">💚 Mã giảm giá:</Text>
+                  <Tag color="green">{order.discountCode.name}</Tag>
+                </Space>
+                <Text
+                  style={{ color: "#52c41a", fontSize: 14, fontWeight: 600 }}
+                >
+                  -
+                  {new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  }).format(order.discountCode.discountAmount)}
+                </Text>
+              </Row>
+            )}
+
             <Row justify="end" align="middle" style={{ marginBottom: 16 }}>
               <Space size="large">
                 <Text type="secondary">

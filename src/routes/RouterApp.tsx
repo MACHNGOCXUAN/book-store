@@ -10,6 +10,7 @@ import ChangePasswordPage from "../pages/account/ChangePasswordPage";
 import FavoritePage from "../pages/account/FavoritePage";
 import { OrdersPage } from "../pages/account/OrdersPage";
 import VoucherPage from "../pages/account/VoucherPage";
+import ExchangeVoucherPage from "../pages/account/ExchangeVoucherPage";
 import DetailPage from "../pages/DetailPage";
 import FilterCategory from "../pages/FilterCategory";
 import HomePage from "../pages/HomePage";
@@ -77,6 +78,10 @@ const router = createBrowserRouter([
           {
             path: "vouchers",
             element: <VoucherPage />,
+          },
+          {
+            path: "exchange-vouchers",
+            element: <ExchangeVoucherPage />,
           },
           {
             path: "favorites",

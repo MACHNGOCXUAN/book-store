@@ -17,7 +17,7 @@ export const store = configureStore({
     orders: ordersReducer,
     addresses: addressReducer,
     session: sessionReducer,
-    banner: bannerReducer
+    banner: bannerReducer,
   },
 });
 

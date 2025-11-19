@@ -1,78 +1,130 @@
 import { CopyOutlined, GiftOutlined } from "@ant-design/icons";
-import { Badge, Button, Card, Col, Empty, message, Row, Tabs } from "antd";
-import { useState } from "react";
+import {
+  Badge,
+  Button,
+  Card,
+  Col,
+  Empty,
+  message,
+  Row,
+  Tabs,
+  Spin,
+} from "antd";
+import { useState, useEffect } from "react";
+import { fetchWalletVouchers } from "../../services/loyaltyService";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import { getAllOrders } from "../../features/orders/ordersSlice";
+import type { WalletVoucher } from "../../types/Loyalty";
 
-interface VoucherItem {
-  id: string;
-  code: string;
-  title: string;
-  discount: string;
-  minOrder?: string;
-  expiryDate: string;
-  description?: string;
-  type: "freeship" | "discount" | "gift";
-  status: "available" | "used" | "expired";
-}
-
-interface VoucherProps {
-  vouchers?: VoucherItem[];
-}
-
-const VoucherPage = ({ vouchers }: VoucherProps) => {
+const VoucherPage = () => {
+  const dispatch = useAppDispatch();
+  const { orders } = useAppSelector((state) => state.orders);
   const [activeTab, setActiveTab] = useState("available");
+  const [walletVouchers, setWalletVouchers] = useState<WalletVoucher[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data
-  const mockVouchers: VoucherItem[] = vouchers || [
-    {
-      id: "1",
-      code: "FAHASA50K",
-      title: "Giảm 50.000đ",
-      discount: "50.000đ",
-      minOrder: "Đơn hàng từ 300.000đ",
-      expiryDate: "31/12/2025",
-      description: "Áp dụng cho tất cả sản phẩm",
-      type: "discount",
-      status: "available",
-    },
-    {
-      id: "2",
-      code: "FREESHIP30K",
-      title: "Freeship 30K",
-      discount: "30.000đ",
-      minOrder: "Đơn hàng từ 150.000đ",
-      expiryDate: "30/11/2025",
-      description: "Miễn phí vận chuyển",
-      type: "freeship",
-      status: "available",
-    },
-    {
-      id: "3",
-      code: "DISCOUNT20",
-      title: "Giảm 20%",
-      discount: "20%",
-      minOrder: "Đơn hàng từ 500.000đ",
-      expiryDate: "15/11/2025",
-      description: "Tối đa 100.000đ",
-      type: "discount",
-      status: "available",
-    },
-  ];
+  // Fetch orders để lấy discount codes đã dùng
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      console.log("📥 Fetching orders for voucher usage tracking...");
+      dispatch(getAllOrders({ page: 1, limit: 100 }));
+    }
+  }, [dispatch]);
+
+  useEffect(() => {
+    const loadVouchers = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem("access_token") || "";
+
+        if (!token) {
+          throw new Error("No token found");
+        }
+
+        // Fetch all vouchers từ wallet (available, used, expired)
+        let allVouchers = await fetchWalletVouchers(token);
+        console.log("📱 Loaded wallet vouchers:", allVouchers);
+
+        // ENHANCE: Thêm vouchers đã dùng từ order list nếu không có ở wallet
+        // (Để hiển thị "Đã sử dụng" tab)
+        const usedVouchersFromOrders = new Set<string>();
+        console.log(
+          "📦 Total orders loaded:",
+          Array.isArray(orders) ? orders.length : 0
+        );
+
+        if (Array.isArray(orders)) {
+          orders.forEach((order: any) => {
+            console.log("🔍 Order:", {
+              orderId: order.orderId,
+              status: order.status,
+              discountCode: order.discountCode,
+            });
+
+            if (order.discountCode?.discountCodeId) {
+              usedVouchersFromOrders.add(order.discountCode.discountCodeId);
+              console.log(
+                `✅ Mark as used from order: ${order.discountCode.discountCodeId}`
+              );
+            }
+          });
+        }
+
+        console.log(
+          "🎁 Used vouchers from orders:",
+          Array.from(usedVouchersFromOrders)
+        );
+
+        // Merge: Nếu voucher đã được dùng, set used: true
+        allVouchers = allVouchers.map((v) => ({
+          ...v,
+          used: v.used || usedVouchersFromOrders.has(v.discountCodeId),
+        }));
+
+        console.log("💾 Final vouchers with status:", allVouchers);
+        setWalletVouchers(allVouchers);
+      } catch (error) {
+        console.error("Error loading vouchers:", error);
+        if (!(error instanceof Error && error.message === "No token found")) {
+          message.error("Không thể tải danh sách voucher");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadVouchers();
+  }, [orders]);
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
     message.success("Đã copy mã voucher!");
   };
 
-  const getVouchersByStatus = (status: string) => {
-    return mockVouchers.filter((v) => v.status === status);
+  const getVouchersByStatus = (status: "AVAILABLE" | "USED" | "EXPIRED") => {
+    return walletVouchers.filter((v) => {
+      // Check if voucher is expired
+      const isExpired = new Date(v.expiryDate) < new Date();
+
+      if (status === "EXPIRED") return isExpired;
+      if (status === "USED") return v.used && !isExpired;
+      if (status === "AVAILABLE") return !v.used && !isExpired;
+      return false;
+    });
   };
 
-  const renderVoucherCard = (voucher: VoucherItem) => {
-    const isExpired = voucher.status === "expired";
-    const isUsed = voucher.status === "used";
+  const renderVoucherCard = (voucher: WalletVoucher) => {
+    const isExpired = new Date(voucher.expiryDate) < new Date();
+    const isUsed = voucher.used;
+    const discount = `${voucher.percent}%`;
+    const minOrder = voucher.minPriceToApply
+      ? `Đơn hàng từ ${voucher.minPriceToApply.toLocaleString()}đ`
+      : undefined;
+    const expiryDate = new Date(voucher.expiryDate).toLocaleDateString("vi-VN");
 
     return (
-      <Col xs={24} sm={12} lg={8} key={voucher.id}>
+      <Col xs={24} sm={12} lg={8} key={voucher.walletVoucherId}>
         <Card
           hoverable={!isExpired && !isUsed}
           style={{
@@ -108,11 +160,9 @@ const VoucherPage = ({ vouchers }: VoucherProps) => {
                     marginBottom: 4,
                   }}
                 >
-                  {voucher.discount}
+                  {discount}
                 </div>
-                <div style={{ fontSize: 12, opacity: 0.9 }}>
-                  {voucher.minOrder}
-                </div>
+                <div style={{ fontSize: 12, opacity: 0.9 }}>{minOrder}</div>
               </div>
               <GiftOutlined style={{ fontSize: 32, opacity: 0.3 }} />
             </div>
@@ -128,7 +178,7 @@ const VoucherPage = ({ vouchers }: VoucherProps) => {
                 marginBottom: 8,
               }}
             >
-              {voucher.title}
+              {voucher.name}
             </div>
 
             {voucher.description && (
@@ -163,13 +213,13 @@ const VoucherPage = ({ vouchers }: VoucherProps) => {
                   fontSize: 14,
                 }}
               >
-                {voucher.code}
+                {voucher.discountCodeId}
               </span>
               <Button
                 type="link"
                 icon={<CopyOutlined />}
                 size="small"
-                onClick={() => handleCopyCode(voucher.code)}
+                onClick={() => handleCopyCode(voucher.discountCodeId)}
                 style={{ color: "#C92127" }}
                 disabled={isExpired || isUsed}
               >
@@ -185,7 +235,7 @@ const VoucherPage = ({ vouchers }: VoucherProps) => {
                 textAlign: "center",
               }}
             >
-              HSD: {voucher.expiryDate}
+              HSD: {expiryDate}
             </div>
 
             {/* Status Badge */}
@@ -219,7 +269,7 @@ const VoucherPage = ({ vouchers }: VoucherProps) => {
         <span>
           Có thể sử dụng
           <Badge
-            count={getVouchersByStatus("available").length}
+            count={getVouchersByStatus("AVAILABLE").length}
             style={{
               marginLeft: 8,
               backgroundColor: "#C92127",
@@ -229,8 +279,8 @@ const VoucherPage = ({ vouchers }: VoucherProps) => {
       ),
       children: (
         <Row gutter={[16, 16]}>
-          {getVouchersByStatus("available").length > 0 ? (
-            getVouchersByStatus("available").map(renderVoucherCard)
+          {getVouchersByStatus("AVAILABLE").length > 0 ? (
+            getVouchersByStatus("AVAILABLE").map(renderVoucherCard)
           ) : (
             <Col span={24}>
               <Empty
@@ -247,30 +297,12 @@ const VoucherPage = ({ vouchers }: VoucherProps) => {
       label: "Đã sử dụng",
       children: (
         <Row gutter={[16, 16]}>
-          {getVouchersByStatus("used").length > 0 ? (
-            getVouchersByStatus("used").map(renderVoucherCard)
+          {getVouchersByStatus("USED").length > 0 ? (
+            getVouchersByStatus("USED").map(renderVoucherCard)
           ) : (
             <Col span={24}>
               <Empty
                 description="Chưa có voucher đã sử dụng"
-                style={{ padding: "40px 0" }}
-              />
-            </Col>
-          )}
-        </Row>
-      ),
-    },
-    {
-      key: "expired",
-      label: "Hết hạn",
-      children: (
-        <Row gutter={[16, 16]}>
-          {getVouchersByStatus("expired").length > 0 ? (
-            getVouchersByStatus("expired").map(renderVoucherCard)
-          ) : (
-            <Col span={24}>
-              <Empty
-                description="Không có voucher hết hạn"
                 style={{ padding: "40px 0" }}
               />
             </Col>
@@ -295,18 +327,30 @@ const VoucherPage = ({ vouchers }: VoucherProps) => {
           Ví Voucher
         </div>
       }
-      bordered={false}
+      variant="borderless"
       style={{
         borderRadius: 8,
         boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
       }}
     >
-      <Tabs
-        activeKey={activeTab}
-        onChange={setActiveTab}
-        items={tabItems}
-        style={{ marginTop: -8 }}
-      />
+      {loading ? (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            padding: "40px 0",
+          }}
+        >
+          <Spin />
+        </div>
+      ) : (
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={tabItems}
+          style={{ marginTop: -8 }}
+        />
+      )}
     </Card>
   );
 };

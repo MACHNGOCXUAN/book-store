@@ -19,7 +19,7 @@ export const OrdersPage = () => {
   const location = useLocation(); // Hook lấy URL hiện tại
   const dispatch = useAppDispatch();
   const { orders } = useAppSelector((state) => state.orders);
-  const [hoveredItem, setHoveredItem] = useState(null);
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
   useEffect(() => {
     dispatch(getAllOrders({ page: 1, limit: 100 }));
@@ -58,7 +58,7 @@ export const OrdersPage = () => {
     },
   ];
 
-  const getCountByStatus = (status) => {
+  const getCountByStatus = (status: string) => {
     return Array.isArray(orders)
       ? orders.filter((order) => order?.status === status).length
       : 0;

@@ -30,10 +30,11 @@ const AccountLayoutInner = () => {
   const getSelectedMenu = () => {
     const pathname = location.pathname;
     if (pathname === "/account" || pathname === "account") return "profile";
+    if (pathname.includes("exchange-vouchers")) return "exchange-vouchers";
+    if (pathname.includes("vouchers")) return "vouchers";
     if (pathname.includes("orders")) return "orders";
     if (pathname.includes("address")) return "address";
     if (pathname.includes("password")) return "change-password";
-    if (pathname.includes("vouchers")) return "vouchers";
     if (pathname.includes("favorites")) return "favorites";
     return "profile";
   };
@@ -53,6 +54,9 @@ const AccountLayoutInner = () => {
         break;
       case "vouchers":
         navigate("vouchers");
+        break;
+      case "exchange-vouchers":
+        navigate("exchange-vouchers");
         break;
       case "favorites":
         navigate("favorites");

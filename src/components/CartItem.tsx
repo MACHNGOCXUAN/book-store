@@ -97,7 +97,7 @@ export const CartItem: React.FC<CartItemProps> = ({
           border: "1px solid #f0f0f0",
           borderRadius: 4,
         }}
-        fallback="https://via.placeholder.com/100?text=Book" // Ảnh dự phòng
+        fallback="https://placeholder.co/100x100?text=No+Image" // Ảnh dự phòng
       />
 
       {/* Thông tin sách */}

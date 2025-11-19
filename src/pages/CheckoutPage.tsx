@@ -20,6 +20,7 @@ import { toast } from "react-toastify";
 import { Checkbox } from "antd";
 import { EditOutlined } from "@ant-design/icons";
 import { type CartItemType } from "../components/CartItem";
+import VoucherSelector from "../components/VoucherSelector";
 import momoIcon from "../components/icons/logo-momo.png";
 import vnpayIcon from "../components/icons/logo-vnpay.jpg";
 import type { Address } from "../types/Address";
@@ -54,6 +55,11 @@ const CheckoutPage: React.FC = () => {
     "COD"
   );
   const [discountCode, setDiscountCode] = useState<string>("");
+  const [isApplyingDiscountCode, setIsApplyingDiscountCode] = useState(false);
+  const [selectedVoucherId, setSelectedVoucherId] = useState<
+    string | undefined
+  >();
+  const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [showQRModal, setShowQRModal] = useState(false);
   const [currentOrderPayment, setCurrentOrderPayment] = useState<any>(null);
 
@@ -165,7 +171,63 @@ const CheckoutPage: React.FC = () => {
     0
   );
   const shipping = 20000;
-  const total = subtotal + shipping;
+  const total = subtotal + shipping - discountAmount;
+
+  // Xử lý áp dụng mã giảm giá text input
+  const handleApplyDiscountCode = async () => {
+    if (!discountCode.trim()) {
+      message.warning("Vui lòng nhập mã giảm giá!");
+      return;
+    }
+
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      message.error("Vui lòng đăng nhập!");
+      return;
+    }
+
+    setIsApplyingDiscountCode(true);
+    try {
+      // Get API URL from config
+      const API_URL =
+        import.meta.env.VITE_API_URL || "http://localhost:8080/api";
+
+      const response = await fetch(
+        `${API_URL}/discounts/apply-code?code=${encodeURIComponent(
+          discountCode.trim()
+        )}&cartTotal=${subtotal}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.error ||
+            errorData.message ||
+            `Lỗi ${response.status}: Không thể áp dụng mã giảm giá`
+        );
+      }
+
+      const data = await response.json();
+      setDiscountAmount(data.discountAmount || 0);
+      message.success(
+        `Áp dụng mã giảm giá thành công! Tiết kiệm ${(
+          data.discountAmount || 0
+        ).toLocaleString("vi-VN")}₫`
+      );
+      setDiscountCode(""); // Clear input sau khi áp dụng
+    } catch (error: any) {
+      message.error(error.message);
+    } finally {
+      setIsApplyingDiscountCode(false);
+    }
+  };
 
   // Xử lý thanh toán
   const handleCheckout = async () => {
@@ -180,7 +242,14 @@ const CheckoutPage: React.FC = () => {
 
     try {
       console.log("📋 Validating form...");
-      const values = await form.validateFields();
+      let values;
+      try {
+        values = await form.validateFields();
+      } catch (validationError: any) {
+        console.log("❌ Form validation failed:", validationError?.errorFields);
+        // Form validation errors are already shown by Ant Design
+        return;
+      }
       console.log("✅ Form validated:", values);
 
       // Kiểm tra giỏ hàng
@@ -198,9 +267,11 @@ const CheckoutPage: React.FC = () => {
         quantity: item.quantity,
       }));
 
+      // Gửi cả voucherId và discountCode nếu có
       const orderPayload = {
         customerId: authUser.userId,
-        discountCode: discountCode.trim() || null,
+        voucherId: selectedVoucherId || null,
+        discountCode: null, // Discount code đã được áp dụng trước, không cần gửi lại
         orderDetails,
       };
 
@@ -287,13 +358,13 @@ const CheckoutPage: React.FC = () => {
         console.log("❌ Order creation failed:", result);
         // Extract error message from rejected action
         const errorMessage =
-          result.payload ||
+          (typeof result.payload === "string" ? result.payload : null) ||
           orderError ||
           "Đặt hàng thất bại. Vui lòng thử lại!";
 
         console.error("📋 Error details:", errorMessage);
 
-        toast.error(errorMessage, {
+        toast.error(String(errorMessage), {
           position: "top-right",
           autoClose: 3000,
           hideProgressBar: false,
@@ -304,7 +375,11 @@ const CheckoutPage: React.FC = () => {
       }
     } catch (error: any) {
       console.error("❌ Exception in handleCheckout:", error);
-      toast.error(error.message || "Có lỗi xảy ra. Vui lòng thử lại!", {
+      const errorMsg =
+        error?.message ||
+        error?.toString?.() ||
+        "Có lỗi xảy ra. Vui lòng thử lại!";
+      toast.error(errorMsg, {
         position: "top-right",
         autoClose: 2000,
         hideProgressBar: false,
@@ -356,7 +431,7 @@ const CheckoutPage: React.FC = () => {
             borderRadius: 12,
             boxShadow: "0 4px 8px rgba(0,0,0,0.05)",
           }}
-          headStyle={{ borderBottom: "1px solid #f0f0f0" }}
+          styles={{ header: { borderBottom: "1px solid #f0f0f0" } }}
         >
           <Form layout="vertical" form={form}>
             <Row gutter={16}>
@@ -580,38 +655,82 @@ const CheckoutPage: React.FC = () => {
 
         {/* Mã khuyến mãi */}
         <Card
-          title="MÃ KHUYẾN MÃI"
+          title="MÃ KHUYẾN MÃI / VOUCHER"
           style={{
             margin: 24,
             borderRadius: 12,
             boxShadow: "0 4px 8px rgba(0,0,0,0.05)",
           }}
         >
-          <Row gutter={8} align="middle">
-            <Col flex="auto">
-              <Input
-                placeholder="Nhập mã khuyến mãi"
-                value={discountCode}
-                onChange={(e) => setDiscountCode(e.target.value)}
-                style={inputStyle}
-              />
-            </Col>
-            <Col>
-              <Button
-                style={{
-                  backgroundColor: "#CB3131",
-                  color: "white",
-                  border: "none",
-                  fontWeight: "bold",
-                  borderRadius: 8,
-                  height: 40,
-                }}
-                onClick={() => message.info("Chức năng đang phát triển")}
-              >
-                Áp dụng
-              </Button>
-            </Col>
-          </Row>
+          <div style={{ marginBottom: 16 }}>
+            <VoucherSelector
+              cartTotal={subtotal}
+              selectedVoucherId={selectedVoucherId}
+              onApplyVoucher={(voucherId, discount) => {
+                setSelectedVoucherId(voucherId);
+                setDiscountAmount(discount);
+                message.success(
+                  `Áp dụng voucher thành công! Tiết kiệm ${discount}₫`
+                );
+              }}
+            />
+          </div>
+
+          <Divider />
+
+          <div style={{ marginTop: 12 }}>
+            <Text
+              type="secondary"
+              style={{ fontSize: 12, display: "block", marginBottom: 8 }}
+            >
+              Hoặc nhập mã khuyến mãi trực tiếp:
+            </Text>
+            <Row gutter={8} align="middle">
+              <Col flex="auto">
+                <Input
+                  placeholder="Nhập mã khuyến mãi"
+                  value={discountCode}
+                  onChange={(e) => setDiscountCode(e.target.value)}
+                  disabled={isApplyingDiscountCode}
+                  style={inputStyle}
+                />
+              </Col>
+              <Col>
+                <Button
+                  style={{
+                    backgroundColor: "#CB3131",
+                    color: "white",
+                    border: "none",
+                    fontWeight: "bold",
+                    borderRadius: 8,
+                    height: 40,
+                  }}
+                  loading={isApplyingDiscountCode}
+                  disabled={!discountCode.trim() || isApplyingDiscountCode}
+                  onClick={handleApplyDiscountCode}
+                >
+                  Áp dụng
+                </Button>
+              </Col>
+            </Row>
+          </div>
+
+          {discountAmount > 0 && (
+            <div
+              style={{
+                marginTop: 12,
+                padding: "12px",
+                background: "#F0F5FF",
+                borderRadius: 6,
+                border: "1px solid #91caff",
+              }}
+            >
+              <Text style={{ color: "#1890ff" }}>
+                ✓ Giảm giá:{" "}
+                <strong>{discountAmount.toLocaleString("vi-VN")}₫</strong>
+              </Text>
+            </div>
+          )}
         </Card>
 
         {/* Kiểm tra đơn hàng */}
@@ -669,6 +788,22 @@ const CheckoutPage: React.FC = () => {
             <Text>Phí vận chuyển</Text>
             <Text>{shipping.toLocaleString("vi-VN")} ₫</Text>
           </div>
+          {discountAmount > 0 && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                color: "#52c41a",
+              }}
+            >
+              <Text style={{ color: "#52c41a" }}>
+                <strong>Giảm giá</strong>
+              </Text>
+              <Text strong style={{ color: "#52c41a" }}>
+                -{discountAmount.toLocaleString("vi-VN")} ₫
+              </Text>
+            </div>
+          )}
           <Divider />
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <Title level={4} style={{ margin: 0 }}>
@@ -734,9 +869,11 @@ const CheckoutPage: React.FC = () => {
           onCancel={() => setShowQRModal(false)}
           width={500}
           style={{ textAlign: "center" }}
-          bodyStyle={{
-            background: "linear-gradient(135deg, #fdfbfb 0%, #f4f4f9 100%)",
-            padding: "32px 24px",
+          styles={{
+            body: {
+              background: "linear-gradient(135deg, #fdfbfb 0%, #f4f4f9 100%)",
+              padding: "32px 24px",
+            },
           }}
           footer={[
             <Button

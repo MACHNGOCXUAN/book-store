@@ -174,7 +174,7 @@ const AddressManagement = () => {
           title={
             <div style={{ fontSize: 18, fontWeight: 600 }}>Địa chỉ của tôi</div>
           }
-          bordered={false}
+          variant="borderless"
           style={{
             borderRadius: 8,
             boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
@@ -264,7 +264,7 @@ const AddressManagement = () => {
             </Button>
           </div>
         }
-        bordered={false}
+        variant="borderless"
         style={{
           borderRadius: 8,
           boxShadow: "0 2px 8px rgba(0,0,0,0.1)",

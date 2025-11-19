@@ -14,6 +14,7 @@ import {
   Col,
   ConfigProvider,
   Form,
+  Image,
   Layout,
   Row,
   Space,
@@ -389,13 +390,17 @@ function DetailPage() {
                       }
                     />
 
-                    <img
+                    <Image
                       src={reduxBook.coverImage || "/placeholder.svg"}
                       alt={reduxBook.title}
                       style={{
                         width: "100%",
-                        height: "auto",
+                        height: "100%",
+                        objectFit: "cover",
                         borderRadius: "8px",
+                      }}
+                      preview={{
+                        mask: "Xem ảnh to",
                       }}
                     />
                   </Card>

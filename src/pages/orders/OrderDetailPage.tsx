@@ -394,14 +394,16 @@ export default function OrderDetailPage() {
               overflow: "hidden",
               background: "#ffffff",
             }}
-            bodyStyle={{ padding: 0 }}
-            headStyle={{
-              padding: 0,
-              border: "none",
-              borderRadius: "12px 12px 0 0",
-              overflow: "hidden",
-              minHeight: 0,
-              background: "transparent",
+            styles={{
+              body: { padding: 0 },
+              header: {
+                padding: 0,
+                border: "none",
+                borderRadius: "12px 12px 0 0",
+                overflow: "hidden",
+                minHeight: 0,
+                background: "transparent",
+              },
             }}
           >
             <div
@@ -434,7 +436,7 @@ export default function OrderDetailPage() {
                             height={90}
                             src={detail.book?.coverImage}
                             alt={detail.book?.title}
-                            fallback="https://via.placeholder.com/90"
+                            fallback="https://placeholder.co/90x90?text=No+Image"
                             style={{
                               objectFit: "cover",
                               borderRadius: 8,
@@ -649,6 +651,74 @@ export default function OrderDetailPage() {
                   </div>
                 </Col>
               </Row>
+
+              {/* Discount Code Information */}
+              {order.discountCode && (
+                <div
+                  style={{
+                    marginTop: 20,
+                    paddingTop: 16,
+                    borderTop: "2px dashed #ffadd2",
+                    background: "rgba(255,77,79,0.05)",
+                    padding: "12px 16px",
+                    borderRadius: 8,
+                  }}
+                >
+                  <div style={{ marginBottom: 12 }}>
+                    <Row justify="space-between">
+                      <Text style={{ fontSize: 13, color: "#8c8c8c" }}>
+                        Tạm tính:
+                      </Text>
+                      <Text style={{ fontSize: 13 }}>
+                        {currency(
+                          order.totalAmount +
+                            (order.discountCode.discountAmount || 0)
+                        )}
+                      </Text>
+                    </Row>
+                  </div>
+
+                  <div style={{ marginBottom: 8 }}>
+                    <Row justify="space-between" align="middle">
+                      <Space>
+                        <Text type="secondary" style={{ fontSize: 13 }}>
+                          💚 {order.discountCode.name}
+                        </Text>
+                        <Tag color="green" style={{ fontSize: 11 }}>
+                          -{order.discountCode.percent}%
+                        </Tag>
+                      </Space>
+                      <Text
+                        style={{
+                          color: "#52c41a",
+                          fontSize: 13,
+                          fontWeight: 600,
+                        }}
+                      >
+                        -{currency(order.discountCode.discountAmount || 0)}
+                      </Text>
+                    </Row>
+                  </div>
+
+                  <Divider style={{ margin: "8px 0" }} />
+
+                  <Row justify="space-between">
+                    <Text strong style={{ fontSize: 14, color: "#ff4d4f" }}>
+                      Thành tiền:
+                    </Text>
+                    <Text
+                      strong
+                      style={{
+                        fontSize: 14,
+                        color: "#ff4d4f",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {currency(order.totalAmount)}
+                    </Text>
+                  </Row>
+                </div>
+              )}
             </div>
           </Card>
 
@@ -680,14 +750,16 @@ export default function OrderDetailPage() {
                 📜 Lịch sử trạng thái
               </div>
             }
-            bodyStyle={{ padding: 0 }}
-            headStyle={{
-              padding: 0,
-              border: "none",
-              borderRadius: "12px 12px 0 0",
-              overflow: "hidden",
-              minHeight: 0,
-              background: "transparent",
+            styles={{
+              body: { padding: 0 },
+              header: {
+                padding: 0,
+                border: "none",
+                borderRadius: "12px 12px 0 0",
+                overflow: "hidden",
+                minHeight: 0,
+                background: "transparent",
+              },
             }}
           >
             <div
@@ -794,14 +866,16 @@ export default function OrderDetailPage() {
                 🚚 Thông tin giao hàng
               </div>
             }
-            bodyStyle={{ padding: "20px" }}
-            headStyle={{
-              padding: 0,
-              border: "none",
-              borderRadius: "12px 12px 0 0",
-              overflow: "hidden",
-              minHeight: 0,
-              background: "transparent",
+            styles={{
+              body: { padding: "20px" },
+              header: {
+                padding: 0,
+                border: "none",
+                borderRadius: "12px 12px 0 0",
+                overflow: "hidden",
+                minHeight: 0,
+                background: "transparent",
+              },
             }}
           >
             <div
@@ -968,14 +1042,16 @@ export default function OrderDetailPage() {
                 💰 Tổng tiền thanh toán
               </div>
             }
-            bodyStyle={{ padding: "32px 24px" }}
-            headStyle={{
-              padding: 0,
-              border: "none",
-              borderRadius: "12px 12px 0 0",
-              overflow: "hidden",
-              minHeight: 0,
-              background: "transparent",
+            styles={{
+              body: { padding: "32px 24px" },
+              header: {
+                padding: 0,
+                border: "none",
+                borderRadius: "12px 12px 0 0",
+                overflow: "hidden",
+                minHeight: 0,
+                background: "transparent",
+              },
             }}
           >
             <div style={{ textAlign: "center" }}>

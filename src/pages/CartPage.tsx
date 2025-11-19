@@ -12,6 +12,10 @@ import {
   Divider,
   Progress,
   Space,
+  Modal,
+  Drawer,
+  Tag,
+  message,
 } from "antd";
 import {
   GiftOutlined,
@@ -29,7 +33,7 @@ import {
 } from "../features/cart/cartSlice";
 import { useNavigate } from "react-router-dom";
 
-const { Title, Text, Link } = Typography;
+const { Title, Text } = Typography;
 
 // Hàm helper để định dạng tiền tệ - không làm tròn, giữ nguyên giá trị chính xác
 const formatCurrency = (amount: number) => {
@@ -49,6 +53,81 @@ export const CartPage = () => {
   const [selectedItemIds, setSelectedItemIds] = useState<(string | number)[]>(
     []
   );
+
+  // Modal & Drawer states
+  const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
+  const [isGiftDrawerOpen, setIsGiftDrawerOpen] = useState(false);
+  const [selectedGift, setSelectedGift] = useState<string | null>(null);
+
+  // Mock data untuk khuyến mãi
+  const mockPromos = [
+    {
+      id: "promo-1",
+      name: "Mã Giảm 10K - Toàn Sàn",
+      discount: "10,000₫",
+      minOrder: "130,000₫",
+      code: "XUAN2024",
+      description: "Giảm 10K cho đơn hàng từ 130K",
+      validity: "01/01 - 31/12/2024",
+      quantity: "Số lượng: 5000 mã",
+    },
+    {
+      id: "promo-2",
+      name: "Mã Giảm 20% - Sách Lập Trình",
+      discount: "Giảm 20%",
+      minOrder: "200,000₫",
+      code: "PROG2024",
+      description: "Giảm 20% cho sách lập trình từ 200K",
+      validity: "01/01 - 31/12/2024",
+      quantity: "Số lượng: 1000 mã",
+    },
+    {
+      id: "promo-3",
+      name: "Mã Giảm 5K - Đơn từ 50K",
+      discount: "5,000₫",
+      minOrder: "50,000₫",
+      code: "SUMMER2024",
+      description: "Giảm 5K cho đơn hàng từ 50K",
+      validity: "01/06 - 31/08/2024",
+      quantity: "Số lượng: 10000 mã",
+    },
+  ];
+
+  // Mock data cho quà tặng
+  const mockGifts = [
+    {
+      id: "gift-1",
+      name: "Combo Bút & Sổ Tay",
+      image: "📔",
+      minOrder: 200000,
+      description: "Tặng combo bút tặng kèm sổ tay khi mua từ 200K",
+      quantity: 50,
+    },
+    {
+      id: "gift-2",
+      name: "Tặng Bookmark Kim Loại",
+      image: "📌",
+      minOrder: 100000,
+      description: "Tặng 1 Bookmark kim loại hình sách khi mua từ 100K",
+      quantity: 200,
+    },
+    {
+      id: "gift-3",
+      name: "Tặng Túi Vải Bố",
+      image: "👜",
+      minOrder: 300000,
+      description: "Tặng túi vải bố cao cấp khi mua từ 300K",
+      quantity: 30,
+    },
+    {
+      id: "gift-4",
+      name: "Tặng Đèn LED Đọc Sách",
+      image: "💡",
+      minOrder: 500000,
+      description: "Tặng đèn LED đọc sách khi mua từ 500K",
+      quantity: 20,
+    },
+  ];
 
   const handleCheckout = () => {
     if (selectedItems.length === 0) return;
@@ -156,12 +235,45 @@ export const CartPage = () => {
   const promoThreshold = 130000;
   const amountToPromo = Math.max(0, promoThreshold - subtotal);
 
+  // Handle promo modal
+  const handlePromoClick = () => {
+    setIsPromoModalOpen(true);
+  };
+
+  // Handle gift drawer
+  const handleGiftClick = () => {
+    if (subtotal < 50000) {
+      message.warning("Cần mua từ 50K để có quà tặng");
+      return;
+    }
+    setIsGiftDrawerOpen(true);
+  };
+
+  // Handle select gift
+  const handleSelectGift = (giftId: string) => {
+    const gift = mockGifts.find((g) => g.id === giftId);
+    if (gift && subtotal < gift.minOrder) {
+      message.warning(
+        `Cần mua từ ${formatCurrency(gift.minOrder)} để chọn quà này`
+      );
+      return;
+    }
+    setSelectedGift(giftId);
+    message.success("Đã chọn quà tặng!");
+  };
+
+  // Handle copy promo code
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    message.success("Đã copy mã: " + code);
+  };
+
   return (
     <div style={{ background: "#f5f5f5", padding: "24px" }}>
       <Row gutter={[24, 24]} style={{ maxWidth: 1280, margin: "0 auto" }}>
         {/* === CỘT BÊN TRÁI (DANH SÁCH SẢN PHẨM) === */}
         <Col xs={24} lg={16}>
-          <Card bordered={false}>
+          <Card variant="borderless">
             <Title level={4}>GIỎ HÀNG ({totalItemsInCart} sản phẩm)</Title>
             <Divider />
 
@@ -224,9 +336,13 @@ export const CartPage = () => {
                   <TagOutlined style={{ color: "#0A68FF", marginRight: 8 }} />{" "}
                   KHUYẾN MÃI
                 </Text>
-                <Link>
+                <Button
+                  type="text"
+                  onClick={handlePromoClick}
+                  style={{ color: "#0A68FF" }}
+                >
                   Xem thêm <RightOutlined />
-                </Link>
+                </Button>
               </Flex>
               <Divider style={{ margin: "12px 0" }} />
               <Flex align="center" gap="middle">
@@ -265,10 +381,29 @@ export const CartPage = () => {
                   <GiftOutlined style={{ color: "#d70018", marginRight: 8 }} />{" "}
                   Nhận quà
                 </Text>
-                <Link>
+                <Button
+                  type="text"
+                  onClick={handleGiftClick}
+                  style={{ color: "#d70018" }}
+                >
                   Chọn quà <RightOutlined />
-                </Link>
+                </Button>
               </Flex>
+              {selectedGift && (
+                <div
+                  style={{
+                    marginTop: 12,
+                    padding: "8px 12px",
+                    background: "#fff7f0",
+                    borderRadius: 6,
+                  }}
+                >
+                  <Text type="success">
+                    ✓ Đã chọn quà tặng:{" "}
+                    {mockGifts.find((g) => g.id === selectedGift)?.name}
+                  </Text>
+                </div>
+              )}
             </Card>
 
             {/* Tóm tắt đơn hàng */}
@@ -313,6 +448,158 @@ export const CartPage = () => {
           </Space>
         </Col>
       </Row>
+
+      {/* PROMO MODAL */}
+      <Modal
+        title={
+          <div style={{ fontSize: 18, fontWeight: 600 }}>
+            <TagOutlined style={{ marginRight: 8, color: "#0A68FF" }} />
+            Danh Sách Khuyến Mãi
+          </div>
+        }
+        open={isPromoModalOpen}
+        onCancel={() => setIsPromoModalOpen(false)}
+        footer={null}
+        width={700}
+      >
+        <div style={{ maxHeight: "500px", overflowY: "auto" }}>
+          <Space direction="vertical" style={{ width: "100%" }} size="large">
+            {mockPromos.map((promo) => (
+              <Card
+                key={promo.id}
+                style={{ borderLeft: "4px solid #0A68FF", borderRadius: 8 }}
+              >
+                <Flex justify="space-between" align="flex-start" gap="middle">
+                  <div style={{ flex: 1 }}>
+                    <div style={{ marginBottom: 8 }}>
+                      <Text strong style={{ fontSize: 16 }}>
+                        {promo.name}
+                      </Text>
+                    </div>
+                    <div style={{ marginBottom: 8 }}>
+                      <Tag color="blue">{promo.discount}</Tag>
+                      <Text type="secondary" style={{ marginLeft: 8 }}>
+                        Đơn tối thiểu: {promo.minOrder}
+                      </Text>
+                    </div>
+                    <div style={{ marginBottom: 8 }}>
+                      <Text type="secondary">{promo.description}</Text>
+                    </div>
+                    <div style={{ marginBottom: 8 }}>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        📅 Hiệu lực: {promo.validity}
+                      </Text>
+                    </div>
+                    <div>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        {promo.quantity}
+                      </Text>
+                    </div>
+                  </div>
+                  <Button
+                    type="primary"
+                    onClick={() => handleCopyCode(promo.code)}
+                    style={{ background: "#0A68FF" }}
+                  >
+                    Copy: {promo.code}
+                  </Button>
+                </Flex>
+              </Card>
+            ))}
+          </Space>
+        </div>
+      </Modal>
+
+      {/* GIFT DRAWER */}
+      <Drawer
+        title={
+          <div style={{ fontSize: 18, fontWeight: 600 }}>
+            <GiftOutlined style={{ marginRight: 8, color: "#d70018" }} />
+            Chọn Quà Tặng
+          </div>
+        }
+        placement="right"
+        onClose={() => setIsGiftDrawerOpen(false)}
+        open={isGiftDrawerOpen}
+        width={450}
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+          <div
+            style={{
+              padding: "12px",
+              background: "#fff7f0",
+              borderRadius: 8,
+              marginBottom: 16,
+            }}
+          >
+            <Text strong style={{ color: "#d70018" }}>
+              💡 Mục Tiêu Đơn Hàng Của Bạn: {formatCurrency(subtotal)}
+            </Text>
+          </div>
+
+          {mockGifts.map((gift) => {
+            const canSelect = subtotal >= gift.minOrder;
+            return (
+              <Card
+                key={gift.id}
+                hoverable={canSelect}
+                style={{
+                  borderRadius: 8,
+                  opacity: canSelect ? 1 : 0.6,
+                  border:
+                    selectedGift === gift.id
+                      ? "2px solid #d70018"
+                      : "1px solid #f0f0f0",
+                  background:
+                    selectedGift === gift.id ? "#fff7f0" : "transparent",
+                }}
+                onClick={() => {
+                  if (canSelect) {
+                    handleSelectGift(gift.id);
+                  }
+                }}
+              >
+                <Flex gap="middle" align="flex-start">
+                  <div
+                    style={{
+                      fontSize: 40,
+                      width: 60,
+                      textAlign: "center",
+                    }}
+                  >
+                    {gift.image}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ marginBottom: 8 }}>
+                      <Text strong style={{ fontSize: 14 }}>
+                        {gift.name}
+                        {selectedGift === gift.id && (
+                          <Tag color="red" style={{ marginLeft: 8 }}>
+                            ✓ Đã chọn
+                          </Tag>
+                        )}
+                      </Text>
+                    </div>
+                    <div style={{ marginBottom: 8 }}>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        {gift.description}
+                      </Text>
+                    </div>
+                    <Flex justify="space-between" align="center">
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        Yêu cầu: từ {formatCurrency(gift.minOrder)}
+                      </Text>
+                      <Text type="secondary" style={{ fontSize: 11 }}>
+                        Còn: {gift.quantity}
+                      </Text>
+                    </Flex>
+                  </div>
+                </Flex>
+              </Card>
+            );
+          })}
+        </Space>
+      </Drawer>
     </div>
   );
 };

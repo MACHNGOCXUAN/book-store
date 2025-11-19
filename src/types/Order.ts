@@ -45,6 +45,13 @@ export interface PaymentQRCode {
   expiresAt: number;
 }
 
+export interface DiscountInfo {
+  discountCodeId: string;
+  name: string;
+  percent: number;
+  discountAmount: number;
+}
+
 export interface OrderResponse {
   orderId: string;
   orderDate: string;
@@ -53,6 +60,7 @@ export interface OrderResponse {
   customer?: OrderCustomer;
   payments?: PaymentInfo[];
   orderDetails?: any[];
+  discountCode?: DiscountInfo;
 }
 
 // Extended order types for fetching
@@ -105,4 +113,5 @@ export interface OrderDataType {
   payments: Payment[];
   orderDetails: OrderDetail[];
   orderHistories: OrderHistory[];
+  discountCode?: DiscountInfo;
 }

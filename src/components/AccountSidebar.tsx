@@ -3,10 +3,13 @@ import {
   ShoppingOutlined,
   UserOutlined,
   WalletOutlined,
+  GiftOutlined,
 } from "@ant-design/icons";
 import { Avatar, Badge, Menu } from "antd";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAppSelector } from "../store/hooks";
+import { fetchWalletVoucherStats } from "../services/loyaltyService";
+import "../styles/AccountSidebar.css";
 
 interface AccountSidebarProps {
   userLevel?: string;
@@ -21,6 +24,46 @@ const AccountSidebar = ({
   const authUser = useAppSelector((s) => s.auth.user);
   const isGoogleLogin = useAppSelector((s) => s.auth.isGoogleLogin);
   const [fullname] = useState(authUser?.fullName || "");
+  const [voucherCount, setVoucherCount] = useState(0);
+
+  // Load voucher count from stats
+  useEffect(() => {
+    const loadVoucherStats = async () => {
+      try {
+        const token = localStorage.getItem("access_token") || "";
+        if (token) {
+          const stats = await fetchWalletVoucherStats(token);
+          // Use availableVouchers count from stats
+          setVoucherCount(stats.availableVouchers || 0);
+          console.log("📊 Voucher stats loaded:", stats);
+        }
+      } catch (error) {
+        console.error("Error loading voucher stats:", error);
+        setVoucherCount(0);
+      }
+    };
+
+    loadVoucherStats();
+  }, []);
+
+  // Determine initial openKeys based on selectedKey
+  const getInitialOpenKeys = () => {
+    if (["profile", "address", "change-password"].includes(selectedKey)) {
+      return ["account-info"];
+    }
+    return [];
+  };
+
+  const [openKeys, setOpenKeys] = useState<string[]>(getInitialOpenKeys());
+
+  // Update openKeys when selectedKey changes from parent component
+  useEffect(() => {
+    if (["profile", "address", "change-password"].includes(selectedKey)) {
+      setOpenKeys(["account-info"]);
+    } else {
+      setOpenKeys([]);
+    }
+  }, [selectedKey]);
 
   const changePasswordItem = { key: "change-password", label: "Đổi mật khẩu" };
 
@@ -49,8 +92,21 @@ const AccountSidebar = ({
         <span>
           Ví voucher
           <Badge
-            count={12}
+            count={voucherCount}
             style={{ marginLeft: 8, backgroundColor: "#C92127" }}
+          />
+        </span>
+      ),
+    },
+    {
+      key: "exchange-vouchers",
+      icon: <GiftOutlined />,
+      label: (
+        <span>
+          Đổi voucher bằng điểm
+          <Badge
+            count="NEW"
+            style={{ marginLeft: 8, backgroundColor: "#FF9800" }}
           />
         </span>
       ),
@@ -67,6 +123,10 @@ const AccountSidebar = ({
     if (onMenuSelect) {
       onMenuSelect(key);
     }
+  };
+
+  const handleOpenChange = (keys: string[]) => {
+    setOpenKeys(keys);
   };
 
   return (
@@ -113,7 +173,8 @@ const AccountSidebar = ({
       <Menu
         mode="inline"
         selectedKeys={[selectedKey]}
-        defaultOpenKeys={["account-info"]}
+        openKeys={openKeys}
+        onOpenChange={handleOpenChange}
         items={menuItems}
         style={{
           border: "none",
