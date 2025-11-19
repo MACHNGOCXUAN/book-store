@@ -1,9 +1,12 @@
+import { useAppSelector } from "../hooks/hooks";
+import ChatEmail from "./ChatEmail";
 import ChatWithAI from "./ChatWithAI";
 import ChatWithEmployee from "./ChatWithStaff";
-import ChatEmail from "./ChatEmail";
 import IconMap from "./IconMap";
 
 const ChatStack = () => {
+  const isAuthenticated = useAppSelector((state) => !!state.auth.token);
+
   return (
     <div
       style={{
@@ -25,9 +28,11 @@ const ChatStack = () => {
       <div style={{ pointerEvents: "auto" }}>
         <IconMap />
       </div>
-      <div style={{ pointerEvents: "auto" }}>
-        <ChatWithEmployee />
-      </div>
+      {isAuthenticated && (
+        <div style={{ pointerEvents: "auto" }}>
+          <ChatWithEmployee />
+        </div>
+      )}
       <div style={{ pointerEvents: "auto" }}>
         <ChatWithAI />
       </div>
