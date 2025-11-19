@@ -26,10 +26,13 @@ class HttpClient {
     }
   }
 
-  private buildHeaders(options?: HttpOptions): Record<string, string> {
-    const headers: Record<string, string> = {
-      "Content-Type": options?.contentType || "application/json",
-    };
+  private buildHeaders(options?: HttpOptions, data?: any): Record<string, string> {
+    const headers: Record<string, string> = {};
+
+    // Nếu data là FormData, không set Content-Type (browser tự động set với boundary)
+    if (!(data instanceof FormData)) {
+      headers["Content-Type"] = options?.contentType || "application/json";
+    }
 
     // Thêm access token vào header nếu có
     const accessToken = this.getAccessToken();
@@ -53,11 +56,10 @@ class HttpClient {
   ) {
     const url = endpoint.startsWith("http")
       ? endpoint
-      : `${this.baseUrl}/api${
-          endpoint.startsWith("/") ? endpoint : `/${endpoint}`
-        }`;
+      : `${this.baseUrl}/api${endpoint.startsWith("/") ? endpoint : `/${endpoint}`
+      }`;
 
-    const headers = this.buildHeaders(options);
+    const headers = this.buildHeaders(options, data);
 
     const config: RequestInit = {
       method,
@@ -66,7 +68,8 @@ class HttpClient {
 
     // Thêm body cho POST, PUT, DELETE
     if (data && method !== "GET") {
-      config.body = JSON.stringify(data);
+      // Nếu data là FormData, gửi trực tiếp; nếu không thì JSON.stringify
+      config.body = data instanceof FormData ? data : JSON.stringify(data);
     }
 
     const response: Response = await fetch(url, config);

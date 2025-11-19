@@ -1,8 +1,8 @@
 "use client";
-import React, { useEffect } from "react";
-import { Form, Input, InputNumber, Button, Row, Col, Upload, Switch, message } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import type { UploadFile } from "antd";
+import { Button, Col, Form, Input, InputNumber, Row, Switch, Upload, message } from "antd";
+import React, { useEffect } from "react";
 
 export interface BannerFormValues {
   bannerId?: string;
@@ -60,7 +60,7 @@ export default function BannerForm({ mode, initialValues, onSubmit, onCancel }: 
       form.setFieldsValue({
         title: "",
         displayOrder: 0,
-        isVisible: true, // Mặc định là 'true'
+        visible: true, // Mặc định là 'true'
         url: "",
       });
       setFileList([]);
@@ -89,7 +89,7 @@ export default function BannerForm({ mode, initialValues, onSubmit, onCancel }: 
         }
 
       } else {
-        form.resetFields(); 
+        form.resetFields();
         setFileList([]);
       }
     }
@@ -109,7 +109,7 @@ export default function BannerForm({ mode, initialValues, onSubmit, onCancel }: 
       message.error("Chỉ được upload file hình ảnh!");
       return false;
     }
-    
+
     const isLt5M = file.size / 1024 / 1024 < 5;
     if (!isLt5M) {
       message.error("Hình ảnh phải nhỏ hơn 5MB!");
@@ -124,12 +124,26 @@ export default function BannerForm({ mode, initialValues, onSubmit, onCancel }: 
   };
 
   const handleFinish = (values: any) => {
-    const data: BannerFormValues = {
-      ...values,
-      imageUrl: fileList.length > 0 ? fileList[0].url || fileList[0].thumbUrl : "",
-    };
-    console.log("Dữ liệu Banner gửi đi:", data);
-    onSubmit(data);
+    // Tạo FormData để gửi file thực
+    const formData = new FormData();
+
+    formData.append("title", values.title || "");
+    formData.append("displayOrder", (values.displayOrder || 0).toString());
+    // Backend expects "isVisible" parameter name
+    formData.append("isVisible", (values.visible ? "true" : "false"));
+    if (values.url) formData.append("url", values.url);
+
+    // Thêm file ảnh nếu có
+    if (fileList.length > 0 && fileList[0].originFileObj) {
+      formData.append("image", fileList[0].originFileObj);
+    }
+
+    console.log("Dữ liệu Banner gửi đi (FormData):");
+    for (let [key, value] of formData.entries()) {
+      console.log(key, value);
+    }
+
+    onSubmit(formData as any);
   };
 
   return (

@@ -14,7 +14,7 @@ export interface BannerFormValues {
 // Thay đổi từ POST sang GET và sử dụng URLSearchParams, giống như getDiscountsFilter.
 // Giả định các tham số filter là: title, isVisible, url
 export const getFilterBanner = createAsyncThunk(
-  "banner/getFilterBanner",
+  "banners/getFilterBanner",
   async (data: any) => {
     const {
       page,
@@ -53,7 +53,7 @@ export const getFilterBanner = createAsyncThunk(
 );
 
 export const deleteBanner = createAsyncThunk(
-  "banner/deleteBanner",
+  "banners/deleteBanner",
   async (id: string) => {
     const response = await http.delete(`banners/${id}`);
     return response;
@@ -61,7 +61,7 @@ export const deleteBanner = createAsyncThunk(
 );
 
 export const createBanner = createAsyncThunk(
-  "banner/createBanner",
+  "banners/createBanner",
   async (data: BannerFormValues) => {
     const response = await http.post("banners", data);
     return response;
@@ -71,7 +71,7 @@ export const createBanner = createAsyncThunk(
 // --- ĐIỀU CHỈNH 2: getBannerId -> getBannerById ---
 // Đổi tên cho nhất quán với getDiscountById
 export const getBannerId = createAsyncThunk(
-  "banner/getBannerById",
+  "banners/getBannerById",
   async (id: string) => {
     const response = await http.get(`banners/${id}`);
     return response;
@@ -84,7 +84,7 @@ export const getBannerById = getBannerId;
 // --- ĐIỀU CHỈNH 3: updateBanner ---
 // Thay đổi signature để nhận { id, data } cho nhất quán
 export const updateBanner = createAsyncThunk(
-  "banner/updateBanner",
+  "banners/updateBanner",
   async (payload: any) => {
     let id: string;
     let data: BannerFormValues;
