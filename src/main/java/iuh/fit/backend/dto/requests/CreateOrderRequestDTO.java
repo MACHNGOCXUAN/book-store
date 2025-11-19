@@ -5,7 +5,8 @@ import java.util.List;
 @Data
 public class CreateOrderRequestDTO {
     private String customerId;
-    private String discountCode; // nullable
+    private String discountCode; // nullable - cho discount code text
+    private String voucherId; // nullable - cho voucher ID từ wallet
     private List<OrderDetailRequest> orderDetails;
 
     @Data

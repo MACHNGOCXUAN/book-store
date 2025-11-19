@@ -41,6 +41,23 @@ public class OrderServiceImpl implements OrderService {
         dto.setStatus(order.getStatus());
         dto.setTotalAmount(order.getTotalAmount());
 
+        // ---------------- Discount Code ----------------
+        if (order.getDiscountCode() != null) {
+            OrderFullDetailDTO.DiscountInfoDTO discountDTO = new OrderFullDetailDTO.DiscountInfoDTO();
+            discountDTO.setDiscountCodeId(order.getDiscountCode().getDiscountCodeId());
+            discountDTO.setName(order.getDiscountCode().getName());
+            discountDTO.setPercent((float) order.getDiscountCode().getPercent());
+            
+            // Calculate discount amount from subtotal
+            double subtotal = order.calcItemsTotal();
+            int discountPercent = order.getDiscountCode().getPercent();
+            double discountAmount = (subtotal * discountPercent) / 100.0;
+
+
+            discountDTO.setDiscountAmount(discountAmount);
+            dto.setDiscountCode(discountDTO);
+        }
+
         // ---------------- Customer ----------------
         if (order.getCustomer() != null) {
             OrderFullDetailDTO.CustomerInfoDTO customerDTO = new OrderFullDetailDTO.CustomerInfoDTO();
@@ -267,11 +284,20 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderStatus.PENDING);
         order.setCustomer(customer);
 
+        // Handle discount code (từ discountCode text)
         if (request.getDiscountCode() != null && !request.getDiscountCode().isBlank()) {
             DiscountCode discountCode = discountCodeRepository.findById(request.getDiscountCode())
                     .orElseThrow(() -> new RuntimeException("Invalid discount code"));
             validateDiscountCode(discountCode, order);
             order.setDiscountCode(discountCode);
+        }
+        
+        // Handle voucher từ wallet (voucherId)
+        if (request.getVoucherId() != null && !request.getVoucherId().isBlank()) {
+            DiscountCode voucherCode = discountCodeRepository.findById(request.getVoucherId())
+                    .orElseThrow(() -> new RuntimeException("Voucher không tồn tại"));
+            validateDiscountCode(voucherCode, order);
+            order.setDiscountCode(voucherCode);
         }
 
         // TẠO CÁC ORDER DETAILS
@@ -312,16 +338,13 @@ public class OrderServiceImpl implements OrderService {
         Order savedOrder = orderRepository.save(order);
 
         // TÍNH TOTAL
-        double subtotal = savedOrder.calcItemsTotal();
+        // Note: Discount subtraction là handled bởi Order.onWrite() callback
+        // nên không cần manually set totalAmount ở đây
+
         if (savedOrder.getDiscountCode() != null) {
             DiscountCode code = savedOrder.getDiscountCode();
-            double discountAmount = subtotal * code.getPercent() / 100.0;
-            savedOrder.setTotalAmount(subtotal - discountAmount);
-
             code.setQuantity(code.getQuantity() - 1);
             discountCodeRepository.save(code);
-        } else {
-            savedOrder.setTotalAmount(subtotal);
         }
 
         orderRepository.save(savedOrder);

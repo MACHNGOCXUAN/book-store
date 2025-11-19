@@ -1,18 +1,30 @@
 package iuh.fit.backend.service.impl;
 
+import iuh.fit.backend.model.Customer;
 import iuh.fit.backend.model.DiscountCode;
+import iuh.fit.backend.model.UserDiscountWallet;
 import iuh.fit.backend.model.enums.DiscountType;
+import iuh.fit.backend.model.enums.CustomerTier;
+import iuh.fit.backend.dto.responses.AvailableVoucherDTO;
 import iuh.fit.backend.repository.DiscountCodeRepository;
+import iuh.fit.backend.repository.UserDiscountWalletRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DiscountCodeServiceImpl implements iuh.fit.backend.service.DiscountCodeService {
     private final DiscountCodeRepository discountCodeRepository;
+    private final UserDiscountWalletRepository userDiscountWalletRepository;
+
     public List<DiscountCode> findAll() {
         return discountCodeRepository.findAll();
     }
@@ -53,5 +65,154 @@ public class DiscountCodeServiceImpl implements iuh.fit.backend.service.Discount
 
     public DiscountCode findById(String id){
         return discountCodeRepository.findById(id).orElse(null);
+    }
+
+    /* ========== New Methods for Loyalty+Tier System (Luồng C) ========== */
+
+    @Override
+    public List<AvailableVoucherDTO> getAvailableVouchersForCheckout(Customer customer, double cartTotal) {
+        log.info("Getting available vouchers for customer: {} with cart total: {}", customer.getUserId(), cartTotal);
+
+        List<AvailableVoucherDTO> result = new java.util.ArrayList<>();
+
+        // 1. Lấy PUBLIC voucher
+        List<DiscountCode> publicVouchers = discountCodeRepository.findByIsPublicTrue();
+        log.info("Found {} public vouchers", publicVouchers.size());
+        for (DiscountCode vc : publicVouchers) {
+            log.debug("Checking voucher: {} - isPublic: {}, quantity: {}, startDate: {}, endDate: {}", 
+                vc.getDiscountCodeId(), vc.getIsPublic(), vc.getQuantity(), vc.getStartDate(), vc.getEndDate());
+            if (isVoucherValid(vc, customer, cartTotal)) {
+                log.debug("Voucher {} is valid, adding to result", vc.getDiscountCodeId());
+                result.add(buildAvailableVoucherDTO(vc, customer, cartTotal, true, false));
+            } else {
+                log.debug("Voucher {} is NOT valid", vc.getDiscountCodeId());
+            }
+        }
+
+        // 2. Lấy voucher từ wallet của user (voucher đã đổi)
+        List<UserDiscountWallet> userWallets = userDiscountWalletRepository.findByCustomerAndUsedFalse(customer);
+        log.info("Found {} vouchers in user wallet", userWallets.size());
+        for (UserDiscountWallet wallet : userWallets) {
+            DiscountCode vc = wallet.getDiscountCode();
+            log.debug("Checking wallet voucher: {} - quantity: {}, startDate: {}, endDate: {}", 
+                vc.getDiscountCodeId(), vc.getQuantity(), vc.getStartDate(), vc.getEndDate());
+            if (isVoucherValid(vc, customer, cartTotal)) {
+                log.debug("Wallet voucher {} is valid, adding to result", vc.getDiscountCodeId());
+                result.add(buildAvailableVoucherDTO(vc, customer, cartTotal, false, true));
+            } else {
+                log.debug("Wallet voucher {} is NOT valid", vc.getDiscountCodeId());
+            }
+        }
+
+        log.info("Returning {} available vouchers", result.size());
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public double applyVoucher(Customer customer, String voucherId, double cartTotal) {
+        log.info("Applying voucher: {} for customer: {} with cart total: {}", voucherId, customer.getUserId(), cartTotal);
+
+        DiscountCode voucher = discountCodeRepository.findById(voucherId)
+                .orElseThrow(() -> new RuntimeException("Voucher không tồn tại"));
+
+        // Validate
+        if (!isVoucherValid(voucher, customer, cartTotal)) {
+            throw new RuntimeException("Voucher không hợp lệ hoặc không thể áp dụng");
+        }
+
+        // Check xem customer có sở hữu voucher không (nếu không public)
+        if (!voucher.getIsPublic()) {
+            Optional<UserDiscountWallet> wallet = userDiscountWalletRepository.findByCustomerAndDiscountCodeAndUsedFalse(customer, voucher);
+            if (wallet.isEmpty()) {
+                throw new RuntimeException("Bạn không sở hữu voucher này");
+            }
+            // Mark as used
+            UserDiscountWallet w = wallet.get();
+            w.markAsUsed(""); // orderId sẽ được set sau khi order được tạo
+            userDiscountWalletRepository.save(w);
+        } else {
+            // Public voucher - giảm quantity
+            if (voucher.getQuantity() > 0) {
+                voucher.setQuantity(voucher.getQuantity() - 1);
+                discountCodeRepository.save(voucher);
+            }
+        }
+
+        // Tính giảm giá
+        double discountAmount = (cartTotal * voucher.getPercent()) / 100;
+        log.info("Voucher applied successfully. Discount amount: {}", discountAmount);
+
+        return discountAmount;
+    }
+
+    /* ========== Helper Methods ========== */
+
+    private boolean isVoucherValid(DiscountCode voucher, Customer customer, double cartTotal) {
+        // Check 1: Quantity > 0
+        if (voucher.getQuantity() <= 0) {
+            log.debug("Voucher {} failed: quantity <= 0 ({})", voucher.getDiscountCodeId(), voucher.getQuantity());
+            return false;
+        }
+
+        // Check 2: Ngày hợp lệ
+        LocalDate today = LocalDate.now();
+        if (voucher.getStartDate().isAfter(today) || voucher.getEndDate().isBefore(today)) {
+            log.debug("Voucher {} failed: date invalid. today={}, startDate={}, endDate={}", 
+                voucher.getDiscountCodeId(), today, voucher.getStartDate(), voucher.getEndDate());
+            return false;
+        }
+
+        // Check 3: Min price to apply
+        if (cartTotal < voucher.getMinPriceToApply()) {
+            log.debug("Voucher {} failed: cartTotal ({}) < minPriceToApply ({})", 
+                voucher.getDiscountCodeId(), cartTotal, voucher.getMinPriceToApply());
+            return false;
+        }
+
+        // Check 4: Tier requirement
+        if (voucher.getMinTierRequired() != null) {
+            CustomerTier customerTier = customer.getTier() != null ? customer.getTier() : CustomerTier.NEW_USER;
+            if (!isTierSufficient(customerTier, voucher.getMinTierRequired())) {
+                log.debug("Voucher {} failed: tier insufficient. customerTier={}, minTierRequired={}", 
+                    voucher.getDiscountCodeId(), customerTier, voucher.getMinTierRequired());
+                return false;
+            }
+        }
+
+        log.debug("Voucher {} is valid", voucher.getDiscountCodeId());
+        return true;
+    }
+
+    private AvailableVoucherDTO buildAvailableVoucherDTO(DiscountCode voucher, Customer customer, double cartTotal, boolean isPublic, boolean isFromWallet) {
+        return AvailableVoucherDTO.builder()
+                .voucherId(voucher.getDiscountCodeId())
+                .voucherName(voucher.getName())
+                .discountPercent(voucher.getPercent())
+                .minPriceToApply(voucher.getMinPriceToApply())
+                .description(voucher.getDescription())
+                .isPublic(isPublic)
+                .isFromWallet(isFromWallet)
+                .isExclusive(voucher.getMinTierRequired() != null)
+                .voucherTag(buildVoucherTag(voucher, isPublic, isFromWallet))
+                .applicable(true)
+                .build();
+    }
+
+    private String buildVoucherTag(DiscountCode voucher, boolean isPublic, boolean isFromWallet) {
+        if (isFromWallet) {
+            return "⭐ Mã của bạn";
+        }
+        if (voucher.getMinTierRequired() == CustomerTier.DIAMOND) {
+            return "💎 Diamond";
+        }
+        if (voucher.getMinTierRequired() == CustomerTier.VIP) {
+            return "🎁 VIP";
+        }
+        return "🎉 Công khai";
+    }
+
+    private boolean isTierSufficient(CustomerTier current, CustomerTier required) {
+        return current.ordinal() >= required.ordinal();
     }
 }

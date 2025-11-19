@@ -2,6 +2,7 @@ package iuh.fit.backend.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import iuh.fit.backend.model.enums.CustomerTier;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -18,7 +19,12 @@ import java.util.Set;
 @DiscriminatorValue("CUSTOMER")
 public class Customer extends User {
 
-    private Integer loyaltyPoints;
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
+    private Integer loyaltyPoints = 0;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'NEW_USER'")
+    private CustomerTier tier = CustomerTier.NEW_USER;
 
     private Boolean hasStaff;
 
@@ -37,4 +43,43 @@ public class Customer extends User {
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     private List<Address> addresses = new ArrayList<>();
+
+    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    private List<UserDiscountWallet> discountWallet = new ArrayList<>();
+
+    /* ========== Loyalty Methods ========== */
+
+    /**
+     * Cộng điểm loyalty và tự động cập nhật tier
+     * @param points số điểm cần cộng
+     * @return true nếu tier thay đổi, false nếu tier không đổi
+     */
+    public boolean addLoyaltyPoints(int points) {
+        CustomerTier oldTier = this.tier;
+        this.loyaltyPoints = (this.loyaltyPoints == null ? 0 : this.loyaltyPoints) + points;
+        this.tier = CustomerTier.getTierByPoints(this.loyaltyPoints);
+        return !oldTier.equals(this.tier);
+    }
+
+    /**
+     * Trừ điểm loyalty (khi đổi voucher)
+     * @param points số điểm cần trừ
+     * @return true nếu có đủ điểm, false nếu không
+     */
+    public boolean redeemLoyaltyPoints(int points) {
+        if (this.loyaltyPoints == null) this.loyaltyPoints = 0;
+        if (this.loyaltyPoints >= points) {
+            this.loyaltyPoints -= points;
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Check xem có đủ điểm không
+     */
+    public boolean hasEnoughPoints(int requiredPoints) {
+        return (this.loyaltyPoints == null ? 0 : this.loyaltyPoints) >= requiredPoints;
+    }
 }

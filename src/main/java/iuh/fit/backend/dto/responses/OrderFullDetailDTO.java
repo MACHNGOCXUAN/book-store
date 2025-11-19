@@ -13,6 +13,9 @@ public class OrderFullDetailDTO {
     private OrderStatus status;
     private Double totalAmount;
 
+    // Discount Information
+    private DiscountInfoDTO discountCode;
+
     // Customer (User) Information
     private CustomerInfoDTO customer;
 
@@ -38,6 +41,14 @@ public class OrderFullDetailDTO {
         private String paymentId;
         private Float amount;
         private PaymentMethod method;
+    }
+
+    @Data
+    public static class DiscountInfoDTO {
+        private String discountCodeId;
+        private String name;
+        private Float percent;
+        private Double discountAmount;
     }
 
     @Data

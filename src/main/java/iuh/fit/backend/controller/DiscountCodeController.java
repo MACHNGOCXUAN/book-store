@@ -1,34 +1,57 @@
 package iuh.fit.backend.controller;
 
 import iuh.fit.backend.model.Book;
+import iuh.fit.backend.model.Customer;
 import iuh.fit.backend.model.DiscountCode;
 import iuh.fit.backend.model.enums.DiscountType;
+import iuh.fit.backend.dto.responses.AvailableVoucherDTO;
 import iuh.fit.backend.service.DiscountCodeService;
+import iuh.fit.backend.repository.CustomerRepository;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/discounts")
 @RequiredArgsConstructor
+@Slf4j
+@Tag(name = "Discount", description = "API quản lý mã giảm giá")
 public class DiscountCodeController {
     private final DiscountCodeService discountCodeService;
-
-//    @GetMapping
-//    public ResponseEntity<List<DiscountCode>> getAllDiscountCodes() {
-//        System.out.println(discountCodeService.findAll());
-//        return ResponseEntity.ok(discountCodeService.findAll());
-//    }
+    private final CustomerRepository customerRepository;
 
     @GetMapping
-    public ResponseEntity<List<DiscountCode>> filterDiscountCodes(@RequestParam(name = "discountCode", required = false) String discountCode,
-                                                                  @RequestParam(name = "type", required = false) DiscountType type,
-                                                                  @RequestParam(name = "description", required = false) String description) {
-        System.out.println(discountCodeService.filterDiscountCode(discountCode, type, description));
-        return ResponseEntity.ok(discountCodeService.filterDiscountCode(discountCode, type, description));
+    public ResponseEntity<?> filterDiscountCodes(
+            @RequestParam(name = "discountCode", required = false) String discountCode,
+            @RequestParam(name = "type", required = false) DiscountType type,
+            @RequestParam(name = "description", required = false) String description,
+            @RequestParam(name = "page", required = false, defaultValue = "0") int page,
+            @RequestParam(name = "size", required = false, defaultValue = "10") int size) {
+        
+        List<DiscountCode> discounts = discountCodeService.filterDiscountCode(discountCode, type, description);
+        
+        // Wrap response với Map để serialization đúng
+        Map<String, Object> response = new HashMap<>();
+        response.put("data", discounts);
+        
+        Map<String, Integer> paging = new HashMap<>();
+        paging.put("curPage", page + 1);
+        paging.put("limitPage", size);
+        paging.put("totalRows", discounts.size());
+        paging.put("totalPage", (int) Math.ceil((double) discounts.size() / size));
+        response.put("paging", paging);
+        
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping
@@ -58,4 +81,57 @@ public class DiscountCodeController {
         return ResponseEntity.ok(updatedDiscount);
     }
 
+    /* ========== Luồng C - Available Vouchers for Checkout ========== */
+
+    /**
+     * Lấy danh sách voucher có thể áp dụng
+     * Được gọi từ CART/CHECKOUT page
+     */
+    @GetMapping("/available")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    @Operation(summary = "Lấy danh sách voucher có thể áp dụng cho giỏ hàng")
+    public ResponseEntity<List<AvailableVoucherDTO>> getAvailableVouchers(
+            @RequestParam double cartTotal,
+            Authentication auth) {
+        log.info("Getting available vouchers for user: {} with cart total: {}", auth.getName(), cartTotal);
+
+        Customer customer = customerRepository.findByUserId(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        List<AvailableVoucherDTO> vouchers = discountCodeService.getAvailableVouchersForCheckout(customer, cartTotal);
+        return ResponseEntity.ok(vouchers);
+    }
+
+    /**
+     * Áp dụng voucher và tính giảm giá
+     * Được gọi từ CHECKOUT page trước khi confirm order
+     */
+    @PostMapping("/apply")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    @Operation(summary = "Áp dụng voucher vào đơn hàng")
+    public ResponseEntity<?> applyVoucher(
+            @RequestParam String voucherId,
+            @RequestParam double cartTotal,
+            Authentication auth) {
+        log.info("Applying voucher: {} for user: {} with cart total: {}", voucherId, auth.getName(), cartTotal);
+
+        Customer customer = customerRepository.findByUserId(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        try {
+            double discountAmount = discountCodeService.applyVoucher(customer, voucherId, cartTotal);
+            final double discount = discountAmount;
+            return ResponseEntity.ok(new Object() {
+                public String voucherId_ret = voucherId;
+                public double discountAmount = discount;
+                public double finalTotal = cartTotal - discount;
+                public String message = "✓ Áp dụng mã giảm giá thành công";
+            });
+        } catch (RuntimeException e) {
+            log.error("Apply voucher failed: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(new Object() {
+                public String error = e.getMessage();
+            });
+        }
+    }
 }
