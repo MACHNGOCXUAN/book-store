@@ -14,4 +14,5 @@ public interface BannerService {
     Banner findById(String id);
 
     List<Banner> findAllVisibleAndSorted();
+
 }
