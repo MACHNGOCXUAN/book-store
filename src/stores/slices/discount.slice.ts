@@ -6,13 +6,7 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 export const getDiscountsFilter = createAsyncThunk(
   "discount/filterDiscountCodes",
   async (data: any) => {
-    const {
-      page, 
-      limit, 
-      discountCode, 
-      type, 
-      description,
-    } = data;
+    const { page, limit, discountCode, type, description } = data;
     console.log("Filter data received:", data);
     const params = new URLSearchParams();
 
@@ -22,7 +16,6 @@ export const getDiscountsFilter = createAsyncThunk(
     if (limit) {
       params.append("size", limit.toString());
     }
-
 
     if (discountCode) {
       params.append("discountCode", discountCode);
@@ -64,7 +57,6 @@ export const updateDiscount = createAsyncThunk(
   }
 );
 
-
 const pagination = {
   curPage: 1,
   limitPage: 10,
@@ -77,7 +69,7 @@ type initialStatetype = {
   listDiscount: any[];
   pagination: any;
   message?: any;
-  discount?: any; 
+  discount?: any;
 };
 
 const initialState: initialStatetype = {
@@ -95,6 +87,9 @@ export const discountSlice = createSlice({
     resetMessage: (state) => {
       state.message = undefined;
     },
+    resetDiscount: (state) => {
+      state.discount = undefined;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -106,8 +101,7 @@ export const discountSlice = createSlice({
         if (Array.isArray(action.payload)) {
           state.listDiscount = action.payload;
           state.pagination = pagination;
-        }
-        else {
+        } else {
           state.listDiscount = action.payload.data || [];
           state.pagination = action.payload.paging || pagination;
         }
@@ -172,4 +166,4 @@ export const discountSlice = createSlice({
 });
 
 export default discountSlice.reducer;
-export const { resetMessage } = discountSlice.actions;
+export const { resetMessage, resetDiscount } = discountSlice.actions;
