@@ -175,13 +175,7 @@ const ProductBestSaler = () => {
                     booksWeek
                       .filter((book) => book.stock > 0)
                       .map((book) => (
-                        <div
-                          key={book.bookId}
-                          style={{
-                            minWidth: 200,
-                            flex: "0 0 auto",
-                          }}
-                        >
+                        <div key={book.bookId}>
                           <ProductCard book={book} />
                         </div>
                       ))}
@@ -189,13 +183,7 @@ const ProductBestSaler = () => {
                     booksMonth
                       .filter((book) => book.stock > 0)
                       .map((book) => (
-                        <div
-                          key={book.bookId}
-                          style={{
-                            minWidth: 200,
-                            flex: "0 0 auto",
-                          }}
-                        >
+                        <div key={book.bookId}>
                           <ProductCard book={book} />
                         </div>
                       ))}
@@ -203,13 +191,7 @@ const ProductBestSaler = () => {
                     booksYear
                       .filter((book) => book.stock > 0)
                       .map((book) => (
-                        <div
-                          key={book.bookId}
-                          style={{
-                            minWidth: 200,
-                            flex: "0 0 auto",
-                          }}
-                        >
+                        <div key={book.bookId}>
                           <ProductCard book={book} />
                         </div>
                       ))}
