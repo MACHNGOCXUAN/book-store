@@ -2,10 +2,13 @@ package iuh.fit.backend.controller;
 
 import iuh.fit.backend.model.Banner;
 import iuh.fit.backend.service.BannerService;
+import iuh.fit.backend.service.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.List;
 
@@ -14,6 +17,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BannerController {
     private final BannerService bannerService;
+    private final CloudinaryService cloudinaryService;
 
 
     @GetMapping
@@ -34,9 +38,26 @@ public class BannerController {
     }
 
 
-    @PostMapping
-    public ResponseEntity<Banner> createBanner(@RequestBody Banner banner) {
-        // ID của banner được tạo tự động bằng UUID, không cần gán thủ công
+    @PostMapping(consumes = {"multipart/form-data"})
+    public ResponseEntity<Banner> createBanner(
+            @RequestParam("title") String title,
+            @RequestParam(value = "displayOrder", defaultValue = "0") int displayOrder,
+            @RequestParam(value = "isVisible", defaultValue = "false") boolean isVisible,
+            @RequestParam(value = "url", required = false) String url,
+            @RequestParam(value = "image", required = false) MultipartFile image) throws IOException {
+
+        Banner banner = new Banner();
+        banner.setTitle(title);
+        banner.setDisplayOrder(displayOrder);
+        banner.setVisible(isVisible);
+        banner.setUrl(url);
+
+        // Upload ảnh lên Cloudinary nếu có
+        if (image != null && !image.isEmpty()) {
+            String imageUrl = cloudinaryService.uploadImage(image);
+            banner.setImageUrl(imageUrl);
+        }
+
         Banner savedBanner = bannerService.save(banner);
         return ResponseEntity.created(URI.create("/api/banners/" + savedBanner.getBannerId()))
                 .body(savedBanner);
@@ -53,16 +74,34 @@ public class BannerController {
         }
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Banner> updateBanner(@PathVariable String id, @RequestBody Banner banner) {
+    @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
+    public ResponseEntity<Banner> updateBanner(
+            @PathVariable String id,
+            @RequestParam(value = "title", required = false) String title,
+            @RequestParam(value = "displayOrder", required = false) Integer displayOrder,
+            @RequestParam(value = "isVisible", required = false) Boolean isVisible,
+            @RequestParam(value = "url", required = false) String url,
+            @RequestParam(value = "image", required = false) MultipartFile image) throws IOException {
+
         // Kiểm tra xem banner có tồn tại không
-        if (bannerService.findById(id) == null) {
+        Banner existingBanner = bannerService.findById(id);
+        if (existingBanner == null) {
             return ResponseEntity.notFound().build();
         }
 
-        // Đảm bảo ID trong URL được gán vào đối tượng trước khi lưu
-        banner.setBannerId(id);
-        Banner updatedBanner = bannerService.save(banner);
+        // Cập nhật các trường nếu có
+        if (title != null) existingBanner.setTitle(title);
+        if (displayOrder != null) existingBanner.setDisplayOrder(displayOrder);
+        if (isVisible != null) existingBanner.setVisible(isVisible);
+        if (url != null) existingBanner.setUrl(url);
+
+        // Upload ảnh mới lên Cloudinary nếu có
+        if (image != null && !image.isEmpty()) {
+            String imageUrl = cloudinaryService.uploadImage(image);
+            existingBanner.setImageUrl(imageUrl);
+        }
+
+        Banner updatedBanner = bannerService.save(existingBanner);
         return ResponseEntity.ok(updatedBanner);
     }
 }

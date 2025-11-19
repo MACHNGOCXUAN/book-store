@@ -28,6 +28,7 @@ public class ChatAIServiceImpl implements iuh.fit.backend.service.ChatAIService 
     @Override
     public String askGemini(String message) {
         System.out.println("📝 User: " + message);
+        System.out.println("🔑 API Key exists: " + (apiKey != null && !apiKey.isEmpty()));
         
         // Thêm system instruction cho AI
         String systemPrompt = "Bạn là AI tư vấn bán sách. Trả lời ngắn gọn, đúng trọng tâm.";
@@ -41,9 +42,12 @@ public class ChatAIServiceImpl implements iuh.fit.backend.service.ChatAIService 
         );
 
         try {
+            String requestUrl = "/v1beta/models/gemini-2.5-flash:generateContent";
+            System.out.println("🔗 Calling: " + requestUrl);
+            
             Map<String, Object> response = webClient.post()
                     .uri(uriBuilder -> uriBuilder
-                            .path("/v1beta/models/gemini-2.5-flash:generateContent")
+                            .path(requestUrl)
                             .queryParam("key", apiKey)
                             .build())
                     .contentType(MediaType.APPLICATION_JSON)
@@ -83,9 +87,16 @@ public class ChatAIServiceImpl implements iuh.fit.backend.service.ChatAIService 
             
         } catch (WebClientResponseException e) {
             System.err.println("❌ Gemini API Error " + e.getStatusCode());
-            return "⚠️ Lỗi từ Gemini API: " + e.getStatusCode();
+            System.err.println("Response body: " + e.getResponseBodyAsString());
+            String errorDetail = e.getResponseBodyAsString();
+            if (errorDetail != null && errorDetail.contains("API key not valid")) {
+                return "⚠️ API Key không hợp lệ. Vui lòng cập nhật API key mới tại https://aistudio.google.com/apikey";
+            }
+            return "⚠️ Lỗi từ Gemini API (" + e.getStatusCode() + "): " + errorDetail;
             
         } catch (Exception e) {
+            System.err.println("❌ Lỗi hệ thống: " + e.getClass().getName());
+            System.err.println("Message: " + e.getMessage());
             e.printStackTrace();
             return "❌ Lỗi hệ thống: " + e.getMessage();
         }
