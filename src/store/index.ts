@@ -1,10 +1,11 @@
 import { configureStore } from "@reduxjs/toolkit";
-import bookReducer from "../features/books/bookSlice";
-import authReducer from "../features/auth/authSlice";
-import cartReducer from "../features/cart/cartSlice";
-import { reviewReducer } from "../features/reviews";
-import ordersReducer from "../features/orders/ordersSlice";
 import addressReducer from "../features/addresses/addressSlice";
+import authReducer from "../features/auth/authSlice";
+import bannerReducer from "../features/banner/bannerSlice";
+import bookReducer from "../features/books/bookSlice";
+import cartReducer from "../features/cart/cartSlice";
+import ordersReducer from "../features/orders/ordersSlice";
+import { reviewReducer } from "../features/reviews";
 import sessionReducer from "../features/session/session.slice";
 
 export const store = configureStore({
@@ -15,7 +16,8 @@ export const store = configureStore({
     reviews: reviewReducer,
     orders: ordersReducer,
     addresses: addressReducer,
-    session: sessionReducer
+    session: sessionReducer,
+    banner: bannerReducer
   },
 });
 

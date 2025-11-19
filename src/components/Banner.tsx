@@ -1,11 +1,7 @@
 import { Col, Row } from 'antd'
 import { useEffect, useState } from 'react'
-
-// Import banner images
-import banner1 from '../assets/paner/25_840x320.png'
-import banner2 from '../assets/paner/SBOOKS10_KC_Resize_840x320.jppg.webp'
-import banner3 from '../assets/paner/TrangHalloween10_Resize840x320.jpg'
-import banner4 from '../assets/paner/Vang_MCBooks_Mainbanner840x320_fix.jpg'
+import { fetchVisibleBanners } from '../features/banner/bannerSlice'
+import { useAppDispatch, useAppSelector } from '../hooks/hooks'
 
 // Import mini banner images
 import miniBanner1 from '../assets/paner_mini/chienthannguvan_310x210_1.jpg'
@@ -13,7 +9,6 @@ import miniBanner2 from '../assets/paner_mini/NgoaiVanT10_Resize_310x210_1.jpg'
 import miniBanner3 from '../assets/paner_mini/trangphunu_310x210.jpg'
 import miniBanner4 from '../assets/paner_mini/Vang_MCBooks_Resize_310x210.jpg'
 
-const bannerImages = [banner1, banner2, banner3, banner4]
 const miniBannerImages = [
     { img: miniBanner1, alt: 'Chiến thần ngữ văn' },
     { img: miniBanner2, alt: 'Ngoại văn T10' },
@@ -22,15 +17,27 @@ const miniBannerImages = [
 ]
 
 const Banner = () => {
+    const dispatch = useAppDispatch()
+    const { banners, loading } = useAppSelector(state => state.banner)
     const [currentBanner, setCurrentBanner] = useState(0)
 
+    // Lấy data từ API khi component mount
     useEffect(() => {
+        dispatch(fetchVisibleBanners())
+    }, [dispatch])
+
+    // Tạo mảng bannerImages từ Redux state
+    const bannerImages = banners.map(banner => banner.imageUrl)
+
+    useEffect(() => {
+        if (bannerImages.length === 0) return
+
         const interval = setInterval(() => {
             setCurrentBanner((prev) => (prev + 1) % bannerImages.length)
         }, 6000) // Change image every 6 seconds
 
         return () => clearInterval(interval)
-    }, [])
+    }, [bannerImages.length])
 
     return (
         <>
@@ -50,57 +57,86 @@ const Banner = () => {
                             height: '320px',
                             borderRadius: '8px',
                             overflow: 'hidden',
+                            background: loading ? '#e0e0e0' : 'transparent',
                         }}
                     >
-                        {bannerImages.map((image, index) => (
+                        {loading ? (
                             <div
-                                key={index}
                                 style={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    width: '100%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
                                     height: '100%',
-                                    opacity: currentBanner === index ? 1 : 0,
-                                    transition: 'opacity 1s ease-in-out',
-                                    backgroundImage: `url(${image})`,
-                                    backgroundSize: 'cover',
-                                    backgroundPosition: 'center',
-                                    backgroundRepeat: 'no-repeat',
+                                    color: '#999',
                                 }}
-                            />
-                        ))}
+                            >
+                                Đang tải banner...
+                            </div>
+                        ) : bannerImages.length > 0 ? (
+                            <>
+                                {bannerImages.map((image, index) => (
+                                    <div
+                                        key={index}
+                                        style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            width: '100%',
+                                            height: '100%',
+                                            opacity: currentBanner === index ? 1 : 0,
+                                            transition: 'opacity 1s ease-in-out',
+                                            backgroundImage: `url(${image})`,
+                                            backgroundSize: 'cover',
+                                            backgroundPosition: 'center',
+                                            backgroundRepeat: 'no-repeat',
+                                        }}
+                                    />
+                                ))}
 
-                        {/* Navigation Dots */}
-                        <div
-                            style={{
-                                position: 'absolute',
-                                bottom: 16,
-                                left: '50%',
-                                transform: 'translateX(-50%)',
-                                display: 'flex',
-                                gap: 8,
-                                zIndex: 10,
-                            }}
-                        >
-                            {bannerImages.map((_, index) => (
-                                <button
-                                    key={index}
-                                    onClick={() => setCurrentBanner(index)}
+                                {/* Navigation Dots */}
+                                <div
                                     style={{
-                                        width: 10,
-                                        height: 10,
-                                        borderRadius: '50%',
-                                        border: '2px solid white',
-                                        background: currentBanner === index ? 'white' : 'transparent',
-                                        cursor: 'pointer',
-                                        padding: 0,
-                                        transition: 'all 0.3s ease',
+                                        position: 'absolute',
+                                        bottom: 16,
+                                        left: '50%',
+                                        transform: 'translateX(-50%)',
+                                        display: 'flex',
+                                        gap: 8,
+                                        zIndex: 10,
                                     }}
-                                    aria-label={`Go to slide ${index + 1}`}
-                                />
-                            ))}
-                        </div>
+                                >
+                                    {bannerImages.map((_, index) => (
+                                        <button
+                                            key={index}
+                                            onClick={() => setCurrentBanner(index)}
+                                            style={{
+                                                width: 10,
+                                                height: 10,
+                                                borderRadius: '50%',
+                                                border: '2px solid white',
+                                                background: currentBanner === index ? 'white' : 'transparent',
+                                                cursor: 'pointer',
+                                                padding: 0,
+                                                transition: 'all 0.3s ease',
+                                            }}
+                                            aria-label={`Go to slide ${index + 1}`}
+                                        />
+                                    ))}
+                                </div>
+                            </>
+                        ) : (
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    height: '100%',
+                                    color: '#999',
+                                }}
+                            >
+                                Không có banner
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
