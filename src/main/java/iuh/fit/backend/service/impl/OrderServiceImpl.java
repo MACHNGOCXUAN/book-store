@@ -1,22 +1,45 @@
 package iuh.fit.backend.service.impl;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import iuh.fit.backend.dto.requests.CreateOrderRequestDTO;
 import iuh.fit.backend.dto.requests.OrderFilter;
 import iuh.fit.backend.dto.requests.UpdateStatusOrderDTO;
 import iuh.fit.backend.dto.responses.OrderFullDetailDTO;
-import iuh.fit.backend.model.*;
+import iuh.fit.backend.model.Address;
+import iuh.fit.backend.model.Book;
+import iuh.fit.backend.model.Cart;
+import iuh.fit.backend.model.Customer;
+import iuh.fit.backend.model.DiscountCode;
+import iuh.fit.backend.model.Order;
+import iuh.fit.backend.model.OrderDetail;
+import iuh.fit.backend.model.OrderHistory;
+import iuh.fit.backend.model.Staff;
+import iuh.fit.backend.model.User;
 import iuh.fit.backend.model.enums.DiscountType;
 import iuh.fit.backend.model.enums.OrderStatus;
 import iuh.fit.backend.model.enums.Role;
-import iuh.fit.backend.repository.*;
+import iuh.fit.backend.repository.BookRepository;
+import iuh.fit.backend.repository.CartItemRepository;
+import iuh.fit.backend.repository.CartRepository;
+import iuh.fit.backend.repository.CustomerRepository;
+import iuh.fit.backend.repository.DiscountCodeRepository;
+import iuh.fit.backend.repository.OrderDetailRepository;
+import iuh.fit.backend.repository.OrderHistoryRepository;
+import iuh.fit.backend.repository.OrderRepository;
+import iuh.fit.backend.repository.PaymentRepository;
+import iuh.fit.backend.repository.StaffRepository;
 import iuh.fit.backend.service.OrderService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.*;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -47,12 +70,11 @@ public class OrderServiceImpl implements OrderService {
             discountDTO.setDiscountCodeId(order.getDiscountCode().getDiscountCodeId());
             discountDTO.setName(order.getDiscountCode().getName());
             discountDTO.setPercent((float) order.getDiscountCode().getPercent());
-            
+
             // Calculate discount amount from subtotal
             double subtotal = order.calcItemsTotal();
             int discountPercent = order.getDiscountCode().getPercent();
             double discountAmount = (subtotal * discountPercent) / 100.0;
-
 
             discountDTO.setDiscountAmount(discountAmount);
             dto.setDiscountCode(discountDTO);
@@ -74,21 +96,25 @@ public class OrderServiceImpl implements OrderService {
             if (addresses != null && !addresses.isEmpty()) {
                 Address chosen = addresses.stream().filter(a -> a.getMain() == 1).findFirst().orElse(addresses.get(0));
                 StringBuilder addr = new StringBuilder();
-                if (chosen.getSpecifics() != null && !chosen.getSpecifics().isBlank())
+                if (chosen.getSpecifics() != null && !chosen.getSpecifics().isBlank()) {
                     addr.append(chosen.getSpecifics());
+                }
                 if (chosen.getWard() != null && !chosen.getWard().isBlank()) {
-                    if (addr.length() > 0)
+                    if (addr.length() > 0) {
                         addr.append(", ");
+                    }
                     addr.append(chosen.getWard());
                 }
                 if (chosen.getDistrict() != null && !chosen.getDistrict().isBlank()) {
-                    if (addr.length() > 0)
+                    if (addr.length() > 0) {
                         addr.append(", ");
+                    }
                     addr.append(chosen.getDistrict());
                 }
                 if (chosen.getProvince() != null && !chosen.getProvince().isBlank()) {
-                    if (addr.length() > 0)
+                    if (addr.length() > 0) {
                         addr.append(", ");
+                    }
                     addr.append(chosen.getProvince());
                 }
 
@@ -291,7 +317,7 @@ public class OrderServiceImpl implements OrderService {
             validateDiscountCode(discountCode, order);
             order.setDiscountCode(discountCode);
         }
-        
+
         // Handle voucher từ wallet (voucherId)
         if (request.getVoucherId() != null && !request.getVoucherId().isBlank()) {
             DiscountCode voucherCode = discountCodeRepository.findById(request.getVoucherId())
@@ -315,8 +341,8 @@ public class OrderServiceImpl implements OrderService {
                     .orElseThrow(() -> new RuntimeException("Book not found with ID: " + detailReq.getBookId()));
 
             if (book.getStock() < detailReq.getQuantity()) {
-                throw new RuntimeException("Sách \"" + book.getTitle() + "\" không đủ số lượng. " +
-                        "Kho: " + book.getStock() + ", Yêu cầu: " + detailReq.getQuantity());
+                throw new RuntimeException("Sách \"" + book.getTitle() + "\" không đủ số lượng. "
+                        + "Kho: " + book.getStock() + ", Yêu cầu: " + detailReq.getQuantity());
             }
 
             String orderDetailId = "ODT" + String.format("%03d", nextDetailNum);
@@ -337,9 +363,14 @@ public class OrderServiceImpl implements OrderService {
         // LƯU ORDER (orderDetails cascade)
         Order savedOrder = orderRepository.save(order);
 
-        // TÍNH TOTAL
-        // Note: Discount subtraction là handled bởi Order.onWrite() callback
-        // nên không cần manually set totalAmount ở đây
+        // TÍNH TOTAL SAU KHI SAVE (lúc này orderDetails đã được persist)
+        if (savedOrder.getDiscountCode() != null) {
+            // Có discount, gọi method tính với discount
+            savedOrder.setTotalAmountWithDiscount();
+        } else {
+            // Không có discount, tính từ items
+            savedOrder.recalcTotals();
+        }
 
         if (savedOrder.getDiscountCode() != null) {
             DiscountCode code = savedOrder.getDiscountCode();
@@ -347,7 +378,8 @@ public class OrderServiceImpl implements OrderService {
             discountCodeRepository.save(code);
         }
 
-        orderRepository.save(savedOrder);
+        // LƯU LẠI ORDER với totalAmount đã tính đúng
+        savedOrder = orderRepository.save(savedOrder);
 
         // CẬP NHẬT GIỎ HÀNG
         Cart cart = cartRepository.findByCustomerUserId(request.getCustomerId())

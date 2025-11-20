@@ -1,20 +1,31 @@
 package iuh.fit.backend.controller;
 
-import iuh.fit.backend.model.ChatSession;
-import iuh.fit.backend.dto.requests.MessageDTO;
-import iuh.fit.backend.service.MessageService;
-import iuh.fit.backend.service.StaffService;
-import iuh.fit.backend.utils.JwtUtils;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import iuh.fit.backend.dto.requests.MessageDTO;
+import iuh.fit.backend.model.ChatSession;
+import iuh.fit.backend.service.MessageService;
+import iuh.fit.backend.service.StaffService;
+import iuh.fit.backend.utils.JwtUtils;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
@@ -145,8 +156,13 @@ public class MessageController {
     @GetMapping("/chat-session/user/{userId}")
     private ResponseEntity<?>  getSessionCustomer(@PathVariable String userId) {
         Optional<ChatSession> optionalChatSession = messageService.getChatSession(userId);
+        
+        if (optionalChatSession.isEmpty()) {
+            return ResponseEntity.status(404)
+                    .body(Map.of("message", "Không tìm thấy phiên chat cho user: " + userId));
+        }
+        
         ChatSession chatSession = optionalChatSession.get();
-
         return ResponseEntity.ok(Map.of("data", chatSession));
     }
 }
