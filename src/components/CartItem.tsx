@@ -1,18 +1,19 @@
 // src/components/CartItem.tsx
 
-import React from "react";
+import { DeleteOutlined } from "@ant-design/icons";
 import {
-  Checkbox,
-  InputNumber,
   Button,
+  Checkbox,
   Flex,
-  Typography,
   Image,
+  InputNumber,
   Space,
   Tag,
+  Typography,
 } from "antd";
-import { DeleteOutlined } from "@ant-design/icons";
 import type { CheckboxChangeEvent } from "antd/es/checkbox";
+import React from "react";
+import { useNavigate } from "react-router-dom";
 
 const { Text } = Typography;
 
@@ -57,7 +58,7 @@ export const CartItem: React.FC<CartItemProps> = ({
   onRemove,
 }) => {
   const itemTotalPrice = item.price * item.quantity;
-
+  const navigate = useNavigate();
   const handleSelectChange = (e: CheckboxChangeEvent) => {
     onSelect(item.id, e.target.checked);
   };
@@ -71,6 +72,9 @@ export const CartItem: React.FC<CartItemProps> = ({
   const handleRemoveClick = () => {
     onRemove(item.id);
   };
+  const handleClick = () => {
+    navigate(`/books/${item.bookId}`);
+  }
 
   return (
     <Flex
@@ -102,9 +106,9 @@ export const CartItem: React.FC<CartItemProps> = ({
 
       {/* Thông tin sách */}
       <Flex vertical gap={4} style={{ flex: 1, minWidth: 0 }}>
-        <Text strong ellipsis={{ tooltip: item.title }}>
+        <a style={{ fontSize: 16, fontWeight: "bold" }} onClick={() => handleClick()}>
           {item.title}
-        </Text>
+        </a>
         {item.author && <Text type="secondary">{item.author}</Text>}
         <Space>
           <Text strong style={{ color: "#d70018" }}>
