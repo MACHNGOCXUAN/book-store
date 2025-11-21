@@ -24,6 +24,7 @@ import iuh.fit.backend.dto.responses.PaymentQRCodeResponse;
 import iuh.fit.backend.model.Book;
 import iuh.fit.backend.model.User;
 import iuh.fit.backend.payment.vnpay.VnpayQRCodeService;
+import iuh.fit.backend.payment.vnpay.VnpayService;
 import iuh.fit.backend.service.BookService;
 import iuh.fit.backend.service.OrderService;
 import iuh.fit.backend.service.UserService;
@@ -42,8 +43,7 @@ public class OrderController {
     private final JwtUtils jwtUtils;
     private final UserService userService;
     private final BookService bookService;
-    // private final VnpayService vnpayService; // TODO: Inject when service is
-    // created
+    private final VnpayService vnpayService;
     private final VnpayQRCodeService qrCodeService;
     private final MoMoService moMoService;
 
@@ -397,6 +397,97 @@ public class OrderController {
             response.put("orderRequest", request); // Trả lại để frontend lưu
 
             System.out.println("✅ MoMo payment created (no order yet): " + tempOrderId);
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            System.out.println("❌ Error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Lỗi hệ thống: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * POST /api/orders/create-vnpay-payment-only
+     * Chỉ tạo VNPay payment request, KHÔNG tạo order. Order sẽ được tạo khi user xác nhận đã thanh toán.
+     */
+    @PostMapping("/create-vnpay-payment-only")
+    public ResponseEntity<?> createVNPayPaymentOnly(
+            @RequestBody CreateOrderRequestDTO request,
+            @RequestHeader("Authorization") String authHeader,
+            HttpServletRequest httpRequest) {
+
+        System.out.println("🟢 Create VNPay Payment Only called");
+        
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Missing Authorization header"));
+        }
+
+        String token = authHeader.substring(7);
+        String userId = jwtUtils.getUserIdFromToken(token);
+        User user = userService.findUserById(userId);
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Invalid token or user not found"));
+        }
+
+        try {
+            // Tính tổng tiền từ orderDetails
+            long totalAmount = 0;
+            for (CreateOrderRequestDTO.OrderDetailRequest detail : request.getOrderDetails()) {
+                Book book = bookService.findById(detail.getBookId()).orElse(null);
+                if (book == null) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                            .body(Map.of("message", "Book not found: " + detail.getBookId()));
+                }
+                double unitPrice = book.getPrice() * (100 - book.getDiscountPercent()) / 100.0;
+                totalAmount += Math.round(unitPrice * detail.getQuantity());
+            }
+            
+            // TODO: Apply discount/voucher nếu có
+            
+            System.out.println("💰 Calculated total: " + totalAmount + " VND");
+
+            // Validate VNPay amount constraints (similar to MoMo)
+            if (totalAmount < 1000) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Số tiền tối thiểu cho thanh toán VNPay là 1,000 VND"));
+            }
+            
+            if (totalAmount > 50000000) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Số tiền tối đa cho thanh toán VNPay là 50,000,000 VND"));
+            }
+
+            // Tạo orderId tạm (chưa lưu vào database)
+            String tempOrderId = "TEMP_" + System.currentTimeMillis();
+            
+            // Lấy IP của client
+            String clientIp = getClientIp(httpRequest);
+            
+            // Tạo VNPay payment URL
+            String paymentUrl = vnpayService.createPaymentUrl(tempOrderId, totalAmount, clientIp);
+            
+            // Tạo QR code từ payment URL
+            String qrCodeBase64 = qrCodeService.generateQRCodeBase64(paymentUrl, 300);
+
+            // Trả về payment data + orderRequest để frontend lưu tạm
+            long expiresAt = System.currentTimeMillis() + (15 * 60 * 1000);
+            
+            Map<String, Object> paymentData = new HashMap<>();
+            paymentData.put("tempOrderId", tempOrderId);
+            paymentData.put("amount", totalAmount);
+            paymentData.put("qrCodeBase64", qrCodeBase64);
+            paymentData.put("paymentUrl", paymentUrl);
+            paymentData.put("expiresAt", expiresAt);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("payment", paymentData);
+            response.put("orderRequest", request); // Trả lại để frontend lưu
+
+            System.out.println("✅ VNPay payment created (no order yet): " + tempOrderId);
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
