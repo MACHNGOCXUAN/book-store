@@ -91,7 +91,7 @@ public class CartServiceImpl implements CartService {
                 it.setCart(cart);
                 it.setBook(book);
                 it.setQuantity(quantity);
-                it.setUnitPrice(book.getPrice()); // cần field price trong Book
+                it.setUnitPrice(book.getPrice() * (1 - (book.getDiscountPercent() / 100.0))); // cần field price trong Book
                 cart.addItem(it); // helper của Cart sẽ set cart & recalc
                 cartItemRepository.save(it); // lưu item trước
             }

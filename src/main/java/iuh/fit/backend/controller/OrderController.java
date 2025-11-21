@@ -4,8 +4,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import iuh.fit.backend.payment.momo.MoMoPaymentResponse;
-import iuh.fit.backend.payment.momo.MoMoService;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,13 +21,17 @@ import iuh.fit.backend.dto.requests.OrderFilter;
 import iuh.fit.backend.dto.requests.UpdateStatusOrderDTO;
 import iuh.fit.backend.dto.responses.OrderFullDetailDTO;
 import iuh.fit.backend.dto.responses.PaymentQRCodeResponse;
+import iuh.fit.backend.model.Book;
 import iuh.fit.backend.model.User;
 import iuh.fit.backend.payment.vnpay.VnpayQRCodeService;
+import iuh.fit.backend.service.BookService;
 import iuh.fit.backend.service.OrderService;
 import iuh.fit.backend.service.UserService;
 import iuh.fit.backend.utils.JwtUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import main.java.iuh.fit.backend.payment.momo.MoMoPaymentResponse;
+import main.java.iuh.fit.backend.payment.momo.MoMoService;
 
 
 @RestController
@@ -39,6 +41,7 @@ public class OrderController {
     private final OrderService orderService;
     private final JwtUtils jwtUtils;
     private final UserService userService;
+    private final BookService bookService;
     // private final VnpayService vnpayService; // TODO: Inject when service is
     // created
     private final VnpayQRCodeService qrCodeService;
@@ -312,6 +315,99 @@ public class OrderController {
     }
 
     /**
+     * POST /api/orders/create-momo-payment-only
+     * Chỉ tạo MoMo payment request, KHÔNG tạo order. Order sẽ được tạo khi user xác nhận đã thanh toán.
+     */
+    @PostMapping("/create-momo-payment-only")
+    public ResponseEntity<?> createMoMoPaymentOnly(
+            @RequestBody CreateOrderRequestDTO request,
+            @RequestHeader("Authorization") String authHeader) {
+
+        System.out.println("🔵 Create MoMo Payment Only called");
+        
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Missing Authorization header"));
+        }
+
+        String token = authHeader.substring(7);
+        String userId = jwtUtils.getUserIdFromToken(token);
+        User user = userService.findUserById(userId);
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Invalid token or user not found"));
+        }
+
+        try {
+            // Tính tổng tiền từ orderDetails
+            long totalAmount = 0;
+            for (CreateOrderRequestDTO.OrderDetailRequest detail : request.getOrderDetails()) {
+                Book book = bookService.findById(detail.getBookId()).orElse(null);
+                if (book == null) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                            .body(Map.of("message", "Book not found: " + detail.getBookId()));
+                }
+                double unitPrice = book.getPrice() * (100 - book.getDiscountPercent()) / 100.0;
+                totalAmount += Math.round(unitPrice * detail.getQuantity());
+            }
+            
+            // TODO: Apply discount/voucher nếu có
+            
+            System.out.println("💰 Calculated total: " + totalAmount + " VND");
+
+            // Validate MoMo amount constraints
+            if (totalAmount < 1000) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Số tiền tối thiểu cho thanh toán MoMo là 1,000 VND"));
+            }
+            
+            if (totalAmount > 50000000) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Số tiền tối đa cho thanh toán MoMo là 50,000,000 VND"));
+            }
+
+            // Tạo orderId tạm (chưa lưu vào database)
+            String tempOrderId = "TEMP_" + System.currentTimeMillis();
+            
+            // Tạo MoMo payment request
+            String momoOrderId = tempOrderId + "_" + System.currentTimeMillis();
+            String orderInfo = "Thanh toán đơn hàng " + tempOrderId;
+            
+            MoMoPaymentResponse momoResponse = moMoService.createPayment(momoOrderId, totalAmount, orderInfo);
+
+            if (!momoResponse.isSuccess()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Không thể tạo thanh toán MoMo: " + momoResponse.getMessage()));
+            }
+
+            // Trả về payment data + orderRequest để frontend lưu tạm
+            long expiresAt = System.currentTimeMillis() + (15 * 60 * 1000);
+            
+            Map<String, Object> paymentData = new HashMap<>();
+            paymentData.put("tempOrderId", tempOrderId);
+            paymentData.put("amount", totalAmount);
+            paymentData.put("qrCodeUrl", momoResponse.getQrCodeUrl());
+            paymentData.put("payUrl", momoResponse.getPayUrl());
+            paymentData.put("deeplink", momoResponse.getDeeplink());
+            paymentData.put("expiresAt", expiresAt);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("payment", paymentData);
+            response.put("orderRequest", request); // Trả lại để frontend lưu
+
+            System.out.println("✅ MoMo payment created (no order yet): " + tempOrderId);
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            System.out.println("❌ Error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Lỗi hệ thống: " + e.getMessage()));
+        }
+    }
+
+    /**
      * POST /api/orders/checkout-momo
      * Tạo đơn hàng mới và trả về QR Code thanh toán MoMo
      */
@@ -381,9 +477,14 @@ public class OrderController {
 
             // 2. Tạo payment request đến MoMo
             System.out.println("💳 Creating MoMo payment...");
+            
+            // Tạo unique orderId cho MoMo (thêm timestamp để tránh trùng)
+            String momoOrderId = orderId + "_" + System.currentTimeMillis();
             String orderInfo = "Thanh toán đơn hàng " + orderId;
-            MoMoPaymentResponse momoResponse = moMoService.createPayment(orderId, totalAmount, orderInfo);
+            
+            MoMoPaymentResponse momoResponse = moMoService.createPayment(momoOrderId, totalAmount, orderInfo);
 
+            System.out.println("   MoMo Order ID: " + momoOrderId);
             System.out.println("   MoMo Response: success=" + momoResponse.isSuccess() + ", message=" + momoResponse.getMessage());
             System.out.println("   QR Code URL: " + momoResponse.getQrCodeUrl());
             System.out.println("   Pay URL: " + momoResponse.getPayUrl());
