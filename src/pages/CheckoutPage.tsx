@@ -1,37 +1,40 @@
-import React, { useEffect, useState, useMemo } from "react";
+import { EditOutlined } from "@ant-design/icons";
 import {
+  Button,
+  Card,
+  Checkbox,
+  Col,
+  Divider,
   Form,
   Input,
-  Select,
-  Card,
-  Radio,
-  Button,
-  Divider,
-  Row,
-  Col,
-  Typography,
   List,
-  Spin,
   message,
   Modal,
+  Radio,
+  Row,
+  Select,
+  Spin,
+  Typography,
 } from "antd";
-import { useNavigate, useLocation } from "react-router-dom";
+import { QRCodeSVG } from "qrcode.react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Checkbox } from "antd";
-import { EditOutlined } from "@ant-design/icons";
 import { type CartItemType } from "../components/CartItem";
 import VoucherSelector from "../components/VoucherSelector";
 import momoIcon from "../components/icons/logo-momo.png";
 import vnpayIcon from "../components/icons/logo-vnpay.jpg";
-import type { Address } from "../types/Address";
-import { fetchProvincesV1, transformV1Data } from "../services/provincesApi";
-import { useAppSelector, useAppDispatch } from "../store/hooks";
-import { createOrder, clearOrder } from "../features/orders/ordersSlice";
-import { fetchCart } from "../features/cart/cartSlice";
 import {
-  getAddresses,
   createAddress as createAddressAction,
+  getAddresses,
 } from "../features/addresses/addressSlice";
+import { fetchCart } from "../features/cart/cartSlice";
+import { clearOrder, createOrder } from "../features/orders/ordersSlice";
+import { createMoMoPaymentOnly } from "../services/momoApi";
+import { fetchProvincesV1, transformV1Data } from "../services/provincesApi";
+import { createVNPayPaymentOnly } from "../services/vnpayApi";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import type { Address } from "../types/Address";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -209,8 +212,8 @@ const CheckoutPage: React.FC = () => {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
           errorData.error ||
-            errorData.message ||
-            `Lỗi ${response.status}: Không thể áp dụng mã giảm giá`
+          errorData.message ||
+          `Lỗi ${response.status}: Không thể áp dụng mã giảm giá`
         );
       }
 
@@ -277,7 +280,217 @@ const CheckoutPage: React.FC = () => {
 
       console.log("📤 Dispatching createOrder with payload:", orderPayload);
 
-      // Dispatch Redux action để tạo đơn
+      // Kiểm tra xem có phải thanh toán MoMo không
+      if (paymentMethod === "MOMO") {
+        console.log("💳 Processing MoMo payment...");
+
+        // Validate MoMo amount constraints
+        if (total < 1000) {
+          message.error("Số tiền tối thiểu cho thanh toán MoMo là 1,000 VND. Vui lòng chọn phương thức thanh toán khác hoặc thêm sản phẩm vào giỏ hàng.");
+          return;
+        }
+
+        if (total > 50000000) {
+          message.error("Số tiền tối đa cho thanh toán MoMo là 50,000,000 VND. Vui lòng chọn phương thức thanh toán khác.");
+          return;
+        }
+
+        const token = localStorage.getItem("access_token");
+        if (!token) {
+          message.error("Vui lòng đăng nhập!");
+          navigate("/login");
+          return;
+        }
+
+        try {
+          // Gọi API tạo MoMo payment (KHÔNG tạo order)
+          const momoResponse = await createMoMoPaymentOnly(orderPayload, token);
+          console.log("✅ MoMo payment created (no order yet):", momoResponse);
+          console.log("   Payment data:", momoResponse.payment);
+          console.log("   QR Code URL:", momoResponse.payment?.qrCodeUrl);
+
+          toast.success("Vui lòng quét mã QR để thanh toán.", {
+            position: "top-right",
+            autoClose: 2000,
+          });
+
+          // Lưu địa chỉ nếu là mới
+          const currentAddress = {
+            main: 1,
+            province: values.province,
+            district: values.district,
+            ward: values.ward,
+            specifics: values.specifics,
+            receiverName: values.receiverName,
+            receiverPhone: values.receiverPhone,
+            isDefault: addressState.addresses.length === 0,
+          };
+
+          const defaultAddr = addressState.addresses.find((a) => a.isDefault);
+          const isNewAddress =
+            !defaultAddr ||
+            defaultAddr.province !== values.province ||
+            defaultAddr.specifics !== values.specifics;
+
+          if (isNewAddress) {
+            console.log("💾 Saving new address...");
+            dispatch(
+              createAddressAction({
+                customerId: authUser.userId,
+                address: currentAddress as Address,
+              })
+            );
+          }
+
+          // KHÔNG reload cart vì chưa tạo order
+          // dispatch(fetchCart());
+
+          // Hiển thị modal QR MoMo - lưu cả orderPayload và address để dùng sau
+          setCurrentOrderPayment({
+            orderPayload: momoResponse.orderRequest, // Lưu để tạo order sau
+            payment: momoResponse.payment,
+            address: currentAddress,
+            values: values, // Lưu form values
+          });
+          setShowQRModal(true);
+
+          return; // Dừng lại để không chạy logic bên dưới
+        } catch (error) {
+          console.error("❌ MoMo checkout error:", error);
+
+          // Lấy thông báo lỗi chi tiết
+          let errorMessage = "Không thể tạo thanh toán MoMo. Vui lòng thử lại!";
+
+          if (error instanceof Error) {
+            errorMessage = error.message;
+          } else if (typeof error === 'object' && error !== null) {
+            const err = error as any;
+            if (err.response?.data?.message) {
+              errorMessage = err.response.data.message;
+            } else if (err.message) {
+              errorMessage = err.message;
+            }
+          }
+
+          console.error("📋 Error message:", errorMessage);
+
+          toast.error(errorMessage, {
+            position: "top-right",
+            autoClose: 5000,
+          });
+          return;
+        }
+      }
+
+      // Kiểm tra xem có phải thanh toán VNPay không
+      if (paymentMethod === "VNPAY") {
+        console.log("💳 Processing VNPay payment...");
+
+        // Validate VNPay amount constraints
+        if (total < 1000) {
+          message.error("Số tiền tối thiểu cho thanh toán VNPay là 1,000 VND. Vui lòng chọn phương thức thanh toán khác hoặc thêm sản phẩm vào giỏ hàng.");
+          return;
+        }
+
+        if (total > 50000000) {
+          message.error("Số tiền tối đa cho thanh toán VNPay là 50,000,000 VND. Vui lòng chọn phương thức thanh toán khác.");
+          return;
+        }
+
+        const token = localStorage.getItem("access_token");
+        if (!token) {
+          message.error("Vui lòng đăng nhập!");
+          navigate("/login");
+          return;
+        }
+
+        try {
+          // Gọi API tạo VNPay payment (KHÔNG tạo order)
+          const vnpayResponse = await createVNPayPaymentOnly(
+            {
+              customerId: authUser!.userId,
+              voucherId: selectedVoucherId || null,
+              discountCode: discountCode || null,
+              orderDetails: cartItems.map((item) => ({
+                bookId: String(item.bookId),
+                quantity: item.quantity,
+              })),
+            },
+            token
+          );
+
+          console.log("✅ VNPay payment created (no order yet):", vnpayResponse);
+          console.log("   Payment data:", vnpayResponse.payment);
+          console.log("   QR Code Base64:", vnpayResponse.payment?.qrCodeBase64?.substring(0, 50) + "...");
+
+          toast.success("Vui lòng quét mã QR để thanh toán VNPay.", {
+            position: "top-right",
+            autoClose: 2000,
+          });
+
+          // Tạo address object
+          const currentAddress = {
+            main: 1,
+            province: values.province,
+            district: values.district,
+            ward: values.ward,
+            specifics: values.specifics,
+            receiverName: values.receiverName,
+            receiverPhone: values.receiverPhone,
+            isDefault: addressState.addresses.length === 0,
+          };
+
+          const defaultAddr = addressState.addresses.find((a) => a.isDefault);
+          const isNewAddress =
+            !defaultAddr ||
+            defaultAddr.province !== values.province ||
+            defaultAddr.specifics !== values.specifics;
+
+          if (isNewAddress) {
+            console.log("💾 Saving new address...");
+            dispatch(
+              createAddressAction({
+                customerId: authUser.userId,
+                address: currentAddress as Address,
+              })
+            );
+          }
+
+          // Lưu orderPayload và payment data để tạo order sau khi xác nhận thanh toán
+          setCurrentOrderPayment({
+            orderPayload: vnpayResponse.orderRequest, // Lưu để tạo order sau
+            payment: vnpayResponse.payment,
+            address: currentAddress,
+            values: values,
+          });
+
+          setShowQRModal(true);
+          return; // Dừng lại để không chạy logic bên dưới
+        } catch (error) {
+          console.error("❌ VNPay checkout error:", error);
+
+          let errorMessage = "Không thể tạo thanh toán VNPay. Vui lòng thử lại!";
+
+          if (error instanceof Error) {
+            errorMessage = error.message;
+          } else if (typeof error === 'object' && error !== null) {
+            const err = error as any;
+            if (err.response?.data?.message) {
+              errorMessage = err.response.data.message;
+            } else if (err.message) {
+              errorMessage = err.message;
+            }
+          }
+
+          toast.error(errorMessage, {
+            position: "top-right",
+            autoClose: 3000,
+          });
+          return;
+        }
+      }
+
+      // Dispatch Redux action để tạo đơn (CHỈ cho COD)
       const result = await dispatch(createOrder(orderPayload));
 
       console.log("📥 Order result:", result);
@@ -326,25 +539,8 @@ const CheckoutPage: React.FC = () => {
         // Reload cart
         dispatch(fetchCart());
 
-        // Nếu là thanh toán ONLINE và có QR code, hiển thị modal QR code
-        if (
-          (paymentMethod === "VNPAY" || paymentMethod === "MOMO") &&
-          result.payload &&
-          typeof result.payload === "object" &&
-          result.payload.payment?.qrCodeBase64
-        ) {
-          console.log(
-            "💳 Showing QR code for payment:",
-            result.payload.payment
-          );
-          setCurrentOrderPayment({
-            order: result.payload.order,
-            payment: result.payload.payment,
-            address: currentAddress,
-          });
-          setShowQRModal(true);
-        } else if (result.payload && typeof result.payload === "object") {
-          // Nếu là COD, chuyển hướng ngay
+        // COD - chuyển hướng trực tiếp đến trang success
+        if (result.payload && typeof result.payload === "object") {
           dispatch(clearOrder());
           navigate("/order-success", {
             state: {
@@ -607,6 +803,11 @@ const CheckoutPage: React.FC = () => {
                     style={{ marginRight: 8 }}
                   />
                   <Text strong>Ví MoMo</Text>
+                  {total < 1000 && (
+                    <Text type="danger" style={{ marginLeft: 8, fontSize: 12 }}>
+                      (Tối thiểu 1,000 VND)
+                    </Text>
+                  )}
                 </Radio>
               </Col>
               <Col span={24}>
@@ -864,7 +1065,7 @@ const CheckoutPage: React.FC = () => {
 
         {/* QR Code Modal */}
         <Modal
-          title="Thanh toán qua VNPay"
+          title={paymentMethod === "MOMO" ? "Thanh toán qua MoMo" : "Thanh toán qua VNPay"}
           open={showQRModal}
           onCancel={() => setShowQRModal(false)}
           width={500}
@@ -886,20 +1087,78 @@ const CheckoutPage: React.FC = () => {
             <Button
               key="confirm"
               type="primary"
-              onClick={() => {
-                dispatch(clearOrder());
-                navigate("/order-success", {
-                  state: {
-                    order: currentOrderPayment?.order,
-                    paymentMethod: paymentMethod,
-                    address: currentOrderPayment?.address,
-                    payment: currentOrderPayment?.payment,
-                  },
-                });
-                setShowQRModal(false);
+              onClick={async () => {
+                // Nếu là MoMo hoặc VNPay và chưa có order, tạo order bây giờ
+                if ((paymentMethod === "MOMO" || paymentMethod === "VNPAY") && currentOrderPayment?.orderPayload) {
+                  try {
+                    console.log("🔄 Creating order after payment confirmation...");
+                    const result = await dispatch(createOrder(currentOrderPayment.orderPayload));
+
+                    if (result.meta.requestStatus === "fulfilled") {
+                      toast.success("Đặt hàng thành công!", {
+                        position: "top-right",
+                        autoClose: 2000,
+                      });
+
+                      // Lưu địa chỉ nếu cần
+                      const defaultAddr = addressState.addresses.find((a) => a.isDefault);
+                      const isNewAddress =
+                        !defaultAddr ||
+                        defaultAddr.province !== currentOrderPayment.values.province ||
+                        defaultAddr.specifics !== currentOrderPayment.values.specifics;
+
+                      if (isNewAddress) {
+                        dispatch(
+                          createAddressAction({
+                            customerId: authUser!.userId,
+                            address: currentOrderPayment.address as Address,
+                          })
+                        );
+                      }
+
+                      // Reload cart
+                      dispatch(fetchCart());
+
+                      // Navigate to success page
+                      dispatch(clearOrder());
+                      navigate("/order-success", {
+                        state: {
+                          order: (result.payload as any)?.order,
+                          paymentMethod: paymentMethod,
+                          address: currentOrderPayment.address,
+                          payment: currentOrderPayment.payment,
+                        },
+                      });
+                      setShowQRModal(false);
+                    } else {
+                      toast.error("Không thể tạo đơn hàng. Vui lòng liên hệ hỗ trợ!", {
+                        position: "top-right",
+                        autoClose: 3000,
+                      });
+                    }
+                  } catch (error) {
+                    console.error("❌ Error creating order:", error);
+                    toast.error("Có lỗi xảy ra khi tạo đơn hàng!", {
+                      position: "top-right",
+                      autoClose: 3000,
+                    });
+                  }
+                } else {
+                  // Trường hợp khác - navigate trực tiếp
+                  dispatch(clearOrder());
+                  navigate("/order-success", {
+                    state: {
+                      order: currentOrderPayment?.order,
+                      paymentMethod: paymentMethod,
+                      address: currentOrderPayment?.address,
+                      payment: currentOrderPayment?.payment,
+                    },
+                  });
+                  setShowQRModal(false);
+                }
               }}
               style={{
-                background: "#d32f2f",
+                background: paymentMethod === "MOMO" ? "#d82d8b" : "#d32f2f",
                 borderRadius: 8,
               }}
             >
@@ -914,7 +1173,62 @@ const CheckoutPage: React.FC = () => {
             >
               Mã QR thanh toán
             </Text>
-            {currentOrderPayment?.payment?.qrCodeBase64 && (
+            {/* Hiển thị QR cho cả MoMo và VNPay */}
+            {paymentMethod === "MOMO" && currentOrderPayment?.payment?.qrCodeUrl ? (
+              <>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    marginBottom: 20,
+                  }}
+                >
+                  <div
+                    style={{
+                      background: "white",
+                      padding: 16,
+                      borderRadius: 12,
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                    }}
+                  >
+                    {/* Generate QR từ chuỗi EMVCo data */}
+                    <QRCodeSVG
+                      value={currentOrderPayment.payment.qrCodeUrl}
+                      size={280}
+                      level="M"
+                      includeMargin={true}
+                    />
+                  </div>
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <Text type="secondary" style={{ fontSize: 13 }}>
+                    Hạn thanh toán:{" "}
+                    {currentOrderPayment.payment.expiresAt
+                      ? new Date(
+                        currentOrderPayment.payment.expiresAt
+                      ).toLocaleString("vi-VN")
+                      : "15 phút từ bây giờ"}
+                  </Text>
+                </div>
+                <div
+                  style={{
+                    marginBottom: 16,
+                    padding: "16px",
+                    background: "white",
+                    borderRadius: 8,
+                    border: "2px solid #d82d8b",
+                    boxShadow: "0 2px 8px rgba(216, 45, 139, 0.15)",
+                  }}
+                >
+                  <Text strong style={{ color: "#d82d8b", fontSize: 18 }}>
+                    {currentOrderPayment.payment.amount?.toLocaleString(
+                      "vi-VN"
+                    )}{" "}
+                    ₫
+                  </Text>
+                </div>
+              </>
+            ) : currentOrderPayment?.payment?.qrCodeBase64 ? (
               <>
                 <div
                   style={{
@@ -933,7 +1247,7 @@ const CheckoutPage: React.FC = () => {
                   >
                     <img
                       src={currentOrderPayment.payment.qrCodeBase64}
-                      alt="QR Code"
+                      alt="VNPay QR Code"
                       style={{
                         maxWidth: 280,
                         width: "100%",
@@ -948,8 +1262,8 @@ const CheckoutPage: React.FC = () => {
                     Hạn thanh toán:{" "}
                     {currentOrderPayment.payment.expiresAt
                       ? new Date(
-                          currentOrderPayment.payment.expiresAt
-                        ).toLocaleString("vi-VN")
+                        currentOrderPayment.payment.expiresAt
+                      ).toLocaleString("vi-VN")
                       : "15 phút từ bây giờ"}
                   </Text>
                 </div>
@@ -971,9 +1285,11 @@ const CheckoutPage: React.FC = () => {
                   </Text>
                 </div>
               </>
-            )}
+            ) : null}
             <Text type="secondary" style={{ fontSize: 13, display: "block" }}>
-              Quét mã QR bằng ứng dụng ngân hàng hoặc ứng dụng hỗ trợ thanh toán
+              {paymentMethod === "MOMO"
+                ? "Quét mã QR bằng ứng dụng MoMo để thanh toán"
+                : "Quét mã QR bằng ứng dụng ngân hàng hoặc ứng dụng hỗ trợ thanh toán"}
             </Text>
           </div>
         </Modal>
