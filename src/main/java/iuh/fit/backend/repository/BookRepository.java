@@ -2,8 +2,8 @@ package iuh.fit.backend.repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale.Category;
 
-import iuh.fit.backend.model.Category;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -22,6 +22,7 @@ public interface BookRepository extends JpaRepository<Book, String>, JpaSpecific
             FROM Book b
             JOIN OrderDetail od ON od.book.bookId = b.bookId
             JOIN Order o ON od.order.orderId = o.orderId
+            WHERE o.status = 'COMPLETED'
             GROUP BY b
             ORDER BY SUM(od.quantity) DESC
             """)
@@ -32,7 +33,7 @@ public interface BookRepository extends JpaRepository<Book, String>, JpaSpecific
             FROM Book b
             JOIN OrderDetail od ON od.book.bookId = b.bookId
             JOIN Order o ON od.order.orderId = o.orderId
-            WHERE o.orderDate >= :startDate
+            WHERE o.orderDate >= :startDate AND o.status = 'COMPLETED'
             GROUP BY b
             ORDER BY SUM(od.quantity) DESC
             """)
@@ -43,7 +44,7 @@ public interface BookRepository extends JpaRepository<Book, String>, JpaSpecific
             FROM Book b
             JOIN OrderDetail od ON od.book.bookId = b.bookId
             JOIN Order o ON od.order.orderId = o.orderId
-            WHERE o.orderDate >= :startDate
+            WHERE o.orderDate >= :startDate AND o.status = 'COMPLETED'
             GROUP BY b
             ORDER BY SUM(od.quantity) DESC
             """)
@@ -54,7 +55,7 @@ public interface BookRepository extends JpaRepository<Book, String>, JpaSpecific
             FROM Book b
             JOIN OrderDetail od ON od.book.bookId = b.bookId
             JOIN Order o ON od.order.orderId = o.orderId
-            WHERE o.orderDate >= :startDate
+            WHERE o.orderDate >= :startDate AND o.status = 'COMPLETED'
             GROUP BY b
             ORDER BY SUM(od.quantity) DESC
             """)
