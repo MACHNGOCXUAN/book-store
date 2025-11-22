@@ -1,6 +1,7 @@
 package iuh.fit.backend.controller;
 
 import iuh.fit.backend.service.ChatAIService;
+import iuh.fit.backend.dto.responses.ChatResponse;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,8 +22,9 @@ public class ChatAIController {
 
 
     @PostMapping
-    public String chat(@RequestBody Map<String, String> request) {
-        return geminiService.askGemini(request.get("message"));
+    public ChatResponse chat(@RequestBody Map<String, String> request) {
+        String message = request.get("message");
+        return geminiService.askGemini(message);
     }
 
 }
