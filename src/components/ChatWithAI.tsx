@@ -15,6 +15,14 @@ const PRIMARY_RED = "#d70018";
 interface Message {
   role: "user" | "bot";
   text: string;
+  context?: string;
+  source?: string;
+}
+
+interface ChatReply {
+  reply: string;
+  context?: string;
+  source?: string;
 }
 
 const ChatPopoverWidget = () => {
@@ -27,7 +35,32 @@ const ChatPopoverWidget = () => {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [healthLoading, setHealthLoading] = useState(false);
+  const [geminiEnabled, setGeminiEnabled] = useState<boolean | null>(null);
+  const [dnsOk, setDnsOk] = useState<boolean | null>(null);
   const chatBodyRef = useRef<HTMLDivElement | null>(null);
+
+  // --- Load health info when chat opened first time ---
+  useEffect(() => {
+    if (openAI && geminiEnabled === null && dnsOk === null) {
+      const loadHealth = async () => {
+        setHealthLoading(true);
+        try {
+          const res = await fetch("http://localhost:8080/api/chat/health");
+          if (!res.ok) throw new Error("Health HTTP " + res.status);
+          const data = await res.json();
+          setGeminiEnabled(!!data.geminiEnabled);
+          setDnsOk(!!data.dnsOk);
+        } catch (e) {
+          setGeminiEnabled(null);
+          setDnsOk(false);
+        } finally {
+          setHealthLoading(false);
+        }
+      };
+      loadHealth();
+    }
+  }, [openAI, geminiEnabled, dnsOk]);
 
   // --- Cuộn xuống cuối khi có tin nhắn mới ---
   useEffect(() => {
@@ -53,9 +86,18 @@ const ChatPopoverWidget = () => {
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const replyText = await res.text();
+      const data: ChatReply = await res.json().catch(async () => {
+        // backward compatibility if server still returns plain text
+        const txt = await res.text();
+        return { reply: txt } as ChatReply;
+      });
 
-      const botMsg: Message = { role: "bot", text: replyText };
+      const botMsg: Message = {
+        role: "bot",
+        text: data.reply,
+        context: data.context,
+        source: data.source,
+      };
       setMessages((prev) => [...prev, botMsg]);
     } catch (err) {
       console.error("❌ Lỗi khi gọi API:", err);
@@ -84,9 +126,35 @@ const ChatPopoverWidget = () => {
           style={{ padding: "12px 16px", borderBottom: "1px solid #f0f0f0" }}
         >
           <Flex align="center" justify="space-between">
-            <Text strong style={{ fontSize: 18 }}>
-              Trợ lý AI
-            </Text>
+            <Flex align="center" gap="small">
+              <Text strong style={{ fontSize: 18 }}>
+                Trợ lý AI
+              </Text>
+              {/* Health indicators */}
+              {healthLoading && <Spin size="small" />}
+              {!healthLoading && geminiEnabled !== null && (
+                <span
+                  title={
+                    geminiEnabled
+                      ? dnsOk
+                        ? "Gemini bật & DNS OK"
+                        : "Gemini bật nhưng DNS lỗi – dùng fallback"
+                      : "Gemini tắt – chỉ dữ liệu nội bộ"
+                  }
+                  style={{
+                    display: "inline-block",
+                    width: 10,
+                    height: 10,
+                    borderRadius: "50%",
+                    background: geminiEnabled
+                      ? dnsOk
+                        ? "#52c41a"
+                        : "#faad14"
+                      : "#d9d9d9",
+                  }}
+                />
+              )}
+            </Flex>
             <Button
               type="text"
               shape="circle"
@@ -120,12 +188,25 @@ const ChatPopoverWidget = () => {
                     }}
                   >
                     <Text style={{ whiteSpace: "pre-line" }}>
-                      {msg.text.split(/(?=\d+\.\s)/).map((part, index) => (
-                        <span key={index}>
-                          {part.trim()}
-                          <br />
-                        </span>
-                      ))}
+                      {msg.text}
+                      {msg.source && (
+                        <>
+                          {"\n"}
+                          <span style={{ fontSize: 11, color: "#888" }}>
+                            Nguồn: {msg.source === "ai" ? "Gemini" : "Fallback"}
+                          </span>
+                        </>
+                      )}
+                      {msg.context && (
+                        <>
+                          {"\n\n"}
+                          <span style={{ color: "#555" }}>
+                            <strong>Dữ liệu tham khảo:</strong>
+                            {"\n"}
+                            {msg.context}
+                          </span>
+                        </>
+                      )}
                     </Text>
                   </div>
                 </Flex>
