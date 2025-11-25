@@ -30,15 +30,7 @@ export default function OrderSuccessPage() {
     // Reload cart to update the cart icon count in header
     dispatch(fetchCart());
 
-    // Show success toast
-    toast.success("Đặt hàng thành công!", {
-      position: "top-right",
-      autoClose: 3000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-    });
+    // Success toast removed to avoid duplicate notification (shown in Checkout step)
   }, [dispatch]);
 
   // Kiểm tra hạn QR code

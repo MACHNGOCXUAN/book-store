@@ -17,7 +17,7 @@ import {
   Typography,
 } from "antd";
 import { QRCodeSVG } from "qrcode.react";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { type CartItemType } from "../components/CartItem";
@@ -65,6 +65,8 @@ const CheckoutPage: React.FC = () => {
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [showQRModal, setShowQRModal] = useState(false);
   const [currentOrderPayment, setCurrentOrderPayment] = useState<any>(null);
+  // Guard to prevent showing success toast multiple times per order
+  const successToastRef = useRef(false);
 
   const [form] = Form.useForm();
   // Province data
@@ -212,8 +214,8 @@ const CheckoutPage: React.FC = () => {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
           errorData.error ||
-          errorData.message ||
-          `Lỗi ${response.status}: Không thể áp dụng mã giảm giá`
+            errorData.message ||
+            `Lỗi ${response.status}: Không thể áp dụng mã giảm giá`
         );
       }
 
@@ -286,12 +288,16 @@ const CheckoutPage: React.FC = () => {
 
         // Validate MoMo amount constraints
         if (total < 1000) {
-          message.error("Số tiền tối thiểu cho thanh toán MoMo là 1,000 VND. Vui lòng chọn phương thức thanh toán khác hoặc thêm sản phẩm vào giỏ hàng.");
+          message.error(
+            "Số tiền tối thiểu cho thanh toán MoMo là 1,000 VND. Vui lòng chọn phương thức thanh toán khác hoặc thêm sản phẩm vào giỏ hàng."
+          );
           return;
         }
 
         if (total > 50000000) {
-          message.error("Số tiền tối đa cho thanh toán MoMo là 50,000,000 VND. Vui lòng chọn phương thức thanh toán khác.");
+          message.error(
+            "Số tiền tối đa cho thanh toán MoMo là 50,000,000 VND. Vui lòng chọn phương thức thanh toán khác."
+          );
           return;
         }
 
@@ -363,7 +369,7 @@ const CheckoutPage: React.FC = () => {
 
           if (error instanceof Error) {
             errorMessage = error.message;
-          } else if (typeof error === 'object' && error !== null) {
+          } else if (typeof error === "object" && error !== null) {
             const err = error as any;
             if (err.response?.data?.message) {
               errorMessage = err.response.data.message;
@@ -388,12 +394,16 @@ const CheckoutPage: React.FC = () => {
 
         // Validate VNPay amount constraints
         if (total < 1000) {
-          message.error("Số tiền tối thiểu cho thanh toán VNPay là 1,000 VND. Vui lòng chọn phương thức thanh toán khác hoặc thêm sản phẩm vào giỏ hàng.");
+          message.error(
+            "Số tiền tối thiểu cho thanh toán VNPay là 1,000 VND. Vui lòng chọn phương thức thanh toán khác hoặc thêm sản phẩm vào giỏ hàng."
+          );
           return;
         }
 
         if (total > 50000000) {
-          message.error("Số tiền tối đa cho thanh toán VNPay là 50,000,000 VND. Vui lòng chọn phương thức thanh toán khác.");
+          message.error(
+            "Số tiền tối đa cho thanh toán VNPay là 50,000,000 VND. Vui lòng chọn phương thức thanh toán khác."
+          );
           return;
         }
 
@@ -419,9 +429,15 @@ const CheckoutPage: React.FC = () => {
             token
           );
 
-          console.log("✅ VNPay payment created (no order yet):", vnpayResponse);
+          console.log(
+            "✅ VNPay payment created (no order yet):",
+            vnpayResponse
+          );
           console.log("   Payment data:", vnpayResponse.payment);
-          console.log("   QR Code Base64:", vnpayResponse.payment?.qrCodeBase64?.substring(0, 50) + "...");
+          console.log(
+            "   QR Code Base64:",
+            vnpayResponse.payment?.qrCodeBase64?.substring(0, 50) + "..."
+          );
 
           toast.success("Vui lòng quét mã QR để thanh toán VNPay.", {
             position: "top-right",
@@ -469,11 +485,12 @@ const CheckoutPage: React.FC = () => {
         } catch (error) {
           console.error("❌ VNPay checkout error:", error);
 
-          let errorMessage = "Không thể tạo thanh toán VNPay. Vui lòng thử lại!";
+          let errorMessage =
+            "Không thể tạo thanh toán VNPay. Vui lòng thử lại!";
 
           if (error instanceof Error) {
             errorMessage = error.message;
-          } else if (typeof error === 'object' && error !== null) {
+          } else if (typeof error === "object" && error !== null) {
             const err = error as any;
             if (err.response?.data?.message) {
               errorMessage = err.response.data.message;
@@ -499,14 +516,18 @@ const CheckoutPage: React.FC = () => {
       if (result.meta.requestStatus === "fulfilled") {
         console.log("✅ Order created successfully!");
 
-        toast.success("Đặt hàng thành công!", {
-          position: "top-right",
-          autoClose: 2000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
+        if (!successToastRef.current) {
+          toast.success("Đặt hàng thành công!", {
+            position: "top-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            toastId: "order-success",
+          });
+          successToastRef.current = true;
+        }
 
         // Lưu địa chỉ nếu là mới
         const currentAddress = {
@@ -1065,7 +1086,11 @@ const CheckoutPage: React.FC = () => {
 
         {/* QR Code Modal */}
         <Modal
-          title={paymentMethod === "MOMO" ? "Thanh toán qua MoMo" : "Thanh toán qua VNPay"}
+          title={
+            paymentMethod === "MOMO"
+              ? "Thanh toán qua MoMo"
+              : "Thanh toán qua VNPay"
+          }
           open={showQRModal}
           onCancel={() => setShowQRModal(false)}
           width={500}
@@ -1089,23 +1114,38 @@ const CheckoutPage: React.FC = () => {
               type="primary"
               onClick={async () => {
                 // Nếu là MoMo hoặc VNPay và chưa có order, tạo order bây giờ
-                if ((paymentMethod === "MOMO" || paymentMethod === "VNPAY") && currentOrderPayment?.orderPayload) {
+                if (
+                  (paymentMethod === "MOMO" || paymentMethod === "VNPAY") &&
+                  currentOrderPayment?.orderPayload
+                ) {
                   try {
-                    console.log("🔄 Creating order after payment confirmation...");
-                    const result = await dispatch(createOrder(currentOrderPayment.orderPayload));
+                    console.log(
+                      "🔄 Creating order after payment confirmation..."
+                    );
+                    const result = await dispatch(
+                      createOrder(currentOrderPayment.orderPayload)
+                    );
 
                     if (result.meta.requestStatus === "fulfilled") {
-                      toast.success("Đặt hàng thành công!", {
-                        position: "top-right",
-                        autoClose: 2000,
-                      });
+                      if (!successToastRef.current) {
+                        toast.success("Đặt hàng thành công!", {
+                          position: "top-right",
+                          autoClose: 2000,
+                          toastId: "order-success",
+                        });
+                        successToastRef.current = true;
+                      }
 
                       // Lưu địa chỉ nếu cần
-                      const defaultAddr = addressState.addresses.find((a) => a.isDefault);
+                      const defaultAddr = addressState.addresses.find(
+                        (a) => a.isDefault
+                      );
                       const isNewAddress =
                         !defaultAddr ||
-                        defaultAddr.province !== currentOrderPayment.values.province ||
-                        defaultAddr.specifics !== currentOrderPayment.values.specifics;
+                        defaultAddr.province !==
+                          currentOrderPayment.values.province ||
+                        defaultAddr.specifics !==
+                          currentOrderPayment.values.specifics;
 
                       if (isNewAddress) {
                         dispatch(
@@ -1131,10 +1171,13 @@ const CheckoutPage: React.FC = () => {
                       });
                       setShowQRModal(false);
                     } else {
-                      toast.error("Không thể tạo đơn hàng. Vui lòng liên hệ hỗ trợ!", {
-                        position: "top-right",
-                        autoClose: 3000,
-                      });
+                      toast.error(
+                        "Không thể tạo đơn hàng. Vui lòng liên hệ hỗ trợ!",
+                        {
+                          position: "top-right",
+                          autoClose: 3000,
+                        }
+                      );
                     }
                   } catch (error) {
                     console.error("❌ Error creating order:", error);
@@ -1174,7 +1217,8 @@ const CheckoutPage: React.FC = () => {
               Mã QR thanh toán
             </Text>
             {/* Hiển thị QR cho cả MoMo và VNPay */}
-            {paymentMethod === "MOMO" && currentOrderPayment?.payment?.qrCodeUrl ? (
+            {paymentMethod === "MOMO" &&
+            currentOrderPayment?.payment?.qrCodeUrl ? (
               <>
                 <div
                   style={{
@@ -1205,8 +1249,8 @@ const CheckoutPage: React.FC = () => {
                     Hạn thanh toán:{" "}
                     {currentOrderPayment.payment.expiresAt
                       ? new Date(
-                        currentOrderPayment.payment.expiresAt
-                      ).toLocaleString("vi-VN")
+                          currentOrderPayment.payment.expiresAt
+                        ).toLocaleString("vi-VN")
                       : "15 phút từ bây giờ"}
                   </Text>
                 </div>
@@ -1262,8 +1306,8 @@ const CheckoutPage: React.FC = () => {
                     Hạn thanh toán:{" "}
                     {currentOrderPayment.payment.expiresAt
                       ? new Date(
-                        currentOrderPayment.payment.expiresAt
-                      ).toLocaleString("vi-VN")
+                          currentOrderPayment.payment.expiresAt
+                        ).toLocaleString("vi-VN")
                       : "15 phút từ bây giờ"}
                   </Text>
                 </div>
