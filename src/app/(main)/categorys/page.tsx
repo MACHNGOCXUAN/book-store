@@ -1,9 +1,8 @@
 "use client";
 import { Table } from "@/components/table/table";
 import { Button, Col, Input, Row, Space, TableProps } from "antd";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  DeleteOutlined,
   EditOutlined,
   PlusOutlined,
   ReloadOutlined,
@@ -27,14 +26,46 @@ type CategoryDataType = {
 
 export default function CategoryPage() {
   const dispatch = useAppDispatch();
-  const { categories, loading, message, categoryDetail } = useAppSelector(
-    (state) => state.category
-  );
+  const {
+    categories = [],
+    loading,
+    message,
+    categoryDetail,
+  } = useAppSelector((state) => state.category);
   const { openNotification, contextHolder } = useMyNotification();
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [mode, setMode] = useState<"create" | "edit">("create");
+
+  const [searchInput, setSearchInput] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
 
   useEffect(() => {
     dispatch(getAllCategories(""));
   }, [dispatch]);
+
+  const filteredCategories = useMemo(() => {
+    if (!appliedSearch) return categories;
+    return categories.filter((item) =>
+      item.categoryName?.toLowerCase().includes(appliedSearch.toLowerCase())
+    );
+  }, [categories, appliedSearch]);
+
+  useEffect(() => {
+    const maxPage = Math.max(
+      1,
+      Math.ceil(filteredCategories.length / pageSize)
+    );
+    if (currentPage > maxPage) {
+      setCurrentPage(maxPage);
+    }
+  }, [filteredCategories.length, pageSize]);
+
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedData = filteredCategories.slice(startIndex, endIndex);
 
   const handleEditCategory = (id: string) => {
     dispatch(getCategoryDetail(id));
@@ -69,9 +100,6 @@ export default function CategoryPage() {
     },
   ];
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [mode, setMode] = useState<"create" | "edit">("create");
-  const [searchText, setSearchText] = useState("");
   const handleCreateCategory = () => {
     setMode("create");
     setIsModalOpen(true);
@@ -94,20 +122,31 @@ export default function CategoryPage() {
   useEffect(() => {
     if (message) {
       openNotification(message?.type, message?.message);
+      if (message?.type === "success") {
+        dispatch(getAllCategories(""));
+      }
+      dispatch(resetMessage());
     }
-    if (message?.type === "success") {
-      dispatch(getAllCategories(""));
-    }
-    dispatch(resetMessage());
-  }, [message, openNotification]);
+  }, [message, openNotification, dispatch]);
 
   const handleApplyFilter = () => {
-    dispatch(getAllCategories(searchText));
+    setAppliedSearch(searchInput.trim());
+    setCurrentPage(1);
   };
 
   const handleResetFilter = () => {
-    setSearchText("");
-    dispatch(getAllCategories(""));
+    setSearchInput("");
+    setAppliedSearch("");
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number, size?: number) => {
+    if (size && size !== pageSize) {
+      setPageSize(size);
+      setCurrentPage(1);
+    } else {
+      setCurrentPage(page);
+    }
   };
 
   return (
@@ -124,6 +163,7 @@ export default function CategoryPage() {
           Thêm danh mục mới
         </Button>
       </div>
+
       <div className="boxItemPage flex flex-col gap-4">
         <label className="text-sm font-semibold text-gray-600 mb-1">
           Tìm kiếm danh mục
@@ -132,8 +172,8 @@ export default function CategoryPage() {
           <Input
             placeholder="Nhập tên danh mục..."
             prefix={<SearchOutlined className="text-gray-400" />}
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             allowClear
             className="rounded-lg"
             style={{ width: 400 }}
@@ -159,11 +199,20 @@ export default function CategoryPage() {
       <div className="boxItemPage">
         <Table<CategoryDataType>
           columns={columns}
-          data={categories}
+          data={paginatedData}
           rowKey="categoryId"
           loading={loading}
+          pagination={{
+            current: currentPage,
+            pageSize: pageSize,
+            total: filteredCategories.length,
+            showSizeChanger: true,
+            pageSizeOptions: ["10", "20", "50", "100"],
+            onChange: (page, size) => handlePageChange(page, size),
+          }}
         />
       </div>
+
       <ModelAddCategory
         isModalOpen={isModalOpen}
         setIsModalOpen={setIsModalOpen}
