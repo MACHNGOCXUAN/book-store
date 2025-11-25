@@ -23,4 +23,6 @@ public interface StaffService {
     List<ChatSession> getCustomersChattingWithStaff(String staffId);
 
     List<ChatSession> getStaffsChattingWithCustomer(String customerId);
+
+    List<ChatSession> getAllChatSessions();
 }

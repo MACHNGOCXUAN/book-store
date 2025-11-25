@@ -34,17 +34,19 @@ public interface OrderRepository extends JpaRepository<Order, String>, JpaSpecif
 
     // Staff: xem đơn của mình; nếu status=PENDING thì trả đơn CHƯA được gán; nếu khác PENDING thì trả đơn gán cho staff đó
     @Query("""
+
         SELECT o FROM Order o
-        WHERE (:status IS NULL OR o.status = :status)
-          AND (:startTime IS NULL OR o.orderDate >= :startTime)
-          AND (:endTime IS NULL OR o.orderDate <= :endTime)
-          AND (:textSearch IS NULL OR LOWER(o.orderId) LIKE LOWER(CONCAT('%', :textSearch, '%'))
-               OR LOWER(o.customer.fullName) LIKE LOWER(CONCAT('%', :textSearch, '%')))
-          AND (
-                (:status = iuh.fit.backend.model.enums.OrderStatus.PENDING AND o.staff IS NULL)
-             OR (o.staff.userId = :staffId AND (:status IS NULL OR :status <> iuh.fit.backend.model.enums.OrderStatus.PENDING))
-          )
-        """)
+        WHERE\s
+            (:startTime IS NULL OR o.orderDate >= :startTime)
+            AND (:endTime IS NULL OR o.orderDate <= :endTime)
+            AND (:textSearch IS NULL OR LOWER(o.orderId) LIKE LOWER(CONCAT('%', :textSearch, '%'))
+                 OR LOWER(o.customer.fullName) LIKE LOWER(CONCAT('%', :textSearch, '%')))
+            AND (
+                (o.status = iuh.fit.backend.model.enums.OrderStatus.PENDING AND o.staff IS NULL)
+                OR
+                (o.staff.userId = :staffId AND (:status IS NULL OR o.status = :status))
+            )
+    """)
     Page<Order> findByFilterStaff(@Param("status") OrderStatus status,
                                   @Param("startTime") LocalDateTime startTime,
                                   @Param("endTime") LocalDateTime endTime,

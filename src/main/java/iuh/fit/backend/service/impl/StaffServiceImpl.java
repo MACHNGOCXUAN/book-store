@@ -203,4 +203,23 @@ public class StaffServiceImpl implements StaffService {
         return chatSessions;
     }
 
+    @Override
+    public List<ChatSession> getAllChatSessions() {
+        List<ChatSession> chatSessions = chatSessionRepository.findAll();
+
+        List<Customer> customersChattingWithStaff = new ArrayList<>();
+
+        for (ChatSession chatSession : chatSessions) {
+            Customer customer = chatSession.getCustomer();
+            if (chatSession.getStaff() != null) {
+                customer.setHasStaff(true);
+                customersChattingWithStaff.add(customer);
+            } else {
+                customer.setHasStaff(false);
+                customersChattingWithStaff.add(customer);
+            }
+        }
+        return chatSessions;
+    }
+
 }
