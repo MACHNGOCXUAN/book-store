@@ -4,12 +4,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
+import iuh.fit.backend.model.User;
+import iuh.fit.backend.model.enums.Role;
+import iuh.fit.backend.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,6 +34,7 @@ public class MessageController {
     private final MessageService messageService;
     private final StaffService staffService;
     private final JwtUtils jwtUtils;
+    private final UserService userService;
 
     private static final String UPLOAD_DIR = "uploads/messages/";
 
@@ -118,7 +118,17 @@ public class MessageController {
         String token = authHeader.substring(7);
         String staffId = jwtUtils.getUserIdFromToken(token);
 
-        List<ChatSession> chatSessions = staffService.getCustomersChattingWithStaff(staffId);
+        User user = userService.findUserById(staffId);
+        if (user == null) {
+            return ResponseEntity.badRequest().body("Missing user");
+        }
+
+        List<ChatSession> chatSessions = new ArrayList<>();
+        if(user.getRole().equals(Role.STAFF)) {
+            chatSessions = staffService.getCustomersChattingWithStaff(staffId);
+        } else if(user.getRole().equals(Role.ADMIN)) {
+            chatSessions = staffService.getAllChatSessions();
+        }
 
         return ResponseEntity.ok(Map.of("data", chatSessions));
     }
