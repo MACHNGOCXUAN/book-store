@@ -17,7 +17,7 @@ import {
   Typography,
 } from "antd";
 import { QRCodeSVG } from "qrcode.react";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { type CartItemType } from "../components/CartItem";
@@ -32,9 +32,9 @@ import { fetchCart } from "../features/cart/cartSlice";
 import { clearOrder, createOrder } from "../features/orders/ordersSlice";
 import { checkoutOrder, createMoMoPaymentOnly } from "../services/momoApi";
 import { fetchProvincesV1, transformV1Data } from "../services/provincesApi";
-import { createVNPayPaymentOnly } from "../services/vnpayApi";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import type { Address } from "../types/Address";
+import { API_BASE } from "../config/api";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -65,6 +65,8 @@ const CheckoutPage: React.FC = () => {
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [showQRModal, setShowQRModal] = useState(false);
   const [currentOrderPayment, setCurrentOrderPayment] = useState<any>(null);
+  // Guard to prevent showing success toast multiple times per order
+  const successToastRef = useRef(false);
 
   const [form] = Form.useForm();
   // Province data
@@ -271,12 +273,21 @@ const CheckoutPage: React.FC = () => {
       }));
 
       // Gửi cả voucherId và discountCode nếu có
-      const orderPayload = {
+      const orderPayload: any = {
         customerId: authUser.userId,
-        voucherId: selectedVoucherId || null,
-        discountCode: null, // Discount code đã được áp dụng trước, không cần gửi lại
         orderDetails,
+        paymentMethod: paymentMethod || "COD", // ⭐ Thêm payment method
       };
+
+      // Chỉ thêm voucherId nếu có (không gửi null)
+      if (selectedVoucherId) {
+        orderPayload.voucherId = selectedVoucherId;
+      }
+
+      // Chỉ thêm discountCode nếu có (không gửi null)
+      if (discountCode && discountCode.trim()) {
+        orderPayload.discountCode = discountCode.trim();
+      }
 
       console.log("📤 Dispatching createOrder with payload:", orderPayload);
 
@@ -499,25 +510,18 @@ const CheckoutPage: React.FC = () => {
         }
 
         try {
-          // Gọi API tạo VNPay payment (KHÔNG tạo order)
-          const vnpayResponse = await createVNPayPaymentOnly(
-            {
-              customerId: authUser!.userId,
-              voucherId: selectedVoucherId || null,
-              discountCode: discountCode || null,
-              orderDetails: cartItems.map((item) => ({
-                bookId: String(item.bookId),
-                quantity: item.quantity,
-              })),
+          // Gọi API tạo VNPay payment - tạo order luôn
+          const vnpayResponse = await fetch(`${API_BASE}/orders/checkout`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
             },
-            token
-          );
+            body: JSON.stringify(orderPayload),
+          }).then((r) => r.json());
 
-          console.log(
-            "✅ VNPay payment created (no order yet):",
-            vnpayResponse
-          );
-          console.log("   Payment data:", vnpayResponse.payment);
+          console.log("✅ VNPay order created:", vnpayResponse);
+          console.log("   Order ID:", vnpayResponse.order?.orderId);
           console.log(
             "   QR Code Base64:",
             vnpayResponse.payment?.qrCodeBase64?.substring(0, 50) + "..."
@@ -556,9 +560,9 @@ const CheckoutPage: React.FC = () => {
             );
           }
 
-          // Lưu orderPayload và payment data để tạo order sau khi xác nhận thanh toán
+          // Lưu order data để sau này nếu cần
           setCurrentOrderPayment({
-            orderPayload: vnpayResponse.orderRequest, // Lưu để tạo order sau
+            orderPayload: vnpayResponse.order, // Đã tạo order rồi
             payment: vnpayResponse.payment,
             address: currentAddress,
             values: values,
@@ -600,14 +604,18 @@ const CheckoutPage: React.FC = () => {
       if (result.meta.requestStatus === "fulfilled") {
         console.log("✅ Order created successfully!");
 
-        toast.success("Đặt hàng thành công!", {
-          position: "top-right",
-          autoClose: 2000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
+        if (!successToastRef.current) {
+          toast.success("Đặt hàng thành công!", {
+            position: "top-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            toastId: "order-success",
+          });
+          successToastRef.current = true;
+        }
 
         // Lưu địa chỉ nếu là mới
         const currentAddress = {
@@ -1259,21 +1267,26 @@ const CheckoutPage: React.FC = () => {
                     console.error("❌ Error creating order:", error);
                     toast.error("Có lỗi xảy ra khi tạo đơn hàng!", {
                       position: "top-right",
-                      autoClose: 3000,
+                      autoClose: 2000,
+                      toastId: "order-success",
                     });
+                    successToastRef.current = true;
                   }
-                } else {
-                  // Trường hợp khác - navigate trực tiếp
+
+                  setShowQRModal(false);
+                  // Redirect tới trang success giống như COD flow
                   dispatch(clearOrder());
                   navigate("/order-success", {
                     state: {
-                      order: currentOrderPayment?.order,
+                      order: currentOrderPayment?.orderPayload,
                       paymentMethod: paymentMethod,
                       address: currentOrderPayment?.address,
                       payment: currentOrderPayment?.payment,
                     },
                   });
-                  setShowQRModal(false);
+                } catch (error) {
+                  console.error("❌ Error saving after payment:", error);
+                  toast.error("Có lỗi xảy ra. Vui lòng thử lại!");
                 }
               }}
               style={{

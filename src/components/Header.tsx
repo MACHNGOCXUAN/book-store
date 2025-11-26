@@ -257,6 +257,14 @@ const Header = () => {
     setIsLoginModalOpen(false);
   };
 
+  const handleCartClick = () => {
+    if (!isLoggedIn) {
+      navigate("/login-required");
+    } else {
+      navigate("/cart");
+    }
+  };
+
   // -------------------- Render --------------------
   return (
     <>
@@ -308,14 +316,11 @@ const Header = () => {
                   icon={<SearchOutlined style={{ fontSize: 20 }} />}
                   onClick={() => setIsSearchModalOpen(true)}
                 />
-                <Link to="/cart">
+                <Button type="text" onClick={handleCartClick}>
                   <Badge count={cartCount} size="small">
-                    <Button
-                      type="text"
-                      icon={<ShoppingCartOutlined style={{ fontSize: 20 }} />}
-                    />
+                    <ShoppingCartOutlined style={{ fontSize: 20 }} />
                   </Badge>
-                </Link>
+                </Button>
               </>
             )}
 
@@ -427,7 +432,7 @@ const Header = () => {
                               {(
                                 Number(b.price) -
                                 (Number(b.price) * Number(b.discountPercent)) /
-                                100
+                                  100
                               ).toLocaleString("vi-VN")}
                               ₫
                             </div>
