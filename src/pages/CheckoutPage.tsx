@@ -596,88 +596,91 @@ const CheckoutPage: React.FC = () => {
       }
 
       // Dispatch Redux action để tạo đơn (CHỈ cho COD)
-      const result = await dispatch(createOrder(orderPayload));
 
-      console.log("📥 Order result:", result);
+      if (paymentMethod === "COD") {
+        const result = await dispatch(createOrder(orderPayload));
+        console.log("📥 Order result:", result);
 
-      // Kiểm tra kết quả
-      if (result.meta.requestStatus === "fulfilled") {
-        console.log("✅ Order created successfully!");
+        if (result.meta.requestStatus === "fulfilled") {
+          console.log("✅ Order created successfully!");
 
-        if (!successToastRef.current) {
-          toast.success("Đặt hàng thành công!", {
+          if (!successToastRef.current) {
+            toast.success("Đặt hàng thành công!", {
+              position: "top-right",
+              autoClose: 2000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              toastId: "order-success",
+            });
+            successToastRef.current = true;
+          }
+
+          // Lưu địa chỉ nếu là mới
+          const currentAddress = {
+            main: 1,
+            province: values.province,
+            district: values.district,
+            ward: values.ward,
+            specifics: values.specifics,
+            receiverName: values.receiverName,
+            receiverPhone: values.receiverPhone,
+            isDefault: addressState.addresses.length === 0,
+          };
+
+          const defaultAddr = addressState.addresses.find((a) => a.isDefault);
+          const isNewAddress =
+            !defaultAddr ||
+            defaultAddr.province !== values.province ||
+            defaultAddr.specifics !== values.specifics;
+
+          if (isNewAddress) {
+            console.log("💾 Saving new address...");
+            dispatch(
+              createAddressAction({
+                customerId: authUser.userId,
+                address: currentAddress as Address,
+              })
+            );
+          }
+
+          // Reload cart
+          dispatch(fetchCart());
+
+          // COD - chuyển hướng trực tiếp đến trang success
+          if (result.payload && typeof result.payload === "object") {
+            dispatch(clearOrder());
+            navigate("/order-success", {
+              state: {
+                order: result.payload.order,
+                paymentMethod,
+                address: currentAddress,
+              },
+            });
+          }
+        } else {
+          console.log("❌ Order creation failed:", result);
+          // Extract error message from rejected action
+          const errorMessage =
+            (typeof result.payload === "string" ? result.payload : null) ||
+            orderError ||
+            "Đặt hàng thất bại. Vui lòng thử lại!";
+
+          console.error("📋 Error details:", errorMessage);
+
+          toast.error(String(errorMessage), {
             position: "top-right",
-            autoClose: 2000,
+            autoClose: 3000,
             hideProgressBar: false,
             closeOnClick: true,
             pauseOnHover: true,
             draggable: true,
-            toastId: "order-success",
-          });
-          successToastRef.current = true;
-        }
-
-        // Lưu địa chỉ nếu là mới
-        const currentAddress = {
-          main: 1,
-          province: values.province,
-          district: values.district,
-          ward: values.ward,
-          specifics: values.specifics,
-          receiverName: values.receiverName,
-          receiverPhone: values.receiverPhone,
-          isDefault: addressState.addresses.length === 0,
-        };
-
-        const defaultAddr = addressState.addresses.find((a) => a.isDefault);
-        const isNewAddress =
-          !defaultAddr ||
-          defaultAddr.province !== values.province ||
-          defaultAddr.specifics !== values.specifics;
-
-        if (isNewAddress) {
-          console.log("💾 Saving new address...");
-          dispatch(
-            createAddressAction({
-              customerId: authUser.userId,
-              address: currentAddress as Address,
-            })
-          );
-        }
-
-        // Reload cart
-        dispatch(fetchCart());
-
-        // COD - chuyển hướng trực tiếp đến trang success
-        if (result.payload && typeof result.payload === "object") {
-          dispatch(clearOrder());
-          navigate("/order-success", {
-            state: {
-              order: result.payload.order,
-              paymentMethod,
-              address: currentAddress,
-            },
           });
         }
-      } else {
-        console.log("❌ Order creation failed:", result);
-        // Extract error message from rejected action
-        const errorMessage =
-          (typeof result.payload === "string" ? result.payload : null) ||
-          orderError ||
-          "Đặt hàng thất bại. Vui lòng thử lại!";
-
-        console.error("📋 Error details:", errorMessage);
-
-        toast.error(String(errorMessage), {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
       }
+
+      // Kiểm tra kết quả
     } catch (error: any) {
       console.error("❌ Exception in handleCheckout:", error);
       const errorMsg =
@@ -1284,9 +1287,6 @@ const CheckoutPage: React.FC = () => {
                       payment: currentOrderPayment?.payment,
                     },
                   });
-                } catch (error) {
-                  console.error("❌ Error saving after payment:", error);
-                  toast.error("Có lỗi xảy ra. Vui lòng thử lại!");
                 }
               }}
               style={{
