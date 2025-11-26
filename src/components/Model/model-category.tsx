@@ -1,6 +1,7 @@
 "use client";
-import React, { useEffect } from "react";
-import { Modal, Form, Input, Button } from "antd";
+import { categoryNameValidationRules } from "@/utils/validation";
+import { Button, Form, Input, Modal } from "antd";
+import { useEffect } from "react";
 
 interface ModelAddCategoryProps {
   isModalOpen: boolean;
@@ -29,14 +30,14 @@ export default function ModelAddCategory({
   };
 
   useEffect(() => {
-  if (isModalOpen) {
-    if (mode === "edit" && initialValues) {
-      form.setFieldsValue(initialValues);
-    } else {
-      form.resetFields();
+    if (isModalOpen) {
+      if (mode === "edit" && initialValues) {
+        form.setFieldsValue(initialValues);
+      } else {
+        form.resetFields();
+      }
     }
-  }
-}, [isModalOpen, initialValues, form]);
+  }, [isModalOpen, initialValues, form]);
 
   return (
     <Modal
@@ -54,7 +55,7 @@ export default function ModelAddCategory({
         <Form.Item
           label="Tên danh mục"
           name="categoryName"
-          rules={[{ required: true, message: "Vui lòng nhập tên danh mục" }]}
+          rules={categoryNameValidationRules}
         >
           <Input placeholder="Nhập tên danh mục" />
         </Form.Item>

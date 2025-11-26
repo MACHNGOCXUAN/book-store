@@ -1,21 +1,32 @@
 // File: components/products/ProductForm.tsx
-import React, { useEffect } from "react";
+import { useAppDispatch, useAppSelector } from "@/stores/hooks";
+import { getAllCategories } from "@/stores/slices/category.slice";
+import { ProductDataType, ProductFormValues } from "@/types/product";
 import {
+  authorValidationRules,
+  categoryValidationRules,
+  descriptionValidationRules,
+  importPriceValidationRules,
+  priceValidationRules,
+  publishDateValidationRules,
+  publisherValidationRules,
+  stockValidationRules,
+  titleValidationRules,
+} from "@/utils/validation";
+import { UploadOutlined } from "@ant-design/icons";
+import type { UploadFile } from "antd";
+import {
+  Button,
+  Col,
   Form,
   Input,
   InputNumber,
-  Button,
-  Row,
-  Col,
-  Upload,
   message,
+  Row,
   Select,
+  Upload,
 } from "antd";
-import { UploadOutlined } from "@ant-design/icons";
-import type { UploadFile } from "antd";
-import { ProductDataType, ProductFormValues } from "@/types/product";
-import { useAppDispatch, useAppSelector } from "@/stores/hooks";
-import { getAllCategories } from "@/stores/slices/category.slice";
+import React, { useEffect } from "react";
 
 const { TextArea } = Input;
 
@@ -110,7 +121,7 @@ export default function ProductForm({
           <Form.Item
             label="Tiêu đề sách"
             name="title"
-            rules={[{ required: true, message: "Vui lòng nhập tiêu đề!" }]}
+            rules={titleValidationRules}
           >
             <Input placeholder="Nhập tiêu đề sách" />
           </Form.Item>
@@ -120,7 +131,7 @@ export default function ProductForm({
           <Form.Item
             label="Tác giả"
             name="author"
-            rules={[{ required: true, message: "Vui lòng nhập tên tác giả!" }]}
+            rules={authorValidationRules}
           >
             <Input placeholder="Nhập tên tác giả" />
           </Form.Item>
@@ -130,7 +141,7 @@ export default function ProductForm({
           <Form.Item
             label="Giá (VNĐ)"
             name="price"
-            rules={[{ required: true, message: "Vui lòng nhập giá!" }]}
+            rules={priceValidationRules}
           >
             <InputNumber
               style={{ width: "100%" }}
@@ -147,7 +158,7 @@ export default function ProductForm({
           <Form.Item
             label="Giá nhập (VNĐ)"
             name="importPrice"
-            rules={[{ required: true, message: "Vui lòng nhập giá nhập!" }]}
+            rules={importPriceValidationRules}
           >
             <InputNumber
               style={{ width: "100%" }}
@@ -168,10 +179,11 @@ export default function ProductForm({
             <InputNumber
               style={{ width: "100%" }}
               min={0}
+              max={100}
               formatter={(value) =>
                 `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
               }
-              placeholder="Nhập giá sách"
+              placeholder="Nhập giảm giá"
             />
           </Form.Item>
         </Col>
@@ -180,7 +192,7 @@ export default function ProductForm({
           <Form.Item
             label="Số lượng tồn kho"
             name="stock"
-            rules={[{ required: true, message: "Vui lòng nhập số lượng!" }]}
+            rules={stockValidationRules}
           >
             <InputNumber
               style={{ width: "100%" }}
@@ -191,13 +203,13 @@ export default function ProductForm({
         </Col>
 
         <Col span={12}>
-          <Form.Item label="Nhà xuất bản" name="publisher">
+          <Form.Item label="Nhà xuất bản" name="publisher" rules={publisherValidationRules}>
             <Input placeholder="Nhập nhà xuất bản" />
           </Form.Item>
         </Col>
 
         <Col span={12}>
-          <Form.Item label="Năm xuất bản" name="publishDate">
+          <Form.Item label="Năm xuất bản" name="publishDate" rules={publishDateValidationRules}>
             <InputNumber
               style={{ width: "100%" }}
               min={1900}
@@ -208,7 +220,7 @@ export default function ProductForm({
         </Col>
 
         <Col span={12}>
-          <Form.Item label="Loại sách" name="category_id" rules={[{ required: true, message: "Vui lòng chọn loại sách!" }]}>
+          <Form.Item label="Loại sách" name="category_id" rules={categoryValidationRules}>
             <Select placeholder="Chọn loại sách" allowClear>
               {
                 categories.map((category: any) => (
@@ -236,7 +248,7 @@ export default function ProductForm({
         </Col>
 
         <Col span={24}>
-          <Form.Item label="Mô tả" name="description">
+          <Form.Item label="Mô tả" name="description" rules={descriptionValidationRules}>
             <TextArea
               rows={4}
               placeholder="Nhập mô tả về sách"

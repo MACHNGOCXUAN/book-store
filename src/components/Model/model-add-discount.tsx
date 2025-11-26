@@ -1,25 +1,31 @@
 "use client";
-import React, { useEffect } from "react";
-import {
-  Modal,
-  Form,
-  Input,
-  Select,
-  Row,
-  Col,
-  Button,
-  DatePicker,
-  InputNumber,
-} from "antd";
 import { useAppDispatch, useAppSelector } from "@/stores/hooks";
 import {
   createDiscount,
   getDiscountsFilter,
-  resetMessage,
   resetDiscount,
+  resetMessage,
   updateDiscount,
 } from "@/stores/slices/discount.slice";
-import dayjs from "dayjs"; // Cần cài 'dayjs'
+import {
+  discountNameValidationRules,
+  discountPercentValidationRules,
+  discountQuantityValidationRules,
+  minPriceValidationRules
+} from "@/utils/validation";
+import {
+  Button,
+  Col,
+  DatePicker,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Row,
+  Select,
+} from "antd";
+import dayjs from "dayjs";
+import React, { useEffect } from "react";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -163,7 +169,7 @@ const ModalAddDiscount = ({ isModalOpen, setIsModalOpen }: any) => {
             <Form.Item
               label="Tên mã"
               name="name"
-              rules={[{ required: true, message: "Vui lòng nhập tên mã" }]}
+              rules={discountNameValidationRules}
             >
               <Input placeholder="Nhập tên mã (ví dụ: SALE10)" />
             </Form.Item>
@@ -187,7 +193,7 @@ const ModalAddDiscount = ({ isModalOpen, setIsModalOpen }: any) => {
             <Form.Item
               label="Giá trị giảm (%)"
               name="percent"
-              rules={[{ required: true, message: "Vui lòng nhập" }]}
+              rules={discountPercentValidationRules}
             >
               <InputNumber
                 min={1}
@@ -201,7 +207,7 @@ const ModalAddDiscount = ({ isModalOpen, setIsModalOpen }: any) => {
             <Form.Item
               label="Số lượng"
               name="quantity"
-              rules={[{ required: true, message: "Vui lòng nhập" }]}
+              rules={discountQuantityValidationRules}
             >
               <InputNumber min={1} style={{ width: "100%" }} />
             </Form.Item>
@@ -210,7 +216,7 @@ const ModalAddDiscount = ({ isModalOpen, setIsModalOpen }: any) => {
             <Form.Item
               label="Giá tối thiểu để áp dụng (VNĐ)"
               name="minPriceToApply"
-              rules={[{ required: true, message: "Vui lòng nhập" }]}
+              rules={minPriceValidationRules}
             >
               <InputNumber
                 min={0}

@@ -1,4 +1,5 @@
 "use client";
+import { bannerTitleValidationRules, bannerUrlValidationRules } from "@/utils/validation";
 import { UploadOutlined } from "@ant-design/icons";
 import type { UploadFile } from "antd";
 import { Button, Col, Form, Input, InputNumber, Row, Switch, Upload, message } from "antd";
@@ -150,7 +151,7 @@ export default function BannerForm({ mode, initialValues, onSubmit, onCancel }: 
     <Form form={form} layout="vertical" onFinish={handleFinish} autoComplete="off">
       <Row gutter={16}>
         <Col span={16}>
-          <Form.Item label="Tiêu đề" name="title" rules={[{ required: true, message: "Vui lòng nhập tiêu đề" }]}>
+          <Form.Item label="Tiêu đề" name="title" rules={bannerTitleValidationRules}>
             <Input placeholder="Nhập tiêu đề banner" />
           </Form.Item>
         </Col>
@@ -168,7 +169,7 @@ export default function BannerForm({ mode, initialValues, onSubmit, onCancel }: 
         </Col>
 
         <Col span={16}>
-          <Form.Item label="Liên kết (URL)" name="url">
+          <Form.Item label="Liên kết (URL)" name="url" rules={bannerUrlValidationRules}>
             <Input placeholder="https://..." />
           </Form.Item>
         </Col>

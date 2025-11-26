@@ -1,12 +1,10 @@
 "use client";
-import React from "react";
-import type { FormProps } from "antd";
-import { Button, Divider, Form, Input } from "antd";
 import { useAppDispatch, useAppSelector } from "@/stores/hooks";
-import { getProfileUser, loginUser } from "@/stores/slices/auth.slice";
+import { loginUser } from "@/stores/slices/auth.slice";
+import { loginUsernameValidationRules, passwordValidationRules } from "@/utils/validation";
+import type { FormProps } from "antd";
+import { Button, Form, Input } from "antd";
 import { useRouter } from "next/navigation";
-import { GoogleOutlined, FacebookFilled } from "@ant-design/icons";
-import { Image } from "@/assets/images";
 
 type FieldType = {
   username?: string;
@@ -15,6 +13,7 @@ type FieldType = {
 };
 
 const LoginPage = () => {
+  const [form] = Form.useForm();
   const dispatch = useAppDispatch();
   const { loading } = useAppSelector((state) => state.auth);
   const router = useRouter();
@@ -41,20 +40,15 @@ const LoginPage = () => {
         </div>
 
         <Form
+          form={form}
           name="login_form"
           onFinish={onFinish}
           autoComplete="off"
           layout="vertical"
-          onSubmitCapture={(e) => e.preventDefault()}
         >
           <Form.Item<FieldType>
             name="username"
-            rules={[
-              {
-                required: true,
-                message: "Vui lòng nhập số điện thoại hoặc email!",
-              },
-            ]}
+            rules={loginUsernameValidationRules}
             className="mb-4"
           >
             <Input
@@ -65,7 +59,7 @@ const LoginPage = () => {
           </Form.Item>
           <Form.Item<FieldType>
             name="password"
-            rules={[{ required: true, message: "Vui lòng nhập mật khẩu!" }]}
+            rules={passwordValidationRules}
             className="mb-2"
           >
             <Input.Password
