@@ -1,14 +1,14 @@
 // src/components/auth/ForgotPasswordForm.tsx
-import React, { useState, useEffect, useMemo } from "react";
-import { Form, Alert } from "antd"; // Chỉ giữ lại các import cần thiết
-import { toast } from "react-toastify";
-import { useAppDispatch } from "../../store/hooks";
+import { Alert, Form } from "antd";
+import React, { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
+import { toast } from "react-toastify";
 import {
   requestOtp,
   resetPasswordWithOtp,
 } from "../../features/auth/authSlice";
 import type { RootState } from "../../store";
+import { useAppDispatch } from "../../store/hooks";
 
 // Import 2 component con
 import RequestOtpForm from "./forgot/RequestOtpForm";
@@ -63,7 +63,7 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
   }, [step]);
 
   // ----- Handlers được quản lý tại đây -----
-  const handleRequestOtp = async (values: any) => {
+  const handleRequestOtp = async (values: Record<string, string>) => {
     setLocalError(null);
     try {
       const e = values.email.trim();
@@ -73,15 +73,13 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
       setResendLeft(RESEND_SECONDS);
       otpForm.resetFields();
       toast.success("Mã OTP đã được gửi!");
-    } catch (err: any) {
-      // lỗi này thường là từ rejected thunk
+    } catch (err) {
       const msg = err || "Không thể gửi mã OTP. Thử lại sau.";
-      // không set localError vì reduxError đã tự set
-      toast.error(msg.toString());
+      toast.error(String(msg));
     }
   };
 
-  const handleReset = async (values: any) => {
+  const handleReset = async (values: Record<string, string>) => {
     setLocalError(null);
     try {
       await dispatch(
@@ -91,18 +89,15 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
           newPassword: values.password,
         })
       ).unwrap();
-      // Thành công → quay lại đăng nhập
       toast.success("Đặt lại mật khẩu thành công!");
       emailForm.resetFields();
       otpForm.resetFields();
       setSavedEmail("");
       setStep("email");
       onSwitchToLogin();
-    } catch (err: any) {
-      // Lỗi này (ví dụ: OTP sai) nên được hiển thị
+    } catch (err) {
       const msg = err || "Đặt lại mật khẩu thất bại. Thử lại sau.";
-      setLocalError(msg.toString());
-      // không dùng toast.error(msg) vì đã hiển thị Alert
+      setLocalError(String(msg));
     }
   };
 
@@ -113,10 +108,9 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
       await dispatch(requestOtp({ email: savedEmail })).unwrap();
       setResendLeft(RESEND_SECONDS);
       toast.success("Mã OTP đã được gửi lại!");
-    } catch (err: any) {
+    } catch (err) {
       const msg = err || "Không thể gửi lại mã. Thử lại sau.";
-      // không set localError vì reduxError đã tự set
-      toast.error(msg.toString());
+      toast.error(String(msg));
     }
   };
 

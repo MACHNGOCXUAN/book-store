@@ -1,17 +1,24 @@
 // src/components/auth/RegisterForm.tsx
 "use client";
 
-import React, { useState } from "react";
-import { Form, Input, Button } from "antd";
-import { toast } from "react-toastify";
 import {
-  UserOutlined,
   LockOutlined,
   MailOutlined,
   PhoneOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
-import { useAppDispatch } from "../../store/hooks";
+import { Button, Form, Input } from "antd";
+import React, { useState } from "react";
+import { toast } from "react-toastify";
 import { registerUser } from "../../features/auth/authSlice";
+import { useAppDispatch } from "../../store/hooks";
+import {
+  confirmPasswordValidationRules,
+  emailValidationRulesBuiltIn,
+  fullNameValidationRules,
+  passwordValidationRules,
+  phoneValidationRules,
+} from "../../utils/validation";
 
 /* ===================== Props Types ===================== */
 interface RegisterFormProps {
@@ -65,31 +72,28 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
       )}
       <Form.Item
         name="fullName"
-        rules={[{ required: true, message: "Vui lòng nhập họ và tên!" }]}
+        rules={fullNameValidationRules}
       >
         <Input prefix={<UserOutlined />} placeholder="Họ và tên" />
       </Form.Item>
 
       <Form.Item
         name="email"
-        rules={[
-          { required: true, message: "Vui lòng nhập email!" },
-          { type: "email", message: "Email không đúng định dạng!" },
-        ]}
+        rules={emailValidationRulesBuiltIn}
       >
         <Input prefix={<MailOutlined />} placeholder="Email" />
       </Form.Item>
 
       <Form.Item
         name="phone"
-        rules={[{ required: true, message: "Vui lòng nhập số điện thoại!" }]}
+        rules={phoneValidationRules}
       >
         <Input prefix={<PhoneOutlined />} placeholder="Số điện thoại" />
       </Form.Item>
 
       <Form.Item
         name="password"
-        rules={[{ required: true, message: "Vui lòng nhập mật khẩu!" }]}
+        rules={passwordValidationRules}
       >
         <Input.Password prefix={<LockOutlined />} placeholder="Mật khẩu" />
       </Form.Item>
@@ -97,16 +101,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
       <Form.Item
         name="confirmPassword"
         dependencies={["password"]}
-        rules={[
-          { required: true, message: "Vui lòng xác nhận mật khẩu!" },
-          ({ getFieldValue }) => ({
-            validator(_, value) {
-              if (!value || getFieldValue("password") === value)
-                return Promise.resolve();
-              return Promise.reject(new Error("Mật khẩu xác nhận không khớp!"));
-            },
-          }),
-        ]}
+        rules={confirmPasswordValidationRules}
       >
         <Input.Password
           prefix={<LockOutlined />}

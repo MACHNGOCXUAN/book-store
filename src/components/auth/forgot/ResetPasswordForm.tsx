@@ -1,20 +1,26 @@
 // src/components/auth/forgot/ResetPasswordForm.tsx
-import React from "react";
-import {
-  Form,
-  Input,
-  Button,
-  Space,
-  Divider,
-  Typography,
-  type FormInstance,
-} from "antd";
-// 1. Thay đổi icon import
 import {
   ArrowLeftOutlined,
   LockOutlined,
   MessageOutlined,
 } from "@ant-design/icons";
+import {
+  Button,
+  Divider,
+  Form,
+  Input,
+  Space,
+  Typography,
+  type FormInstance,
+} from "antd";
+import React from "react";
+import {
+  PASSWORD_REGEX,
+  confirmPasswordValidationRules,
+  isValidPassword,
+  otpValidationRules,
+  passwordValidationRules,
+} from "../../../utils/validation";
 
 const { Text } = Typography;
 
@@ -37,6 +43,13 @@ const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({
   maskedEmail,
   onSwitchToLogin,
 }) => {
+  // Debug: In ra passwordValidationRules và PASSWORD_REGEX
+  React.useEffect(() => {
+    console.log("🔍 PASSWORD_REGEX:", PASSWORD_REGEX);
+    console.log("🔍 passwordValidationRules:", passwordValidationRules);
+    console.log("🔍 Test 'hithien123':", isValidPassword("hithien123"));
+    console.log("🔍 Test 'Hithien123':", isValidPassword("Hithien123"));
+  }, []);
   return (
     <Form layout="vertical" size="large" form={form} onFinish={onFinish}>
       <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
@@ -46,14 +59,9 @@ const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({
       <Form.Item
         name="otp"
         label="Mã OTP (6 số)"
-        rules={[
-          { required: true, message: "Vui lòng nhập mã OTP!" },
-          { len: 6, message: "OTP phải gồm 6 số!" },
-          { pattern: /^\d{6}$/, message: "OTP chỉ gồm chữ số." },
-        ]}
+        rules={otpValidationRules}
       >
         <Input
-          // 2. Thay đổi icon tại đây
           prefix={<MessageOutlined />}
           placeholder="123456"
           inputMode="numeric"
@@ -64,32 +72,17 @@ const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({
       <Form.Item
         name="password"
         label="Mật khẩu mới"
-        rules={[
-          { required: true, message: "Vui lòng nhập mật khẩu mới!" },
-          { min: 8, message: "Tối thiểu 8 ký tự." },
-          {
-            pattern: /^(?=.*[A-Za-z])(?=.*\d).{8,}$/,
-            message: "Phải có chữ và số.",
-          },
-        ]}
+        rules={passwordValidationRules}
       >
-        <Input.Password prefix={<LockOutlined />} placeholder="********" />
-      </Form.Item>
-
-      <Form.Item
+        <Input.Password
+          prefix={<LockOutlined />}
+          placeholder="********"
+        />
+      </Form.Item>      <Form.Item
         name="confirm"
         label="Nhập lại mật khẩu"
         dependencies={["password"]}
-        rules={[
-          { required: true, message: "Vui lòng nhập lại mật khẩu!" },
-          ({ getFieldValue }) => ({
-            validator(_, value) {
-              if (!value || getFieldValue("password") === value)
-                return Promise.resolve();
-              return Promise.reject(new Error("Mật khẩu nhập lại không khớp!"));
-            },
-          }),
-        ]}
+        rules={confirmPasswordValidationRules}
       >
         <Input.Password prefix={<LockOutlined />} placeholder="********" />
       </Form.Item>

@@ -17,13 +17,14 @@ import {
   Typography,
 } from "antd";
 import { QRCodeSVG } from "qrcode.react";
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { type CartItemType } from "../components/CartItem";
 import VoucherSelector from "../components/VoucherSelector";
 import momoIcon from "../components/icons/logo-momo.png";
 import vnpayIcon from "../components/icons/logo-vnpay.jpg";
+import { API_BASE } from "../config/api";
 import {
   createAddress as createAddressAction,
   getAddresses,
@@ -33,7 +34,14 @@ import { clearOrder, createOrder } from "../features/orders/ordersSlice";
 import { fetchProvincesV1, transformV1Data } from "../services/provincesApi";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import type { Address } from "../types/Address";
-import { API_BASE } from "../config/api";
+import {
+  addressDetailValidationRules,
+  districtValidationRules,
+  fullNameValidationRules,
+  phoneValidationRules,
+  provinceValidationRules,
+  wardValidationRules,
+} from "../utils/validation";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -213,8 +221,8 @@ const CheckoutPage: React.FC = () => {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
           errorData.error ||
-            errorData.message ||
-            `Lỗi ${response.status}: Không thể áp dụng mã giảm giá`
+          errorData.message ||
+          `Lỗi ${response.status}: Không thể áp dụng mã giảm giá`
         );
       }
 
@@ -665,9 +673,7 @@ const CheckoutPage: React.FC = () => {
                 <Form.Item
                   label="Họ và tên người nhận"
                   name="receiverName"
-                  rules={[
-                    { required: true, message: "Vui lòng nhập họ và tên!" },
-                  ]}
+                  rules={fullNameValidationRules}
                 >
                   <Input placeholder="Nhập họ và tên" style={inputStyle} />
                 </Form.Item>
@@ -676,9 +682,7 @@ const CheckoutPage: React.FC = () => {
                 <Form.Item
                   label="Số điện thoại"
                   name="receiverPhone"
-                  rules={[
-                    { required: true, message: "Vui lòng nhập số điện thoại!" },
-                  ]}
+                  rules={phoneValidationRules}
                 >
                   <Input placeholder="Nhập số điện thoại" style={inputStyle} />
                 </Form.Item>
@@ -699,12 +703,7 @@ const CheckoutPage: React.FC = () => {
                 <Form.Item
                   label="Tỉnh/Thành phố"
                   name="province"
-                  rules={[
-                    {
-                      required: true,
-                      message: "Vui lòng chọn Tỉnh/Thành phố!",
-                    },
-                  ]}
+                  rules={provinceValidationRules}
                 >
                   <Select
                     placeholder="Chọn tỉnh/thành phố"
@@ -733,9 +732,7 @@ const CheckoutPage: React.FC = () => {
                 <Form.Item
                   label="Quận/Huyện"
                   name="district"
-                  rules={[
-                    { required: true, message: "Vui lòng chọn Quận/Huyện!" },
-                  ]}
+                  rules={districtValidationRules}
                 >
                   <Select
                     placeholder="Chọn quận/huyện"
@@ -761,9 +758,7 @@ const CheckoutPage: React.FC = () => {
                 <Form.Item
                   label="Phường/Xã"
                   name="ward"
-                  rules={[
-                    { required: true, message: "Vui lòng chọn Phường/Xã!" },
-                  ]}
+                  rules={wardValidationRules}
                 >
                   <Select
                     placeholder="Chọn phường/xã"
@@ -789,9 +784,7 @@ const CheckoutPage: React.FC = () => {
             <Form.Item
               label="Địa chỉ chi tiết"
               name="specifics"
-              rules={[
-                { required: true, message: "Vui lòng nhập địa chỉ chi tiết!" },
-              ]}
+              rules={addressDetailValidationRules}
             >
               <Input placeholder="Số nhà, tên đường..." style={inputStyle} />
             </Form.Item>
@@ -1134,9 +1127,9 @@ const CheckoutPage: React.FC = () => {
                   const isNewAddress =
                     !defaultAddr ||
                     defaultAddr.province !==
-                      currentOrderPayment?.values.province ||
+                    currentOrderPayment?.values.province ||
                     defaultAddr.specifics !==
-                      currentOrderPayment?.values.specifics;
+                    currentOrderPayment?.values.specifics;
 
                   if (isNewAddress && currentOrderPayment?.address) {
                     dispatch(
@@ -1193,7 +1186,7 @@ const CheckoutPage: React.FC = () => {
             </Text>
             {/* Hiển thị QR cho cả MoMo và VNPay */}
             {paymentMethod === "MOMO" &&
-            currentOrderPayment?.payment?.qrCodeUrl ? (
+              currentOrderPayment?.payment?.qrCodeUrl ? (
               <>
                 <div
                   style={{
@@ -1224,8 +1217,8 @@ const CheckoutPage: React.FC = () => {
                     Hạn thanh toán:{" "}
                     {currentOrderPayment.payment.expiresAt
                       ? new Date(
-                          currentOrderPayment.payment.expiresAt
-                        ).toLocaleString("vi-VN")
+                        currentOrderPayment.payment.expiresAt
+                      ).toLocaleString("vi-VN")
                       : "15 phút từ bây giờ"}
                   </Text>
                 </div>
@@ -1281,8 +1274,8 @@ const CheckoutPage: React.FC = () => {
                     Hạn thanh toán:{" "}
                     {currentOrderPayment.payment.expiresAt
                       ? new Date(
-                          currentOrderPayment.payment.expiresAt
-                        ).toLocaleString("vi-VN")
+                        currentOrderPayment.payment.expiresAt
+                      ).toLocaleString("vi-VN")
                       : "15 phút từ bây giờ"}
                   </Text>
                 </div>
