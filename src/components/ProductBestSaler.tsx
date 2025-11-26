@@ -71,6 +71,25 @@ const ProductBestSaler = () => {
         </div>
       ));
 
+  // Check if there are any books with stock > 0 for the active tab
+  const getAvailableBooks = (books: Book[]) => {
+    return books.filter((book) => book.stock > 0);
+  };
+
+  const hasAvailableBooks =
+    getAvailableBooks(
+      activeTab === "week"
+        ? booksWeek
+        : activeTab === "month"
+        ? booksMonth
+        : booksYear
+    ).length > 0;
+
+  // Hide section if no books available and loading is complete
+  if (!loading && !hasAvailableBooks) {
+    return null;
+  }
+
   return (
     <>
       <div style={{ background: "white", padding: "60px 0" }}>
@@ -131,9 +150,48 @@ const ProductBestSaler = () => {
                 </div>
               ) : (
                 <>
-                  {activeTab === "week" && renderBooks(booksWeek)}
-                  {activeTab === "month" && renderBooks(booksMonth)}
-                  {activeTab === "year" && renderBooks(booksYear)}
+                  {activeTab === "week" &&
+                    (renderBooks(booksWeek).length > 0 ? (
+                      renderBooks(booksWeek)
+                    ) : (
+                      <div
+                        style={{
+                          textAlign: "center",
+                          padding: 40,
+                          width: "100%",
+                        }}
+                      >
+                        Không có sách bán chạy trong tuần này
+                      </div>
+                    ))}
+                  {activeTab === "month" &&
+                    (renderBooks(booksMonth).length > 0 ? (
+                      renderBooks(booksMonth)
+                    ) : (
+                      <div
+                        style={{
+                          textAlign: "center",
+                          padding: 40,
+                          width: "100%",
+                        }}
+                      >
+                        Không có sách bán chạy trong tháng này
+                      </div>
+                    ))}
+                  {activeTab === "year" &&
+                    (renderBooks(booksYear).length > 0 ? (
+                      renderBooks(booksYear)
+                    ) : (
+                      <div
+                        style={{
+                          textAlign: "center",
+                          padding: 40,
+                          width: "100%",
+                        }}
+                      >
+                        Không có sách bán chạy trong năm này
+                      </div>
+                    ))}
                 </>
               )}
             </div>
@@ -182,11 +240,38 @@ const ProductBestSaler = () => {
         {loading ? (
           <div style={{ textAlign: "center", padding: 40 }}>Đang tải...</div>
         ) : (
-          <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
-            {activeTab === "week" && renderBooks(booksWeek)}
-            {activeTab === "month" && renderBooks(booksMonth)}
-            {activeTab === "year" && renderBooks(booksYear)}
-          </Row>
+          <>
+            {activeTab === "week" &&
+              (renderBooks(booksWeek).length > 0 ? (
+                <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
+                  {renderBooks(booksWeek)}
+                </Row>
+              ) : (
+                <div style={{ textAlign: "center", padding: 40 }}>
+                  Không có sách bán chạy trong tuần này
+                </div>
+              ))}
+            {activeTab === "month" &&
+              (renderBooks(booksMonth).length > 0 ? (
+                <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
+                  {renderBooks(booksMonth)}
+                </Row>
+              ) : (
+                <div style={{ textAlign: "center", padding: 40 }}>
+                  Không có sách bán chạy trong tháng này
+                </div>
+              ))}
+            {activeTab === "year" &&
+              (renderBooks(booksYear).length > 0 ? (
+                <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
+                  {renderBooks(booksYear)}
+                </Row>
+              ) : (
+                <div style={{ textAlign: "center", padding: 40 }}>
+                  Không có sách bán chạy trong năm này
+                </div>
+              ))}
+          </>
         )}
       </Modal>
     </>

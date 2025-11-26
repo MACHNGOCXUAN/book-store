@@ -1,6 +1,6 @@
 // src/components/header/HeaderActions.tsx
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Badge, Button, Dropdown, Space, type MenuProps } from "antd";
 import {
   BellOutlined,
@@ -28,6 +28,14 @@ const HeaderActions: React.FC<HeaderActionsProps> = ({
 }) => {
   const [hoveredCart, setHoveredCart] = useState(false);
   const navigate = useNavigate();
+
+  const handleCartClick = () => {
+    if (!isLoggedIn) {
+      navigate("/login-required");
+    } else {
+      navigate("/cart");
+    }
+  };
 
   const userMenuItems: MenuProps["items"] = [
     { key: "profile", label: "Trang cá nhân", icon: <SolutionOutlined /> },
@@ -73,33 +81,32 @@ const HeaderActions: React.FC<HeaderActionsProps> = ({
       </Button>
 
       {/* Cart */}
-      <Link to="/cart">
-        <Button
-          type="text"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            height: "auto",
-            padding: "4px 8px",
-            color: hoveredCart ? "#C92127" : "#666",
-            transition: "color 0.3s",
-          }}
-          onMouseEnter={() => setHoveredCart(true)}
-          onMouseLeave={() => setHoveredCart(false)}
-        >
-          <Badge count={cartCount} offset={[-8, 2]}>
-            <ShoppingCartOutlined
-              style={{
-                fontSize: 24,
-                color: hoveredCart ? "#C92127" : "#666",
-                transition: "color 0.3s",
-              }}
-            />
-          </Badge>
-          <span style={{ fontSize: 11, marginTop: 2 }}>Giỏ Hàng</span>
-        </Button>
-      </Link>
+      <Button
+        type="text"
+        onClick={handleCartClick}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          height: "auto",
+          padding: "4px 8px",
+          color: hoveredCart ? "#C92127" : "#666",
+          transition: "color 0.3s",
+        }}
+        onMouseEnter={() => setHoveredCart(true)}
+        onMouseLeave={() => setHoveredCart(false)}
+      >
+        <Badge count={cartCount} offset={[-8, 2]}>
+          <ShoppingCartOutlined
+            style={{
+              fontSize: 24,
+              color: hoveredCart ? "#C92127" : "#666",
+              transition: "color 0.3s",
+            }}
+          />
+        </Badge>
+        <span style={{ fontSize: 11, marginTop: 2 }}>Giỏ Hàng</span>
+      </Button>
 
       {/* Account */}
       {isLoggedIn ? (

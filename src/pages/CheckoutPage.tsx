@@ -30,11 +30,10 @@ import {
 } from "../features/addresses/addressSlice";
 import { fetchCart } from "../features/cart/cartSlice";
 import { clearOrder, createOrder } from "../features/orders/ordersSlice";
-import { createMoMoPaymentOnly } from "../services/momoApi";
 import { fetchProvincesV1, transformV1Data } from "../services/provincesApi";
-import { createVNPayPaymentOnly } from "../services/vnpayApi";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import type { Address } from "../types/Address";
+import { API_BASE } from "../config/api";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -273,12 +272,21 @@ const CheckoutPage: React.FC = () => {
       }));
 
       // Gửi cả voucherId và discountCode nếu có
-      const orderPayload = {
+      const orderPayload: any = {
         customerId: authUser.userId,
-        voucherId: selectedVoucherId || null,
-        discountCode: null, // Discount code đã được áp dụng trước, không cần gửi lại
         orderDetails,
+        paymentMethod: paymentMethod || "COD", // ⭐ Thêm payment method
       };
+
+      // Chỉ thêm voucherId nếu có (không gửi null)
+      if (selectedVoucherId) {
+        orderPayload.voucherId = selectedVoucherId;
+      }
+
+      // Chỉ thêm discountCode nếu có (không gửi null)
+      if (discountCode && discountCode.trim()) {
+        orderPayload.discountCode = discountCode.trim();
+      }
 
       console.log("📤 Dispatching createOrder with payload:", orderPayload);
 
@@ -309,10 +317,18 @@ const CheckoutPage: React.FC = () => {
         }
 
         try {
-          // Gọi API tạo MoMo payment (KHÔNG tạo order)
-          const momoResponse = await createMoMoPaymentOnly(orderPayload, token);
-          console.log("✅ MoMo payment created (no order yet):", momoResponse);
-          console.log("   Payment data:", momoResponse.payment);
+          // Gọi API tạo MoMo payment - tạo order luôn
+          const momoResponse = await fetch(`${API_BASE}/orders/checkout-momo`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(orderPayload),
+          }).then((r) => r.json());
+
+          console.log("✅ MoMo order created:", momoResponse);
+          console.log("   Order ID:", momoResponse.order?.orderId);
           console.log("   QR Code URL:", momoResponse.payment?.qrCodeUrl);
 
           toast.success("Vui lòng quét mã QR để thanh toán.", {
@@ -351,12 +367,12 @@ const CheckoutPage: React.FC = () => {
           // KHÔNG reload cart vì chưa tạo order
           // dispatch(fetchCart());
 
-          // Hiển thị modal QR MoMo - lưu cả orderPayload và address để dùng sau
+          // Hiển thị modal QR MoMo
           setCurrentOrderPayment({
-            orderPayload: momoResponse.orderRequest, // Lưu để tạo order sau
+            orderPayload: momoResponse.order, // Đã tạo order rồi
             payment: momoResponse.payment,
             address: currentAddress,
-            values: values, // Lưu form values
+            values: values,
           });
           setShowQRModal(true);
 
@@ -415,25 +431,18 @@ const CheckoutPage: React.FC = () => {
         }
 
         try {
-          // Gọi API tạo VNPay payment (KHÔNG tạo order)
-          const vnpayResponse = await createVNPayPaymentOnly(
-            {
-              customerId: authUser!.userId,
-              voucherId: selectedVoucherId || null,
-              discountCode: discountCode || null,
-              orderDetails: cartItems.map((item) => ({
-                bookId: String(item.bookId),
-                quantity: item.quantity,
-              })),
+          // Gọi API tạo VNPay payment - tạo order luôn
+          const vnpayResponse = await fetch(`${API_BASE}/orders/checkout`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
             },
-            token
-          );
+            body: JSON.stringify(orderPayload),
+          }).then((r) => r.json());
 
-          console.log(
-            "✅ VNPay payment created (no order yet):",
-            vnpayResponse
-          );
-          console.log("   Payment data:", vnpayResponse.payment);
+          console.log("✅ VNPay order created:", vnpayResponse);
+          console.log("   Order ID:", vnpayResponse.order?.orderId);
           console.log(
             "   QR Code Base64:",
             vnpayResponse.payment?.qrCodeBase64?.substring(0, 50) + "..."
@@ -472,9 +481,9 @@ const CheckoutPage: React.FC = () => {
             );
           }
 
-          // Lưu orderPayload và payment data để tạo order sau khi xác nhận thanh toán
+          // Lưu order data để sau này nếu cần
           setCurrentOrderPayment({
-            orderPayload: vnpayResponse.orderRequest, // Lưu để tạo order sau
+            orderPayload: vnpayResponse.order, // Đã tạo order rồi
             payment: vnpayResponse.payment,
             address: currentAddress,
             values: values,
@@ -1113,91 +1122,57 @@ const CheckoutPage: React.FC = () => {
               key="confirm"
               type="primary"
               onClick={async () => {
-                // Nếu là MoMo hoặc VNPay và chưa có order, tạo order bây giờ
-                if (
-                  (paymentMethod === "MOMO" || paymentMethod === "VNPAY") &&
-                  currentOrderPayment?.orderPayload
-                ) {
-                  try {
-                    console.log(
-                      "🔄 Creating order after payment confirmation..."
+                // ⭐ Order đã được tạo ở /checkout-momo hoặc /checkout
+                // Chỉ cần lưu address và redirect
+                try {
+                  console.log("💾 Saving address and closing modal...");
+
+                  // Lưu địa chỉ nếu cần
+                  const defaultAddr = addressState.addresses.find(
+                    (a) => a.isDefault
+                  );
+                  const isNewAddress =
+                    !defaultAddr ||
+                    defaultAddr.province !==
+                      currentOrderPayment?.values.province ||
+                    defaultAddr.specifics !==
+                      currentOrderPayment?.values.specifics;
+
+                  if (isNewAddress && currentOrderPayment?.address) {
+                    dispatch(
+                      createAddressAction({
+                        customerId: authUser!.userId,
+                        address: currentOrderPayment.address as Address,
+                      })
                     );
-                    const result = await dispatch(
-                      createOrder(currentOrderPayment.orderPayload)
-                    );
-
-                    if (result.meta.requestStatus === "fulfilled") {
-                      if (!successToastRef.current) {
-                        toast.success("Đặt hàng thành công!", {
-                          position: "top-right",
-                          autoClose: 2000,
-                          toastId: "order-success",
-                        });
-                        successToastRef.current = true;
-                      }
-
-                      // Lưu địa chỉ nếu cần
-                      const defaultAddr = addressState.addresses.find(
-                        (a) => a.isDefault
-                      );
-                      const isNewAddress =
-                        !defaultAddr ||
-                        defaultAddr.province !==
-                          currentOrderPayment.values.province ||
-                        defaultAddr.specifics !==
-                          currentOrderPayment.values.specifics;
-
-                      if (isNewAddress) {
-                        dispatch(
-                          createAddressAction({
-                            customerId: authUser!.userId,
-                            address: currentOrderPayment.address as Address,
-                          })
-                        );
-                      }
-
-                      // Reload cart
-                      dispatch(fetchCart());
-
-                      // Navigate to success page
-                      dispatch(clearOrder());
-                      navigate("/order-success", {
-                        state: {
-                          order: (result.payload as any)?.order,
-                          paymentMethod: paymentMethod,
-                          address: currentOrderPayment.address,
-                          payment: currentOrderPayment.payment,
-                        },
-                      });
-                      setShowQRModal(false);
-                    } else {
-                      toast.error(
-                        "Không thể tạo đơn hàng. Vui lòng liên hệ hỗ trợ!",
-                        {
-                          position: "top-right",
-                          autoClose: 3000,
-                        }
-                      );
-                    }
-                  } catch (error) {
-                    console.error("❌ Error creating order:", error);
-                    toast.error("Có lỗi xảy ra khi tạo đơn hàng!", {
-                      position: "top-right",
-                      autoClose: 3000,
-                    });
                   }
-                } else {
-                  // Trường hợp khác - navigate trực tiếp
+
+                  // Reload cart
+                  dispatch(fetchCart());
+
+                  if (!successToastRef.current) {
+                    toast.success("Đặt hàng thành công!", {
+                      position: "top-right",
+                      autoClose: 2000,
+                      toastId: "order-success",
+                    });
+                    successToastRef.current = true;
+                  }
+
+                  setShowQRModal(false);
+                  // Redirect tới trang success giống như COD flow
                   dispatch(clearOrder());
                   navigate("/order-success", {
                     state: {
-                      order: currentOrderPayment?.order,
+                      order: currentOrderPayment?.orderPayload,
                       paymentMethod: paymentMethod,
                       address: currentOrderPayment?.address,
                       payment: currentOrderPayment?.payment,
                     },
                   });
-                  setShowQRModal(false);
+                } catch (error) {
+                  console.error("❌ Error saving after payment:", error);
+                  toast.error("Có lỗi xảy ra. Vui lòng thử lại!");
                 }
               }}
               style={{
