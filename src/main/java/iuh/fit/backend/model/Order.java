@@ -106,18 +106,10 @@ public class Order {
     @PrePersist
     @PreUpdate
     private void onWrite() {
-        // ⚠️ IMPORTANT: Khi @PrePersist được gọi, orderDetails chưa chắc đã được persist
-        // Nên chỉ tính những order KHÔNG có discount ở đây
-        // Với discount, service layer phải gọi setTotalAmountWithDiscount() trước khi save
-        
-        if (this.discountCode == null) {
-            // Không có discount, tính từ items
-            this.totalAmount = calcItemsTotal();
-            log.info("🔵 Order.onWrite() (NO DISCOUNT): set totalAmount={}", this.totalAmount);
-        } else {
-            // Có discount, không thay đổi totalAmount (đã được set bởi service)
-            log.info("🔵 Order.onWrite() (HAS DISCOUNT): keeping totalAmount={}", this.totalAmount);
-        }
+        // ⚠️ IMPORTANT: Do NOT recalc totalAmount here
+        // At @PrePersist time, orderDetails may not be persisted yet
+        // Service layer MUST call recalcTotals() or setTotalAmountWithDiscount() BEFORE save()
+        log.info("🔵 Order.onWrite() called - totalAmount={}", this.totalAmount);
     }
 
     /** Tiện phương thức add/remove giữ đồng bộ 2 chiều */
@@ -126,7 +118,7 @@ public class Order {
             return;
         d.setOrder(this);
         this.orderDetails.add(d);
-        this.totalAmount = calcItemsTotal();
+        // ⚠️ Không set totalAmount ở đây - để cho service layer xử lý qua recalcTotals() hoặc setTotalAmountWithDiscount()
     }
 
     public void removeOrderDetail(OrderDetail d) {
@@ -134,6 +126,6 @@ public class Order {
             return;
         this.orderDetails.remove(d);
         d.setOrder(null);
-        this.totalAmount = calcItemsTotal();
+        // ⚠️ Không set totalAmount ở đây - để cho service layer xử lý qua recalcTotals() hoặc setTotalAmountWithDiscount()
     }
 }

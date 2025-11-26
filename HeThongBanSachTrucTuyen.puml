@@ -1,0 +1,316 @@
+@startuml
+enum iuh.fit.backend.model.enums.DiscountType {
++  ONE_TIME
++  MANY_TIME
+}
+
+enum iuh.fit.backend.model.enums.Gender {
++  MALE
++  FEMALE
+}
+
+class iuh.fit.backend.model.CartItem {
+- String cartItemId
+- int quantity
+- double unitPrice
+- Cart cart
+- Book book
++ double getLineTotal()
+}
+
+
+class iuh.fit.backend.model.ChatSession {
+- String sessionId
+- Customer customer
+- Staff staff
+- LocalDateTime startTime
+- LocalDateTime lastMessageTime
+- String lastMessage
+- boolean isActive
++ void prePersist()
+}
+
+
+class iuh.fit.backend.model.Customer {
+- Integer loyaltyPoints
+- CustomerTier tier
+- Boolean hasStaff
+- Cart cart
+- Set<Book> favoriteBooks
+- List<Address> addresses
+- List<UserDiscountWallet> discountWallet
++ boolean addLoyaltyPoints(int)
++ boolean redeemLoyaltyPoints(int)
++ boolean hasEnoughPoints(int)
+}
+
+
+class iuh.fit.backend.model.Staff {
+- String department
+- String shift
+}
+
+class iuh.fit.backend.model.Book {
+- String bookId
+- String title
+- String author
+- String publisher
+- double price
+- double importPrice
+- int stock
+- int discountPercent
+- String description
+- LocalDate publishDate
+- Category category
+- String coverImage
+- List<OrderDetail> orderDetails
+- List<CartItem> cartItems
+- List<Review> reviews
+- Set<Customer> likedByCustomers
+}
+
+enum iuh.fit.backend.model.enums.MessageStatus {
++  SENT
++  DELIVERED
++  READ
+}
+
+class iuh.fit.backend.model.UserDiscountWallet {
+- Long id
+- Customer customer
+- DiscountCode discountCode
+- Boolean used
+- LocalDateTime acquiredDate
+- LocalDateTime usedDate
+- String usedInOrderId
++ void markAsUsed(String)
++ boolean isValidToUse()
+}
+
+
+class iuh.fit.backend.model.Cart {
+- String cartId
+- LocalDate createdDate
+- double totalAmount
+- Customer customer
+- List<CartItem> items
++ double calcItemsTotal()
++ void recalcTotals()
+- void onWrite()
++ void addItem(CartItem)
++ void removeItem(CartItem)
+}
+
+
+class iuh.fit.backend.model.PasswordResetOTP {
+- Long id
+- String userId
+- String otpHash
+- LocalDateTime expiresAt
+- LocalDateTime createdAt
+- Integer attempts
+- Integer maxAttempts
+- boolean used
+}
+
+class iuh.fit.backend.model.Banner {
+- String bannerId
+- String title
+- String imageUrl
+- int displayOrder
+- boolean isVisible
+- String url
+- User createdBy
+- LocalDateTime createdAt
+- LocalDateTime updatedAt
+}
+
+class iuh.fit.backend.model.Admin {
+}
+class iuh.fit.backend.model.Category {
+- String categoryId
+- String categoryName
+- List<Book> books
+}
+
+class iuh.fit.backend.model.Message {
+- String messageId
+- User sender
+- User receiver
+- String content
+- MessageType messageType
+- String fileUrl
+- String fileName
+- String fileSize
+- LocalDateTime timestamp
+- boolean isRead
+- ChatSession chatSession
++ void prePersist()
+}
+
+
+class iuh.fit.backend.model.DiscountCode {
+- String discountCodeId
+- String name
+- int percent
+- LocalDate startDate
+- LocalDate endDate
+- String description
+- int quantity
+- double minPriceToApply
+- DiscountType discountType
+- int maxQuantityCanUse
+- Boolean isPublic
+- Boolean redeemable
+- Integer redeemCost
+- CustomerTier minTierRequired
+- List<Order> order
+- List<UserDiscountWallet> wallets
+}
+
+enum iuh.fit.backend.model.enums.CustomerTier {
++  NEW_USER
++  REGULAR
++  VIP
++  DIAMOND
+- int minPoints
++ int getMinPoints()
++ {static} CustomerTier getTierByPoints(int)
+}
+
+
+enum iuh.fit.backend.model.enums.PaymentMethod {
++  COD
++  ONLINE
+}
+
+abstract class iuh.fit.backend.model.User {
+- String userId
+- String fullName
+- LocalDate dateOfBirth
+- Gender gender
+- String password
+- String email
+- String phoneNumber
+- Role role
+- boolean status
+- LocalDate registrationDate
+}
+
+class iuh.fit.backend.model.OrderDetail {
+- String orderDetailId
+- int quantity
+- double unitPrice
+- Order order
+- Book book
++ double getLineTotal()
+}
+
+
+class iuh.fit.backend.model.Address {
+- Long id
+- String receiverName
+- String receiverPhone
+- String province
+- String district
+- String ward
+- String specifics
+- int main
+- Customer customer
+}
+
+class iuh.fit.backend.model.Article {
+- String articleId
+- String title
+- String content
+- String thumbnailUrl
+- User createdBy
+- User updatedBy
+- LocalDateTime createdAt
+- LocalDateTime updatedAt
+}
+
+class iuh.fit.backend.model.Order {
+- String orderId
+- LocalDateTime orderDate
+- OrderStatus status
+- double totalAmount
+- Customer customer
+- List<OrderDetail> orderDetails
+- List<Payment> payments
+- DiscountCode discountCode
+- Staff staff
+- List<OrderHistory> orderHistories
++ double calcItemsTotal()
++ double calcPaidAmount()
++ double calcDueAmount()
++ void recalcTotals()
++ void setTotalAmountWithDiscount()
++ double calcTotalWithDiscount()
+- void onWrite()
++ void addOrderDetail(OrderDetail)
++ void removeOrderDetail(OrderDetail)
+}
+
+
+enum iuh.fit.backend.model.enums.Role {
++  CUSTOMER
++  ADMIN
++  STAFF
+}
+
+class iuh.fit.backend.model.Review {
+- String reviewId
+- Book book
+- Customer customer
+- int rating
+- String content
+- LocalDate ratingDate
+}
+
+class iuh.fit.backend.model.OrderHistory {
+- String id
+- OrderStatus status
+- LocalDateTime timestamp
+- Order order
+}
+
+enum iuh.fit.backend.model.enums.MessageType {
++  TEXT
++  IMAGE
++  VIDEO
++  FILE
+}
+
+enum iuh.fit.backend.model.enums.ChatStatus {
++  OPEN
++  CLOSED
+}
+
+enum iuh.fit.backend.model.enums.OrderStatus {
++  PENDING
++  PROCESSING
++  SHIPPING
++  COMPLETED
++  CANCELLED
+}
+
+class iuh.fit.backend.model.Payment {
+- String paymentId
+- Order order
+- float amount
+- PaymentMethod method
+- String qrCodeBase64
+- String paymentUrl
+- LocalDateTime paymentCreatedAt
+- LocalDateTime paymentCompletedAt
+- String vnpTransactionId
+- String vnpResponseCode
+}
+
+
+
+iuh.fit.backend.model.User <|-- iuh.fit.backend.model.Customer
+iuh.fit.backend.model.User <|-- iuh.fit.backend.model.Staff
+iuh.fit.backend.model.User <|-- iuh.fit.backend.model.Admin
+@enduml

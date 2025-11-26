@@ -23,13 +23,15 @@ public class Payment {
 
     private float amount; // có thể dùng BigDecimal trong thực tế
     @Enumerated(EnumType.STRING)
+    @Column(length = 20)
     private PaymentMethod method;
 
     // QR Code fields cho VNPay
     @Column(columnDefinition = "LONGTEXT")
     private String qrCodeBase64; // QR code dạng Base64 (data:image/png;base64,...)
 
-    private String paymentUrl; // URL thanh toán VNPay
+    @Column(columnDefinition = "LONGTEXT")
+    private String paymentUrl; // URL thanh toán VNPay (có thể rất dài)
 
     private LocalDateTime paymentCreatedAt; // Thời gian tạo thanh toán
 
