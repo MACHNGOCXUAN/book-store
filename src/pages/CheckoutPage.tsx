@@ -1270,15 +1270,7 @@ const CheckoutPage: React.FC = () => {
                         }
                       );
                     }
-                  } catch (error) {
-                    console.error("❌ Error creating order:", error);
-                    toast.error("Có lỗi xảy ra khi tạo đơn hàng!", {
-                      position: "top-right",
-                      autoClose: 2000,
-                      toastId: "order-success",
-                    });
-                    successToastRef.current = true;
-                  }
+                  } 
 
                   setShowQRModal(false);
                   // Redirect tới trang success giống như COD flow
@@ -1291,7 +1283,15 @@ const CheckoutPage: React.FC = () => {
                       payment: currentOrderPayment?.payment,
                     },
                   });
-                }
+                } catch (error) {
+                    console.error("❌ Error creating order:", error);
+                    toast.error("Có lỗi xảy ra khi tạo đơn hàng!", {
+                      position: "top-right",
+                      autoClose: 2000,
+                      toastId: "order-success",
+                    });
+                    successToastRef.current = true;
+                  }
               }}
               style={{
                 background: paymentMethod === "MOMO" ? "#d82d8b" : "#d32f2f",
