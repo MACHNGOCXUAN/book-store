@@ -1,7 +1,8 @@
 // src/components/auth/forgot/RequestOtpForm.tsx
-import React from "react";
-import { Form, Input, Button, Divider, type FormInstance } from "antd";
 import { ArrowLeftOutlined, MailOutlined } from "@ant-design/icons";
+import { Button, Divider, Form, Input, type FormInstance } from "antd";
+import React from "react";
+import { emailValidationRulesBuiltIn } from "../../../utils/validation";
 
 interface RequestOtpFormProps {
   form: FormInstance;
@@ -20,10 +21,7 @@ const RequestOtpForm: React.FC<RequestOtpFormProps> = ({
     <Form layout="vertical" size="large" form={form} onFinish={onFinish}>
       <Form.Item
         name="email"
-        rules={[
-          { required: true, message: "Vui lòng nhập email!" },
-          { type: "email", message: "Email không đúng định dạng!" },
-        ]}
+        rules={emailValidationRulesBuiltIn}
       >
         <Input prefix={<MailOutlined />} placeholder="you@example.com" />
       </Form.Item>

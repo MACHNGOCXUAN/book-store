@@ -1,10 +1,11 @@
 import { Button, Card, Form, Input, Typography } from "antd";
 import { useState } from "react";
-import { API_BASE } from "../../config/api";
 import { useSelector } from "react-redux";
-import type { RootState } from "../../store";
 import { toast } from "react-toastify";
+import { API_BASE } from "../../config/api";
 import { useAccountContext } from "../../context/AccountContext";
+import type { RootState } from "../../store";
+import { passwordValidationRules } from "../../utils/validation";
 
 const { Link: TextLink } = Typography;
 
@@ -130,10 +131,7 @@ const ChangePasswordPage = ({ onSave }: ChangePasswordProps) => {
             </span>
           }
           name="newPassword"
-          rules={[
-            { required: true, message: "Vui lòng nhập mật khẩu mới!" },
-            { min: 6, message: "Mật khẩu phải có ít nhất 6 ký tự!" },
-          ]}
+          rules={passwordValidationRules}
         >
           <Input.Password
             placeholder="Mật khẩu mới"
@@ -230,8 +228,8 @@ const ChangePasswordPage = ({ onSave }: ChangePasswordProps) => {
           Lưu ý:
         </div>
         <ul style={{ margin: 0, paddingLeft: 20 }}>
-          <li>Mật khẩu phải có ít nhất 6 ký tự</li>
-          <li>Nên sử dụng kết hợp chữ hoa, chữ thường và số</li>
+          <li>Mật khẩu phải có ít nhất 8 ký tự</li>
+          <li>Phải chứa ít nhất 1 chữ hoa, 1 chữ thường, 1 số</li>
           <li>Không chia sẻ mật khẩu với người khác</li>
         </ul>
       </div>
