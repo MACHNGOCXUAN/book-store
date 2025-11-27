@@ -1,6 +1,7 @@
 package iuh.fit.backend.model;
 
 import iuh.fit.backend.model.enums.PaymentMethod;
+import iuh.fit.backend.model.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -21,21 +22,23 @@ public class Payment {
     @JoinColumn(name = "order_id", nullable = false)
     private Order order; // 1 order - n payments
 
-    private float amount; // có thể dùng BigDecimal trong thực tế
+    private Long amount;
     @Enumerated(EnumType.STRING)
-    @Column(length = 20)
     private PaymentMethod method;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PaymentStatus status = PaymentStatus.PENDING;
+
+    private String paymentUrl;
+    private LocalDateTime paymentCreatedAt;
+    private LocalDateTime paymentCompletedAt;
+    private String transactionId;
+    private String responseCode;
 
     // QR Code fields cho VNPay
     @Column(columnDefinition = "LONGTEXT")
     private String qrCodeBase64; // QR code dạng Base64 (data:image/png;base64,...)
-
-    @Column(columnDefinition = "LONGTEXT")
-    private String paymentUrl; // URL thanh toán VNPay (có thể rất dài)
-
-    private LocalDateTime paymentCreatedAt; // Thời gian tạo thanh toán
-
-    private LocalDateTime paymentCompletedAt; // Thời gian hoàn tất thanh toán
 
     @Column(length = 50)
     private String vnpTransactionId; // ID giao dịch từ VNPay (vnp_TxnRef)

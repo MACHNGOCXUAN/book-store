@@ -11,4 +11,6 @@ import java.util.List;
 public interface PaymentRepository extends JpaRepository<Payment, String> {
     @Query("SELECT p.paymentId FROM Payment p ORDER BY p.paymentId DESC LIMIT 1")
     String findMaxPaymentId();
+
+    Payment findByTransactionId(String transactionId);
 }
