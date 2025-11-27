@@ -220,7 +220,7 @@ public class OrderServiceImpl implements OrderService {
             Payment payment = new Payment();
             payment.setPaymentId(generateNextPaymentId());
             payment.setOrder(saved);
-            payment.setAmount((float) saved.getTotalAmount());
+            payment.setAmount((long) saved.getTotalAmount());
             payment.setMethod(PaymentMethod.valueOf(request.getPaymentMethod().toUpperCase()));
             payment.setPaymentCreatedAt(LocalDateTime.now());
             paymentRepository.save(payment);

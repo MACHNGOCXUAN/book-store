@@ -135,7 +135,7 @@ public class OrderFullDetailDTO {
     @Data
     public static class PaymentInfoDTO {
         private String paymentId;
-        private Float amount;
+        private Long amount;
         private PaymentMethod method;
     }
 
