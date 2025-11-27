@@ -30,6 +30,7 @@ import {
 } from "../features/addresses/addressSlice";
 import { fetchCart } from "../features/cart/cartSlice";
 import { clearOrder, createOrder } from "../features/orders/ordersSlice";
+import { checkoutOrder, createMoMoPaymentOnly } from "../services/momoApi";
 import { fetchProvincesV1, transformV1Data } from "../services/provincesApi";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import type { Address } from "../types/Address";
@@ -291,10 +292,109 @@ const CheckoutPage: React.FC = () => {
       console.log("📤 Dispatching createOrder with payload:", orderPayload);
 
       // Kiểm tra xem có phải thanh toán MoMo không
-      if (paymentMethod === "MOMO") {
-        console.log("💳 Processing MoMo payment...");
+      // if (paymentMethod === "MOMO") {
+      //   console.log("💳 Processing MoMo payment...");
 
-        // Validate MoMo amount constraints
+      //   // Validate MoMo amount constraints
+      //   if (total < 1000) {
+      //     message.error("Số tiền tối thiểu cho thanh toán MoMo là 1,000 VND. Vui lòng chọn phương thức thanh toán khác hoặc thêm sản phẩm vào giỏ hàng.");
+      //     return;
+      //   }
+
+      //   if (total > 50000000) {
+      //     message.error("Số tiền tối đa cho thanh toán MoMo là 50,000,000 VND. Vui lòng chọn phương thức thanh toán khác.");
+      //     return;
+      //   }
+
+      //   const token = localStorage.getItem("access_token");
+      //   if (!token) {
+      //     message.error("Vui lòng đăng nhập!");
+      //     navigate("/login");
+      //     return;
+      //   }
+
+      //   try {
+      //     // Gọi API tạo MoMo payment (KHÔNG tạo order)
+      //     // const momoResponse = await createMoMoPaymentOnly(orderPayload, token);
+      //     const momoResponse = await checkoutOrder(orderPayload, token);
+      //     console.log("✅ MoMo payment created (no order yet):", momoResponse);
+      //     console.log("   Payment data:", momoResponse.payment);
+      //     console.log("   QR Code URL:", momoResponse.payment?.qrCodeUrl);
+
+      //     toast.success("Vui lòng quét mã QR để thanh toán.", {
+      //       position: "top-right",
+      //       autoClose: 2000,
+      //     });
+
+      //     // Lưu địa chỉ nếu là mới
+      //     const currentAddress = {
+      //       main: 1,
+      //       province: values.province,
+      //       district: values.district,
+      //       ward: values.ward,
+      //       specifics: values.specifics,
+      //       receiverName: values.receiverName,
+      //       receiverPhone: values.receiverPhone,
+      //       isDefault: addressState.addresses.length === 0,
+      //     };
+
+      //     const defaultAddr = addressState.addresses.find((a) => a.isDefault);
+      //     const isNewAddress =
+      //       !defaultAddr ||
+      //       defaultAddr.province !== values.province ||
+      //       defaultAddr.specifics !== values.specifics;
+
+      //     if (isNewAddress) {
+      //       console.log("💾 Saving new address...");
+      //       dispatch(
+      //         createAddressAction({
+      //           customerId: authUser.userId,
+      //           address: currentAddress as Address,
+      //         })
+      //       );
+      //     }
+
+      //     // KHÔNG reload cart vì chưa tạo order
+      //     // dispatch(fetchCart());
+
+      //     // Hiển thị modal QR MoMo - lưu cả orderPayload và address để dùng sau
+      //     setCurrentOrderPayment({
+      //       orderPayload: momoResponse.orderRequest, // Lưu để tạo order sau
+      //       payment: momoResponse.payment,
+      //       address: currentAddress,
+      //       values: values, // Lưu form values
+      //     });
+      //     setShowQRModal(true);
+
+      //     return; // Dừng lại để không chạy logic bên dưới
+      //   } catch (error) {
+      //     console.error("❌ MoMo checkout error:", error);
+
+      //     // Lấy thông báo lỗi chi tiết
+      //     let errorMessage = "Không thể tạo thanh toán MoMo. Vui lòng thử lại!";
+
+      //     if (error instanceof Error) {
+      //       errorMessage = error.message;
+      //     } else if (typeof error === 'object' && error !== null) {
+      //       const err = error as any;
+      //       if (err.response?.data?.message) {
+      //         errorMessage = err.response.data.message;
+      //       } else if (err.message) {
+      //         errorMessage = err.message;
+      //       }
+      //     }
+
+      //     console.error("📋 Error message:", errorMessage);
+
+      //     toast.error(errorMessage, {
+      //       position: "top-right",
+      //       autoClose: 5000,
+      //     });
+      //     return;
+      //   }
+      // }
+
+      if (paymentMethod === "MOMO") {
         if (total < 1000) {
           message.error(
             "Số tiền tối thiểu cho thanh toán MoMo là 1,000 VND. Vui lòng chọn phương thức thanh toán khác hoặc thêm sản phẩm vào giỏ hàng."
@@ -317,26 +417,19 @@ const CheckoutPage: React.FC = () => {
         }
 
         try {
-          // Gọi API tạo MoMo payment - tạo order luôn
-          const momoResponse = await fetch(`${API_BASE}/orders/checkout-momo`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(orderPayload),
-          }).then((r) => r.json());
+          const response = await checkoutOrder(orderPayload, token);
+          if (!response.paymentUrl) {
+            throw new Error("Không nhận được URL thanh toán từ MoMo");
+          }
 
-          console.log("✅ MoMo order created:", momoResponse);
-          console.log("   Order ID:", momoResponse.order?.orderId);
-          console.log("   QR Code URL:", momoResponse.payment?.qrCodeUrl);
+          toast.success(
+            "Đơn hàng đã được tạo. Đang chuyển đến trang thanh toán MoMo...",
+            {
+              position: "top-right",
+              autoClose: 2000,
+            }
+          );
 
-          toast.success("Vui lòng quét mã QR để thanh toán.", {
-            position: "top-right",
-            autoClose: 2000,
-          });
-
-          // Lưu địa chỉ nếu là mới
           const currentAddress = {
             main: 1,
             province: values.province,
@@ -355,7 +448,6 @@ const CheckoutPage: React.FC = () => {
             defaultAddr.specifics !== values.specifics;
 
           if (isNewAddress) {
-            console.log("💾 Saving new address...");
             dispatch(
               createAddressAction({
                 customerId: authUser.userId,
@@ -364,23 +456,12 @@ const CheckoutPage: React.FC = () => {
             );
           }
 
-          // KHÔNG reload cart vì chưa tạo order
-          // dispatch(fetchCart());
+          dispatch(fetchCart());
 
-          // Hiển thị modal QR MoMo
-          setCurrentOrderPayment({
-            orderPayload: momoResponse.order, // Đã tạo order rồi
-            payment: momoResponse.payment,
-            address: currentAddress,
-            values: values,
-          });
-          setShowQRModal(true);
+          localStorage.setItem("pending_momo_order", response.orderId);
 
-          return; // Dừng lại để không chạy logic bên dưới
+          window.location.href = response.paymentUrl;
         } catch (error) {
-          console.error("❌ MoMo checkout error:", error);
-
-          // Lấy thông báo lỗi chi tiết
           let errorMessage = "Không thể tạo thanh toán MoMo. Vui lòng thử lại!";
 
           if (error instanceof Error) {
@@ -393,8 +474,6 @@ const CheckoutPage: React.FC = () => {
               errorMessage = err.message;
             }
           }
-
-          console.error("📋 Error message:", errorMessage);
 
           toast.error(errorMessage, {
             position: "top-right",
@@ -517,88 +596,91 @@ const CheckoutPage: React.FC = () => {
       }
 
       // Dispatch Redux action để tạo đơn (CHỈ cho COD)
-      const result = await dispatch(createOrder(orderPayload));
 
-      console.log("📥 Order result:", result);
+      if (paymentMethod === "COD") {
+        const result = await dispatch(createOrder(orderPayload));
+        console.log("📥 Order result:", result);
 
-      // Kiểm tra kết quả
-      if (result.meta.requestStatus === "fulfilled") {
-        console.log("✅ Order created successfully!");
+        if (result.meta.requestStatus === "fulfilled") {
+          console.log("✅ Order created successfully!");
 
-        if (!successToastRef.current) {
-          toast.success("Đặt hàng thành công!", {
+          if (!successToastRef.current) {
+            toast.success("Đặt hàng thành công!", {
+              position: "top-right",
+              autoClose: 2000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              toastId: "order-success",
+            });
+            successToastRef.current = true;
+          }
+
+          // Lưu địa chỉ nếu là mới
+          const currentAddress = {
+            main: 1,
+            province: values.province,
+            district: values.district,
+            ward: values.ward,
+            specifics: values.specifics,
+            receiverName: values.receiverName,
+            receiverPhone: values.receiverPhone,
+            isDefault: addressState.addresses.length === 0,
+          };
+
+          const defaultAddr = addressState.addresses.find((a) => a.isDefault);
+          const isNewAddress =
+            !defaultAddr ||
+            defaultAddr.province !== values.province ||
+            defaultAddr.specifics !== values.specifics;
+
+          if (isNewAddress) {
+            console.log("💾 Saving new address...");
+            dispatch(
+              createAddressAction({
+                customerId: authUser.userId,
+                address: currentAddress as Address,
+              })
+            );
+          }
+
+          // Reload cart
+          dispatch(fetchCart());
+
+          // COD - chuyển hướng trực tiếp đến trang success
+          if (result.payload && typeof result.payload === "object") {
+            dispatch(clearOrder());
+            navigate("/order-success", {
+              state: {
+                order: result.payload.order,
+                paymentMethod,
+                address: currentAddress,
+              },
+            });
+          }
+        } else {
+          console.log("❌ Order creation failed:", result);
+          // Extract error message from rejected action
+          const errorMessage =
+            (typeof result.payload === "string" ? result.payload : null) ||
+            orderError ||
+            "Đặt hàng thất bại. Vui lòng thử lại!";
+
+          console.error("📋 Error details:", errorMessage);
+
+          toast.error(String(errorMessage), {
             position: "top-right",
-            autoClose: 2000,
+            autoClose: 3000,
             hideProgressBar: false,
             closeOnClick: true,
             pauseOnHover: true,
             draggable: true,
-            toastId: "order-success",
-          });
-          successToastRef.current = true;
-        }
-
-        // Lưu địa chỉ nếu là mới
-        const currentAddress = {
-          main: 1,
-          province: values.province,
-          district: values.district,
-          ward: values.ward,
-          specifics: values.specifics,
-          receiverName: values.receiverName,
-          receiverPhone: values.receiverPhone,
-          isDefault: addressState.addresses.length === 0,
-        };
-
-        const defaultAddr = addressState.addresses.find((a) => a.isDefault);
-        const isNewAddress =
-          !defaultAddr ||
-          defaultAddr.province !== values.province ||
-          defaultAddr.specifics !== values.specifics;
-
-        if (isNewAddress) {
-          console.log("💾 Saving new address...");
-          dispatch(
-            createAddressAction({
-              customerId: authUser.userId,
-              address: currentAddress as Address,
-            })
-          );
-        }
-
-        // Reload cart
-        dispatch(fetchCart());
-
-        // COD - chuyển hướng trực tiếp đến trang success
-        if (result.payload && typeof result.payload === "object") {
-          dispatch(clearOrder());
-          navigate("/order-success", {
-            state: {
-              order: result.payload.order,
-              paymentMethod,
-              address: currentAddress,
-            },
           });
         }
-      } else {
-        console.log("❌ Order creation failed:", result);
-        // Extract error message from rejected action
-        const errorMessage =
-          (typeof result.payload === "string" ? result.payload : null) ||
-          orderError ||
-          "Đặt hàng thất bại. Vui lòng thử lại!";
-
-        console.error("📋 Error details:", errorMessage);
-
-        toast.error(String(errorMessage), {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
       }
+
+      // Kiểm tra kết quả
     } catch (error: any) {
       console.error("❌ Exception in handleCheckout:", error);
       const errorMsg =
@@ -1122,36 +1204,71 @@ const CheckoutPage: React.FC = () => {
               key="confirm"
               type="primary"
               onClick={async () => {
-                // ⭐ Order đã được tạo ở /checkout-momo hoặc /checkout
-                // Chỉ cần lưu address và redirect
-                try {
-                  console.log("💾 Saving address and closing modal...");
-
-                  // Lưu địa chỉ nếu cần
-                  const defaultAddr = addressState.addresses.find(
-                    (a) => a.isDefault
-                  );
-                  const isNewAddress =
-                    !defaultAddr ||
-                    defaultAddr.province !==
-                      currentOrderPayment?.values.province ||
-                    defaultAddr.specifics !==
-                      currentOrderPayment?.values.specifics;
-
-                  if (isNewAddress && currentOrderPayment?.address) {
-                    dispatch(
-                      createAddressAction({
-                        customerId: authUser!.userId,
-                        address: currentOrderPayment.address as Address,
-                      })
+                // Nếu là MoMo hoặc VNPay và chưa có order, tạo order bây giờ
+                if (
+                  (paymentMethod === "MOMO" || paymentMethod === "VNPAY") &&
+                  currentOrderPayment?.orderPayload
+                ) {
+                  try {
+                    console.log(
+                      "🔄 Creating order after payment confirmation..."
                     );
-                  }
+                    const result = await dispatch(
+                      createOrder(currentOrderPayment.orderPayload)
+                    );
 
-                  // Reload cart
-                  dispatch(fetchCart());
+                    if (result.meta.requestStatus === "fulfilled") {
+                      toast.success("Đặt hàng thành công!", {
+                        position: "top-right",
+                        autoClose: 2000,
+                      });
 
-                  if (!successToastRef.current) {
-                    toast.success("Đặt hàng thành công!", {
+                      // Lưu địa chỉ nếu cần
+                      const defaultAddr = addressState.addresses.find(
+                        (a) => a.isDefault
+                      );
+                      const isNewAddress =
+                        !defaultAddr ||
+                        defaultAddr.province !==
+                          currentOrderPayment.values.province ||
+                        defaultAddr.specifics !==
+                          currentOrderPayment.values.specifics;
+
+                      if (isNewAddress) {
+                        dispatch(
+                          createAddressAction({
+                            customerId: authUser!.userId,
+                            address: currentOrderPayment.address as Address,
+                          })
+                        );
+                      }
+
+                      // Reload cart
+                      dispatch(fetchCart());
+
+                      // Navigate to success page
+                      dispatch(clearOrder());
+                      navigate("/order-success", {
+                        state: {
+                          order: (result.payload as any)?.order,
+                          paymentMethod: paymentMethod,
+                          address: currentOrderPayment.address,
+                          payment: currentOrderPayment.payment,
+                        },
+                      });
+                      setShowQRModal(false);
+                    } else {
+                      toast.error(
+                        "Không thể tạo đơn hàng. Vui lòng liên hệ hỗ trợ!",
+                        {
+                          position: "top-right",
+                          autoClose: 3000,
+                        }
+                      );
+                    }
+                  } catch (error) {
+                    console.error("❌ Error creating order:", error);
+                    toast.error("Có lỗi xảy ra khi tạo đơn hàng!", {
                       position: "top-right",
                       autoClose: 2000,
                       toastId: "order-success",
@@ -1170,9 +1287,6 @@ const CheckoutPage: React.FC = () => {
                       payment: currentOrderPayment?.payment,
                     },
                   });
-                } catch (error) {
-                  console.error("❌ Error saving after payment:", error);
-                  toast.error("Có lỗi xảy ra. Vui lòng thử lại!");
                 }
               }}
               style={{

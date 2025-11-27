@@ -37,6 +37,13 @@ export interface MoMoPaymentOnlyResponse {
     orderRequest: MoMoCheckoutRequest;
 }
 
+export interface CheckoutResponse {
+  message: string;   
+  orderId: string;
+  amount: number; 
+  paymentUrl: string;
+}
+
 // Tạo MoMo payment mà KHÔNG tạo order (chỉ hiển thị QR)
 export const createMoMoPaymentOnly = async (
     request: MoMoCheckoutRequest,
@@ -44,6 +51,24 @@ export const createMoMoPaymentOnly = async (
 ): Promise<MoMoPaymentOnlyResponse> => {
     const response = await axios.post(
         `${API_URL}/orders/create-momo-payment-only`,
+        request,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+            },
+        }
+    );
+
+    return response.data;
+};
+
+export const checkoutOrder = async (
+    request: MoMoCheckoutRequest,
+    token: string
+): Promise<CheckoutResponse> => {
+    const response = await axios.post(
+        `${API_URL}/orders/checkout-order`,
         request,
         {
             headers: {
