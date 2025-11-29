@@ -6,83 +6,132 @@ export const MenuItems = [
     key: "/reports",
     label: "Thống kê",
     icon: (
-      <span style={{ display: 'inline-block', width: 20, height: 20 }}>
-        <Image src={ImageIcon.StatisticalIcon} alt="stat" width={20} height={20} />
+      <span style={{ display: "inline-block", width: 20, height: 20 }}>
+        <Image
+          src={ImageIcon.StatisticalIcon}
+          alt="stat"
+          width={20}
+          height={20}
+        />
       </span>
     ),
-    roles: ['ADMIN', 'STAFF']
+    roles: ["ADMIN", "STAFF"],
   },
   {
     key: "/products",
     label: "Quản lý sản phẩm",
     icon: (
-      <span style={{ display: 'inline-block', width: 20, height: 20 }}>
-        <Image src={ImageIcon.ProductIcon} alt="product" width={20} height={20} />
+      <span style={{ display: "inline-block", width: 20, height: 20 }}>
+        <Image
+          src={ImageIcon.ProductIcon}
+          alt="product"
+          width={20}
+          height={20}
+        />
       </span>
     ),
-    roles: ['ADMIN', 'STAFF']
+    roles: ["ADMIN", "STAFF"],
   },
   {
     key: "/categorys",
     label: "Quản lý danh mục",
     icon: (
-      <span style={{ display: 'inline-block', width: 20, height: 20 }}>
-        <Image src={ImageIcon.CategoryIcon} alt="category" width={20} height={20} />
+      <span style={{ display: "inline-block", width: 20, height: 20 }}>
+        <Image
+          src={ImageIcon.CategoryIcon}
+          alt="category"
+          width={20}
+          height={20}
+        />
       </span>
     ),
-    roles: ['ADMIN', 'STAFF']
+    roles: ["ADMIN", "STAFF"],
   },
   {
     key: "/orders",
     label: "Quản lý đơn hàng",
     icon: (
-      <span style={{ display: 'inline-block', width: 20, height: 20 }}>
-        <Image src={ImageIcon.OrderProductIcon} alt="order" width={20} height={20} />
+      <span style={{ display: "inline-block", width: 20, height: 20 }}>
+        <Image
+          src={ImageIcon.OrderProductIcon}
+          alt="order"
+          width={20}
+          height={20}
+        />
       </span>
     ),
-    roles: ['ADMIN', 'STAFF']
+    roles: ["ADMIN", "STAFF"],
   },
   {
     key: "users",
     label: "Quản lý người dùng",
     icon: (
-      <span style={{ display: 'inline-block', width: 20, height: 20 }}>
+      <span style={{ display: "inline-block", width: 20, height: 20 }}>
         <Image src={ImageIcon.UserIcon} alt="user" width={20} height={20} />
       </span>
     ),
     children: [
-      { key: '/users/customers', label: 'Khách hàng', roles: ['ADMIN', 'STAFF'] },
-      { key: '/users/staffs', label: 'Nhân viên', roles: ['ADMIN'] },
+      {
+        key: "/users/customers",
+        label: "Khách hàng",
+        roles: ["ADMIN", "STAFF"],
+      },
+      { key: "/users/staffs", label: "Nhân viên", roles: ["ADMIN"] },
     ],
   },
   {
     key: "/messages",
     label: "Quản lý tin nhắn",
     icon: (
-      <span style={{ display: 'inline-block', width: 20, height: 20 }}>
-        <Image src={ImageIcon.MessageIcon} alt="message" width={20} height={20} />
+      <span style={{ display: "inline-block", width: 20, height: 20 }}>
+        <Image
+          src={ImageIcon.MessageIcon}
+          alt="message"
+          width={20}
+          height={20}
+        />
       </span>
     ),
-    roles: ['ADMIN', 'STAFF']
+    roles: ["ADMIN", "STAFF"],
   },
   {
     key: "/discounts",
     label: "Quản lý mã giảm giá",
     icon: (
-      <span style={{ display: 'inline-block', width: 20, height: 20 }}>
-        <Image src={ImageIcon.DiscountIcon} alt="discount" width={20} height={20} />
+      <span style={{ display: "inline-block", width: 20, height: 20 }}>
+        <Image
+          src={ImageIcon.DiscountIcon}
+          alt="discount"
+          width={20}
+          height={20}
+        />
       </span>
     ),
-    roles: ['ADMIN', 'STAFF']
+    roles: ["ADMIN", "STAFF"],
   },
   {
     key: "/banners",
     label: "Quản lý banner",
     icon: (
-      <span style={{ display: 'inline-block', width: 20, height: 20 }}>
+      <span style={{ display: "inline-block", width: 20, height: 20 }}>
         <Image src={ImageIcon.BannerIcon} alt="banner" width={20} height={20} />
       </span>
     ),
-    roles: ['ADMIN', 'STAFF']
+    roles: ["ADMIN", "STAFF"],
+  },
+  {
+    key: "/articles",
+    label: "Quản lý bài viết",
+    icon: (
+      <span style={{ display: "inline-block", width: 20, height: 20 }}>
+        <Image
+          src={ImageIcon.ArticleIcon}
+          alt="article"
+          width={20}
+          height={20}
+        />
+      </span>
+    ),
+    roles: ["ADMIN", "STAFF"],
   },
 ];
