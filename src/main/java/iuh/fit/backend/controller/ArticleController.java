@@ -34,10 +34,16 @@ public class ArticleController {
         articleService.delete(id);
     }
 
-    // Lấy bài viết theo ID
+    // Lấy bài viết theo ID (summary)
     @GetMapping("/{id}")
     public ArticleResponse getById(@PathVariable String id) {
         return articleService.getById(id);
+    }
+
+    // Lấy tất cả bài báo
+    @GetMapping("/all")
+    public List<ArticleResponse> getAll() {
+        return articleService.getAll();
     }
 
     @GetMapping
