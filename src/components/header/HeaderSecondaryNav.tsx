@@ -95,6 +95,20 @@ const HeaderSecondaryNav: React.FC = () => {
           </Link>
 
           <Link
+            to="/articles"
+            style={{
+              color: "white",
+              textDecoration: "none",
+              fontSize: 15,
+              fontWeight: 500,
+              transition: "color 0.3s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#000")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "white")}
+          >
+            Bài báo
+          </Link>
+          <Link
             to="/reviews"
             style={{
               color: "white",

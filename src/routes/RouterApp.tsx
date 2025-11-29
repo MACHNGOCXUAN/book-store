@@ -16,6 +16,8 @@ import FilterCategory from "../pages/FilterCategory";
 import HomePage from "../pages/HomePage";
 import MembershipPage from "../pages/MembershipPage";
 import ReviewPage from "../pages/ReviewPage";
+import ArticlesPage from "../pages/ArticlesPage";
+import ArticleDetailPage from "../pages/ArticleDetailPage";
 import CheckoutPage from "../pages/CheckoutPage";
 import OrderSuccessPage from "../pages/OrderSuccessPage";
 import OrderHistoryPage from "../pages/orders/OrderHistoryPage";
@@ -43,6 +45,14 @@ const router = createBrowserRouter([
       {
         path: "membership",
         element: <MembershipPage />,
+      },
+      {
+        path: "articles",
+        element: <ArticlesPage />,
+      },
+      {
+        path: "articles/:id",
+        element: <ArticleDetailPage />,
       },
       {
         path: "reviews",
