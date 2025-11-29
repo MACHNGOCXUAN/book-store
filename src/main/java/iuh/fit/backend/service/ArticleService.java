@@ -12,5 +12,4 @@ public interface ArticleService {
     ArticleResponse getById(String id);
     List<ArticleResponse> getAll();
     List<ArticleResponse> search(String title, Boolean isVisible);
-
 }

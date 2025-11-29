@@ -134,6 +134,7 @@ public class ArticleServiceImpl implements ArticleService {
                 .map(this::toResponse)
                 .toList();
     }
+
     @Override
     public List<ArticleResponse> search(String title, Boolean isVisible) {
         List<Article> list = articleRepo.search(title, isVisible);
@@ -143,3 +144,4 @@ public class ArticleServiceImpl implements ArticleService {
     }
 
 }
+
