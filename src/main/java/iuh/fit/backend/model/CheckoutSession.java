@@ -29,5 +29,7 @@ public class CheckoutSession {
     private LocalDateTime createdAt;
     private LocalDateTime expiresAt; // Hết hạn sau 15 phút
 
-    private String momoTransactionId;
+    private String transactionPaymentId;
+    private String responseCode;
+
 }
