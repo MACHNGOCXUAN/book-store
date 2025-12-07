@@ -1,16 +1,16 @@
-import { useState, useEffect } from "react";
+import { GiftOutlined, HeartOutlined } from "@ant-design/icons";
 import {
+  Badge,
+  Button,
   Card,
-  Row,
   Col,
+  Empty,
+  Modal,
+  Row,
   Spin,
   message,
-  Button,
-  Modal,
-  Badge,
-  Empty,
 } from "antd";
-import { GiftOutlined, HeartOutlined } from "@ant-design/icons";
+import { useEffect, useState } from "react";
 import {
   exchangeVoucher,
   fetchExchangeableVouchers,
@@ -154,10 +154,19 @@ const ExchangeVoucherPage = () => {
   };
 
   const renderVoucherCard = (voucher: ExchangeableVoucher) => {
-    const canExchange =
-      voucher.isExchangeable &&
-      loyaltyInfo &&
-      loyaltyInfo.currentPoints >= voucher.redeemCost;
+    // Determine eligibility purely from client-visible rules (points + tier),
+    // not the backend isExchangeable flag to avoid false locks.
+    const tierHierarchy: { [key: string]: number } = {
+      NEW_USER: 0,
+      REGULAR: 1,
+      VIP: 2,
+      DIAMOND: 3,
+    };
+    const currentTierLevel = tierHierarchy[(loyaltyInfo?.currentTier as string) || "NEW_USER"] || 0;
+    const requiredTierLevel = tierHierarchy[voucher.minTierRequired || "NEW_USER"] || 0;
+    const meetsTier = currentTierLevel >= requiredTierLevel;
+    const hasPoints = (loyaltyInfo?.currentPoints || 0) >= voucher.redeemCost;
+    const canExchange = meetsTier && hasPoints;
 
     const minTierName =
       voucher.minTierRequired === "NEW_USER" || !voucher.minTierRequired
@@ -167,12 +176,12 @@ const ExchangeVoucherPage = () => {
     return (
       <Col xs={24} sm={12} lg={8} key={voucher.voucherId}>
         <Card
-          hoverable={voucher.isExchangeable}
+          hoverable={canExchange}
           style={{
             borderRadius: 12,
             overflow: "hidden",
             border: "2px solid #f0f0f0",
-            opacity: voucher.isExchangeable ? 1 : 0.6,
+            opacity: canExchange ? 1 : 0.6,
             position: "relative",
           }}
           styles={{ body: { padding: 0 } }}
@@ -297,11 +306,10 @@ const ExchangeVoucherPage = () => {
                       ? "#F0F5FF"
                       : "#FFE6E6",
                   borderRadius: 6,
-                  border: `1px solid ${
-                    loyaltyInfo.currentPoints >= voucher.redeemCost
+                  border: `1px solid ${loyaltyInfo.currentPoints >= voucher.redeemCost
                       ? "#D0D9FF"
                       : "#FFD9D9"
-                  }`,
+                    }`,
                 }}
               >
                 Điểm còn lại: <strong>{loyaltyInfo.currentPoints}</strong>
@@ -309,32 +317,24 @@ const ExchangeVoucherPage = () => {
             )}
 
             {/* Action Button */}
-            {!voucher.isExchangeable && (
-              <Button disabled block style={{ borderRadius: 6 }}>
-                {voucher.lockReason || "Không khả dụng"}
-              </Button>
-            )}
-
-            {voucher.isExchangeable && (
-              <Button
-                type={canExchange ? "primary" : "default"}
-                danger={canExchange || false}
-                block
-                disabled={!canExchange}
-                onClick={() => handleExchange(voucher)}
-                style={{
-                  borderRadius: 6,
-                  background: canExchange ? "#C92127" : undefined,
-                  borderColor: canExchange ? "#C92127" : undefined,
-                }}
-              >
-                {canExchange ? "Đổi ngay" : "Không đủ điểm"}
-              </Button>
-            )}
+            <Button
+              type={canExchange ? "primary" : "default"}
+              danger={canExchange || false}
+              block
+              disabled={!canExchange}
+              onClick={() => handleExchange(voucher)}
+              style={{
+                borderRadius: 6,
+                background: canExchange ? "#C92127" : undefined,
+                borderColor: canExchange ? "#C92127" : undefined,
+              }}
+            >
+              {canExchange ? "Đổi ngay" : (hasPoints ? "Không đủ tier" : "Không đủ điểm")}
+            </Button>
           </div>
 
           {/* Status Badge */}
-          {!voucher.isExchangeable && (
+          {!canExchange && (
             <div
               style={{
                 position: "absolute",
@@ -348,7 +348,7 @@ const ExchangeVoucherPage = () => {
                 fontWeight: 600,
               }}
             >
-              🔒 Khóa
+              🔒 {hasPoints ? "Yêu cầu tier" : "Thiếu điểm"}
             </div>
           )}
         </Card>
