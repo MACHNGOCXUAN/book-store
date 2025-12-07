@@ -16,11 +16,14 @@ import iuh.fit.backend.payment.momo.MoMoPaymentResponse;
 import iuh.fit.backend.payment.momo.MoMoService;
 import iuh.fit.backend.repository.*;
 import iuh.fit.backend.service.*;
+import jakarta.mail.internet.MimeMessage;
 import jakarta.servlet.http.HttpServletResponse;
 import org.json.JSONObject;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,6 +34,8 @@ import iuh.fit.backend.payment.vnpay.VnpayService;
 import iuh.fit.backend.utils.JwtUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.thymeleaf.context.Context;
+import org.thymeleaf.spring6.SpringTemplateEngine;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -52,6 +57,10 @@ public class OrderController {
     private final OrderHistoryRepository orderHistoryRepository;
     private final PaymentRepository paymentRepository;
     private final VnpayPaymentService vnpayPaymentService;
+
+    private final JavaMailSender mailSender;
+    private final SpringTemplateEngine templateEngine;
+    private final String mailTo = "machngocxuan2004@gmail.com";
 
     /** ----------------------- FILTER ORDERS ----------------------- */
     @PostMapping()
@@ -94,9 +103,53 @@ public class OrderController {
         if (updateStatusOrderDTO.getOrderId() == null || updateStatusOrderDTO.getStatus() == null)
             return ResponseEntity.badRequest().body(Map.of("message", "orderId & status required"));
 
-        return orderService.updateOrderStatus(updateStatusOrderDTO, user)
-                ? ResponseEntity.ok(Map.of("message", "Cập nhật thành công!"))
-                : ResponseEntity.status(500).body(Map.of("message", "Cập nhật thất bại!"));
+        boolean updated = orderService.updateOrderStatus(updateStatusOrderDTO, user);
+
+        if (updated) {
+            String status = updateStatusOrderDTO.getStatus().toString();
+            if ("COMPLETED".equalsIgnoreCase(status) || "CANCELLED".equalsIgnoreCase(status)) {
+                try {
+                    Context context = new Context();
+
+                    OrderFullDetailDTO order = orderService.getOrderById(updateStatusOrderDTO.getOrderId());
+
+                    // Thông tin đơn hàng
+                    context.setVariable("orderId", order.getOrderId());
+                    context.setVariable("email", order.getCustomer().getEmail());
+                    context.setVariable("phone", order.getCustomer().getPhoneNumber());
+                    context.setVariable("orderDate", order.getOrderDate());
+
+                    // Thông tin giao hàng
+                    context.setVariable("receiverName", order.getCustomer().getFullName());
+                    context.setVariable("shippingAddress", order.getCustomer().getAddress());
+                    context.setVariable("receiverPhone", order.getCustomer().getPhoneNumber());
+
+                    // Danh sách sách
+                    context.setVariable("orderItems", order.getOrderDetails());
+
+                    // Tổng tiền
+                    context.setVariable("totalAmount", order.getTotalAmount());
+
+                    String html = templateEngine.process("mail-template.html", context);
+
+                    MimeMessage message = mailSender.createMimeMessage();
+                    MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+                    helper.setTo(order.getCustomer().getEmail());
+                    helper.setSubject("Xác nhận đơn hàng đã được giao");
+                    helper.setText(html, true);
+
+                    // 4. Gửi email
+                    mailSender.send(message);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+
+            return ResponseEntity.ok(Map.of("message", "Cập nhật thành công!"));
+        } else {
+            return ResponseEntity.status(500).body(Map.of("message", "Cập nhật thất bại!"));
+        }
     }
 
     /** ----------------------- CANCEL ORDER ----------------------- */
