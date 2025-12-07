@@ -36,12 +36,14 @@ public class UserDiscountWallet {
      * true = voucher đã được dùng trong 1 order
      * false = chưa dùng
      */
+    @Builder.Default
     @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT false")
     private Boolean used = false;
 
     /**
      * Thời điểm user nhận voucher (đổi hoặc được cấp)
      */
+    @Builder.Default
     @Column(nullable = false, updatable = false)
     private LocalDateTime acquiredDate = LocalDateTime.now();
 

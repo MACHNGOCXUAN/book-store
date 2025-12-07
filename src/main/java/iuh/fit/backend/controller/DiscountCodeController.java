@@ -1,25 +1,32 @@
 package iuh.fit.backend.controller;
 
-import iuh.fit.backend.model.Book;
-import iuh.fit.backend.model.Customer;
-import iuh.fit.backend.model.DiscountCode;
-import iuh.fit.backend.model.enums.DiscountType;
-import iuh.fit.backend.dto.responses.AvailableVoucherDTO;
-import iuh.fit.backend.service.DiscountCodeService;
-import iuh.fit.backend.repository.CustomerRepository;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.annotations.Operation;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
-
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import iuh.fit.backend.dto.responses.AvailableVoucherDTO;
+import iuh.fit.backend.model.Customer;
+import iuh.fit.backend.model.DiscountCode;
+import iuh.fit.backend.model.enums.DiscountType;
+import iuh.fit.backend.repository.CustomerRepository;
+import iuh.fit.backend.service.DiscountCodeService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api/discounts")
@@ -57,6 +64,13 @@ public class DiscountCodeController {
     @PostMapping
     public ResponseEntity<DiscountCode> createDiscount(@RequestBody DiscountCode discountCode) {
         DiscountCode savedDiscount = discountCodeService.save(discountCode);
+
+        // Auto-distribute voucher to eligible users based on discount settings
+        try {
+            discountCodeService.distributeVoucherToEligibleUsers(savedDiscount);
+        } catch (Exception ex) {
+            log.error("Distribute voucher failed for discount {}: {}", savedDiscount.getDiscountCodeId(), ex.getMessage());
+        }
         return ResponseEntity.created(URI.create("/api/discounts" + savedDiscount.getDiscountCodeId()))
                 .body(savedDiscount);
     }

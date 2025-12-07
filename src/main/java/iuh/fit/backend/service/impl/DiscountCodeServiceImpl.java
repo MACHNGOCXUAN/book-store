@@ -1,22 +1,24 @@
 package iuh.fit.backend.service.impl;
 
-import iuh.fit.backend.model.Customer;
-import iuh.fit.backend.model.DiscountCode;
-import iuh.fit.backend.model.UserDiscountWallet;
-import iuh.fit.backend.model.enums.DiscountType;
-import iuh.fit.backend.model.enums.CustomerTier;
-import iuh.fit.backend.dto.responses.AvailableVoucherDTO;
-import iuh.fit.backend.repository.DiscountCodeRepository;
-import iuh.fit.backend.repository.UserDiscountWalletRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import iuh.fit.backend.dto.responses.AvailableVoucherDTO;
+import iuh.fit.backend.model.Customer;
+import iuh.fit.backend.model.DiscountCode;
+import iuh.fit.backend.model.UserDiscountWallet;
+import iuh.fit.backend.model.enums.CustomerTier;
+import iuh.fit.backend.model.enums.DiscountType;
+import iuh.fit.backend.repository.CustomerRepository;
+import iuh.fit.backend.repository.DiscountCodeRepository;
+import iuh.fit.backend.repository.UserDiscountWalletRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
@@ -24,11 +26,14 @@ import java.util.stream.Collectors;
 public class DiscountCodeServiceImpl implements iuh.fit.backend.service.DiscountCodeService {
     private final DiscountCodeRepository discountCodeRepository;
     private final UserDiscountWalletRepository userDiscountWalletRepository;
+    private final CustomerRepository customerRepository;
 
+    @Override
     public List<DiscountCode> findAll() {
         return discountCodeRepository.findAll();
     }
 
+    @Override
     public List<DiscountCode> filterDiscountCode(String code, DiscountType type, String description) {
 
         boolean hasCode = (code != null && !code.isEmpty());
@@ -54,6 +59,7 @@ public class DiscountCodeServiceImpl implements iuh.fit.backend.service.Discount
         return discountCodeRepository.findAll();
     }
 
+    @Override
     public DiscountCode save(DiscountCode discountCode){
         if (discountCode.getDiscountCodeId() == null || discountCode.getDiscountCodeId().isBlank()) {
             String prefix = "DC";
@@ -63,6 +69,7 @@ public class DiscountCodeServiceImpl implements iuh.fit.backend.service.Discount
         return discountCodeRepository.save(discountCode);
     }
 
+    @Override
     public DiscountCode findById(String id){
         return discountCodeRepository.findById(id).orElse(null);
     }
@@ -83,7 +90,7 @@ public class DiscountCodeServiceImpl implements iuh.fit.backend.service.Discount
                 vc.getDiscountCodeId(), vc.getIsPublic(), vc.getQuantity(), vc.getStartDate(), vc.getEndDate());
             if (isVoucherValid(vc, customer, cartTotal)) {
                 log.debug("Voucher {} is valid, adding to result", vc.getDiscountCodeId());
-                result.add(buildAvailableVoucherDTO(vc, customer, cartTotal, true, false));
+                result.add(buildAvailableVoucherDTO(vc, true, false));
             } else {
                 log.debug("Voucher {} is NOT valid", vc.getDiscountCodeId());
             }
@@ -98,7 +105,7 @@ public class DiscountCodeServiceImpl implements iuh.fit.backend.service.Discount
                 vc.getDiscountCodeId(), vc.getQuantity(), vc.getStartDate(), vc.getEndDate());
             if (isVoucherValid(vc, customer, cartTotal)) {
                 log.debug("Wallet voucher {} is valid, adding to result", vc.getDiscountCodeId());
-                result.add(buildAvailableVoucherDTO(vc, customer, cartTotal, false, true));
+                result.add(buildAvailableVoucherDTO(vc, false, true));
             } else {
                 log.debug("Wallet voucher {} is NOT valid", vc.getDiscountCodeId());
             }
@@ -146,6 +153,79 @@ public class DiscountCodeServiceImpl implements iuh.fit.backend.service.Discount
         return discountAmount;
     }
 
+    /**
+     * Phân phối voucher đến các khách hàng đủ điều kiện và thêm vào UserDiscountWallet.
+     */
+    @Override
+    @Transactional
+    public int distributeVoucherToEligibleUsers(DiscountCode discountCode) {
+        int created = 0;
+
+        // Xác định danh sách khách hàng đủ điều kiện
+        List<Customer> candidates;
+
+        boolean isPublic = Boolean.TRUE.equals(discountCode.getIsPublic());
+        LocalDate now = LocalDate.now();
+        List<Customer> allCustomers = customerRepository.findAll();
+        log.info("[VoucherDist] Total customers in DB: {}", allCustomers.size());
+
+        if (discountCode.getMinTierRequired() == CustomerTier.NEW_USER) {
+            // NEW_USER: trong vòng 3 tháng gần đây
+            LocalDate threshold = now.minusMonths(3);
+            candidates = allCustomers.stream()
+                    .filter(c -> c.getRegistrationDate() != null && !c.getRegistrationDate().isBefore(threshold))
+                    .collect(Collectors.toList());
+            log.info("[VoucherDist] NEW_USER candidates (reg >= {}): {}", threshold, candidates.size());
+        } else if (isPublic) {
+            // Public: tất cả khách hàng đang hoạt động, có tier đáp ứng nếu minTierRequired khác null
+            candidates = allCustomers.stream()
+                    .filter(c -> {
+                        if (discountCode.getMinTierRequired() == null) return true;
+                        CustomerTier tier = c.getTier() != null ? c.getTier() : CustomerTier.NEW_USER;
+                        return isTierSufficient(tier, discountCode.getMinTierRequired());
+                    })
+                    .collect(Collectors.toList());
+            log.info("[VoucherDist] PUBLIC candidates (minTierRequired={}): {}", discountCode.getMinTierRequired(), candidates.size());
+        } else {
+            // Không public và không NEW_USER: phân phối theo minTierRequired nếu có
+            candidates = allCustomers.stream()
+                    .filter(c -> {
+                        if (discountCode.getMinTierRequired() == null) return true;
+                        CustomerTier tier = c.getTier() != null ? c.getTier() : CustomerTier.NEW_USER;
+                        return isTierSufficient(tier, discountCode.getMinTierRequired());
+                    })
+                    .collect(Collectors.toList());
+            log.info("[VoucherDist] NON-PUBLIC candidates (minTierRequired={}): {}", discountCode.getMinTierRequired(), candidates.size());
+        }
+
+        // Log chi tiết một vài ứng viên đầu tiên
+        candidates.stream().limit(10).forEach(c -> {
+            log.debug("[VoucherDist] Candidate userId={}, regDate={}, tier={}", c.getUserId(), c.getRegistrationDate(), c.getTier());
+        });
+
+        // Tạo wallet entries, tránh trùng
+        for (Customer customer : candidates) {
+            boolean exists = userDiscountWalletRepository.existsByCustomerAndDiscountCode(customer, discountCode);
+            if (exists) {
+                log.debug("[VoucherDist] Skip existing wallet for userId={} and discountCodeId={}",
+                        customer.getUserId(), discountCode.getDiscountCodeId());
+                continue;
+            }
+
+            UserDiscountWallet wallet = UserDiscountWallet.builder()
+                    .customer(customer)
+                    .discountCode(discountCode)
+                    .used(false)
+                    .build();
+            userDiscountWalletRepository.save(wallet);
+            created++;
+        }
+
+        log.info("[VoucherDist] Distributed voucher {} to {} eligible users (minTierRequired={}, isPublic={})",
+                discountCode.getDiscountCodeId(), created, discountCode.getMinTierRequired(), isPublic);
+        return created;
+    }
+
     /* ========== Helper Methods ========== */
 
     private boolean isVoucherValid(DiscountCode voucher, Customer customer, double cartTotal) {
@@ -184,7 +264,7 @@ public class DiscountCodeServiceImpl implements iuh.fit.backend.service.Discount
         return true;
     }
 
-    private AvailableVoucherDTO buildAvailableVoucherDTO(DiscountCode voucher, Customer customer, double cartTotal, boolean isPublic, boolean isFromWallet) {
+    private AvailableVoucherDTO buildAvailableVoucherDTO(DiscountCode voucher, boolean isPublic, boolean isFromWallet) {
         return AvailableVoucherDTO.builder()
                 .voucherId(voucher.getDiscountCodeId())
                 .voucherName(voucher.getName())

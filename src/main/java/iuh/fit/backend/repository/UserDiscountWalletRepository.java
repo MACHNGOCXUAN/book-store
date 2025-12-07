@@ -1,13 +1,14 @@
 package iuh.fit.backend.repository;
 
-import iuh.fit.backend.model.UserDiscountWallet;
-import iuh.fit.backend.model.Customer;
-import iuh.fit.backend.model.DiscountCode;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
+import iuh.fit.backend.model.Customer;
+import iuh.fit.backend.model.DiscountCode;
+import iuh.fit.backend.model.UserDiscountWallet;
 
 @Repository
 public interface UserDiscountWalletRepository extends JpaRepository<UserDiscountWallet, Long> {
@@ -41,4 +42,9 @@ public interface UserDiscountWalletRepository extends JpaRepository<UserDiscount
      * Lấy số voucher đã dùng của discount code nào đó
      */
     long countByDiscountCodeAndUsedTrue(DiscountCode discountCode);
+
+    /**
+     * Kiểm tra tồn tại bản ghi wallet theo customer và discountCode
+     */
+    boolean existsByCustomerAndDiscountCode(Customer customer, DiscountCode discountCode);
 }

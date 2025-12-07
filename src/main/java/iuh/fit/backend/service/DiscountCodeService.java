@@ -1,13 +1,11 @@
 package iuh.fit.backend.service;
 
+import java.util.List;
+
+import iuh.fit.backend.dto.responses.AvailableVoucherDTO;
 import iuh.fit.backend.model.Customer;
 import iuh.fit.backend.model.DiscountCode;
 import iuh.fit.backend.model.enums.DiscountType;
-import iuh.fit.backend.dto.responses.AvailableVoucherDTO;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RequestBody;
-
-import java.util.List;
 
 public interface DiscountCodeService {
     List<DiscountCode> findAll();
@@ -45,4 +43,16 @@ public interface DiscountCodeService {
      * @throws RuntimeException nếu không thỏa điều kiện
      */
     double applyVoucher(Customer customer, String voucherId, double cartTotal);
+
+    /**
+     * Phân phối voucher tới các user đủ điều kiện và thêm vào bảng UserDiscountWallet.
+     * Điều kiện:
+     * - Nếu voucher isPublic=true: phân phối cho tất cả khách hàng đang hoạt động, có tier đáp ứng nếu có minTierRequired.
+     * - Nếu minTierRequired=NEW_USER: chỉ phân phối cho khách hàng đăng ký trong vòng 3 tháng gần đây.
+     * - Tránh tạo trùng: không tạo nếu đã có bản ghi wallet cho customer + discountCode.
+     *
+     * @param discountCode voucher vừa tạo/cập nhật
+     * @return số lượng bản ghi wallet đã thêm
+     */
+    int distributeVoucherToEligibleUsers(DiscountCode discountCode);
 }
