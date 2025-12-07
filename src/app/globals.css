@@ -31,3 +31,158 @@
 #nprogress .spinner {
   display: none !important;
 } */
+
+/* Container chính của Timeline - nằm ngang */
+.ant-timeline {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  padding: 40px 20px;
+  gap: 0;
+  overflow-x: auto;
+  position: relative;
+}
+
+/* Mỗi item trong timeline */
+.ant-timeline-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 auto;
+  min-width: 160px;
+}
+
+/* Ẩn tail của item cuối */
+.ant-timeline-item:last-child .ant-timeline-item-tail {
+  display: none;
+}
+
+/* Thanh nối giữa các item - nằm ngang */
+.ant-timeline-item-tail {
+  position: absolute;
+  top: 8px;
+  left: calc(50% + 8px);
+  width: calc(100% - 16px);
+  height: 2px;
+  background: #d9d9d9;
+}
+
+/* Đầu node của timeline */
+.ant-timeline-item-head {
+  position: relative;
+  z-index: 2;
+  width: 12px;
+  height: 12px;
+  border: 3px solid #1890ff;
+  border-radius: 50%;
+  background: #fff;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+/* Head với icon */
+.ant-timeline-item-head.has-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  border-width: 2px;
+}
+
+/* Head màu xanh lá (đã giao) */
+.ant-timeline-item-head.success {
+  border-color: #52c41a;
+  background: #f6ffed;
+}
+
+.ant-timeline-item-head.success.has-icon {
+  background: #52c41a;
+  color: #fff;
+}
+
+/* Head màu xanh dương (đang giao) */
+.ant-timeline-item-head.processing {
+  border-color: #1890ff;
+  background: #e6f7ff;
+}
+
+.ant-timeline-item-head.processing.has-icon {
+  background: #1890ff;
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(24, 144, 255, 0.2);
+}
+
+/* Nội dung của timeline item */
+.ant-timeline-item-content {
+  text-align: center;
+  width: 100%;
+  padding: 0 8px;
+}
+
+/* Label/title của item */
+.ant-timeline-item-label {
+  font-weight: 600;
+  color: #262626;
+  font-size: 14px;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Time của item */
+.ant-timeline-item-time {
+  font-size: 12px;
+  color: #8c8c8c;
+  white-space: nowrap;
+}
+
+/* Description thêm (nếu cần) */
+.ant-timeline-item-description {
+  font-size: 12px;
+  color: #595959;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* Responsive cho màn hình nhỏ */
+@media (max-width: 768px) {
+  .ant-timeline {
+    padding: 30px 10px;
+  }
+  
+  .ant-timeline-item {
+    min-width: 120px;
+  }
+  
+  .ant-timeline-item-label {
+    font-size: 13px;
+  }
+  
+  .ant-timeline-item-time {
+    font-size: 11px;
+  }
+}
+
+/* Scroll styling cho timeline dài */
+.ant-timeline::-webkit-scrollbar {
+  height: 6px;
+}
+
+.ant-timeline::-webkit-scrollbar-track {
+  background: #f5f5f5;
+  border-radius: 3px;
+}
+
+.ant-timeline::-webkit-scrollbar-thumb {
+  background: #bfbfbf;
+  border-radius: 3px;
+}
+
+.ant-timeline::-webkit-scrollbar-thumb:hover {
+  background: #8c8c8c;
+}
