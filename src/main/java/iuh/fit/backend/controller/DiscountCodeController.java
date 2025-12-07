@@ -61,6 +61,35 @@ public class DiscountCodeController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Đổi voucher bằng loyalty points: thêm vào ví và trừ điểm
+     */
+    @PostMapping("/exchange")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    @Operation(summary = "Đổi voucher bằng điểm loyalty")
+    public ResponseEntity<?> exchangeVoucher(
+            @RequestBody Map<String, Object> payload,
+            Authentication auth) {
+        Customer customer = customerRepository.findByUserId(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        String voucherId = String.valueOf(payload.get("voucherId"));
+        int pointsToSpend = Integer.parseInt(String.valueOf(payload.getOrDefault("pointsToSpend", 0)));
+
+        try {
+            Long walletId = discountCodeService.exchangeVoucher(customer, voucherId, pointsToSpend);
+            return ResponseEntity.ok(Map.of(
+                    "walletVoucherId", String.valueOf(walletId),
+                    "voucherId", voucherId,
+                    "remainingPoints", customer.getLoyaltyPoints(),
+                    "message", "✓ Đổi voucher thành công"
+            ));
+        } catch (RuntimeException e) {
+            log.error("Exchange voucher failed: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PostMapping
     public ResponseEntity<DiscountCode> createDiscount(@RequestBody DiscountCode discountCode) {
         DiscountCode savedDiscount = discountCodeService.save(discountCode);

@@ -77,4 +77,10 @@ public interface DiscountCodeService {
      * Lấy tất cả bản ghi ví voucher theo customer_id.
      */
     java.util.List<iuh.fit.backend.model.UserDiscountWallet> getWalletEntriesByUserId(String userId);
+
+    /**
+     * Đổi voucher bằng loyalty points: tạo bản ghi vào UserDiscountWallet và trừ điểm trên Customer.
+     * Trả về id của wallet entry vừa tạo.
+     */
+    Long exchangeVoucher(Customer customer, String voucherId, int pointsToSpend);
 }

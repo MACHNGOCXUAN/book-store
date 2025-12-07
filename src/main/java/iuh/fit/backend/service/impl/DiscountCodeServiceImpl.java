@@ -239,6 +239,39 @@ public class DiscountCodeServiceImpl implements iuh.fit.backend.service.Discount
         return userDiscountWalletRepository.findByCustomer_UserId(userId);
     }
 
+    @Override
+    @Transactional
+    public Long exchangeVoucher(Customer customer, String voucherId, int pointsToSpend) {
+        DiscountCode voucher = discountCodeRepository.findById(voucherId)
+                .orElseThrow(() -> new RuntimeException("Voucher không tồn tại"));
+
+        if (!customer.hasEnoughPoints(pointsToSpend)) {
+            throw new RuntimeException("Không đủ điểm loyalty để đổi voucher này");
+        }
+
+        // Prevent duplicates: if wallet already has this discount for customer
+        boolean exists = userDiscountWalletRepository.existsByCustomerAndDiscountCode(customer, voucher);
+        if (exists) {
+            throw new RuntimeException("Bạn đã sở hữu voucher này trong ví");
+        }
+
+        // Deduct points
+        boolean ok = customer.redeemLoyaltyPoints(pointsToSpend);
+        if (!ok) {
+            throw new RuntimeException("Không đủ điểm loyalty");
+        }
+        customerRepository.save(customer);
+
+        // Create wallet entry
+        UserDiscountWallet wallet = UserDiscountWallet.builder()
+                .customer(customer)
+                .discountCode(voucher)
+                .used(false)
+                .build();
+        UserDiscountWallet saved = userDiscountWalletRepository.save(wallet);
+        return saved.getId();
+    }
+
     /**
      * Phân phối voucher đến các khách hàng đủ điều kiện và thêm vào UserDiscountWallet.
      */
