@@ -26,6 +26,7 @@ import OrderCancelledPage from "../pages/orders/OrderCancelledPage";
 import OrderCompletedPage from "../pages/orders/OrderCompletedPage";
 import OrderDetailPage from "../pages/orders/OrderDetailPage";
 import LoginRequiredPage from "../pages/LoginRequiredPage";
+import PaymentStatus from "../pages/PaymentStatus";
 
 const router = createBrowserRouter([
   {
@@ -140,6 +141,10 @@ const router = createBrowserRouter([
         path: "login-required",
         element: <LoginRequiredPage />,
       },
+      {
+        path: "payment-status",
+        element: <PaymentStatus/>
+      }
     ],
   },
 ]);
