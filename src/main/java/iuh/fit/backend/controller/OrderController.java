@@ -16,6 +16,7 @@ import iuh.fit.backend.payment.momo.MoMoPaymentResponse;
 import iuh.fit.backend.payment.momo.MoMoService;
 import iuh.fit.backend.repository.*;
 import iuh.fit.backend.service.*;
+import jakarta.servlet.http.HttpServletResponse;
 import org.json.JSONObject;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -618,66 +619,38 @@ public class OrderController {
 
     @GetMapping("/vnpay/callback")
     @Transactional
-    public ResponseEntity<?> handleVnpayCallback(@RequestParam Map<String, String> allParams) {
+    public ResponseEntity<?> handleVnpayCallback(@RequestParam Map<String, String> allParams, HttpServletResponse response) {
         try {
             String txnRef = allParams.get("vnp_TxnRef");
             String responseCode = allParams.get("vnp_ResponseCode");
             String vnpSecureHash = allParams.get("vnp_SecureHash");
 
-            // 1. LOẠI BỎ vnp_SecureHash và vnp_SecureHashType trước khi verify
             Map<String, String> paramsToVerify = new HashMap<>(allParams);
             paramsToVerify.remove("vnp_SecureHash");
             paramsToVerify.remove("vnp_SecureHashType");
 
-            // 2. Tính hash từ các params còn lại
             String calculatedHash = VnpayConfig.hashAllFields(paramsToVerify);
 
-            // 3. So sánh với hash từ VNPay
-            // 3. So sánh với hash từ VNPay
             if (!calculatedHash.equals(vnpSecureHash)) {
-                System.out.println("\n" + "=".repeat(60));
-                System.out.println("❌ VNPAY SIGNATURE VERIFICATION FAILED");
-                System.out.println("=".repeat(60));
-
-                System.out.println("\n📋 Transaction Info:");
-                System.out.println("   TxnRef: " + txnRef);
-                System.out.println("   Response Code: " + allParams.get("vnp_ResponseCode"));
-                System.out.println("   Amount: " + allParams.get("vnp_Amount"));
-
-                System.out.println("\n🔐 Hash Comparison:");
-                System.out.println("   Expected (Calculated): " + calculatedHash);
-                System.out.println("   Received (VNPay):      " + vnpSecureHash);
-                System.out.println("   Match: " + calculatedHash.equals(vnpSecureHash));
-
-                System.out.println("\n📦 All Parameters from VNPay:");
                 allParams.entrySet().stream()
                         .sorted(Map.Entry.comparingByKey())
                         .forEach(entry ->
                                 System.out.println("   " + entry.getKey() + " = " + entry.getValue())
                         );
 
-                System.out.println("\n🔧 Parameters Used for Hash (without vnp_SecureHash):");
                 paramsToVerify.entrySet().stream()
                         .sorted(Map.Entry.comparingByKey())
                         .forEach(entry ->
                                 System.out.println("   " + entry.getKey() + " = " + entry.getValue())
                         );
 
-                System.out.println("\n🔑 Secret Key being used: " +
-                        VnpayConfig.secretKey.substring(0, 5) + "..." +
-                        VnpayConfig.secretKey.substring(VnpayConfig.secretKey.length() - 5));
-
-                System.out.println("\n" + "=".repeat(60) + "\n");
-
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("message", "Chữ ký không hợp lệ"));
             }
 
-            // 2. Lấy session từ DB
             CheckoutSession session = checkoutSessionRepository.findById(txnRef)
                     .orElseThrow(() -> new RuntimeException("Session not found"));
 
-            // 3. Kiểm tra session expired
             if (LocalDateTime.now().isAfter(session.getExpiresAt())) {
                 session.setStatus(SessionStatus.EXPIRED);
                 checkoutSessionRepository.save(session);
@@ -689,7 +662,6 @@ public class OrderController {
                 return ResponseEntity.ok(Map.of("message", "Session already processed"));
             }
 
-            // 4. Thanh toán thành công
             if ("00".equals(responseCode)) {
                 ObjectMapper mapper = new ObjectMapper();
                 List<OrderInfoDTO.OrderDetailRequest> orderDetailDTOs = mapper.readValue(
@@ -697,7 +669,6 @@ public class OrderController {
                         new TypeReference<List<OrderInfoDTO.OrderDetailRequest>>() {}
                 );
 
-                // 5. Kiểm tra tồn kho
                 for (OrderInfoDTO.OrderDetailRequest detailDTO : orderDetailDTOs) {
                     Optional<Book> book = bookService.findById(detailDTO.getBookId());
                     if (book.isEmpty() || book.get().getStock() < detailDTO.getQuantity()) {
@@ -708,7 +679,6 @@ public class OrderController {
                     }
                 }
 
-                // 6. Tạo Order
                 Customer customer = customerRepository.findByUserId(session.getCustomerId())
                         .orElseThrow(() -> new RuntimeException("Customer not found"));
 
@@ -736,7 +706,6 @@ public class OrderController {
                 order.recalcTotals();
                 orderRepository.save(order);
 
-                // 7. Lưu Payment
                 Payment payment = new Payment();
                 payment.setPaymentId(UUID.randomUUID().toString());
                 payment.setOrder(order);
@@ -749,21 +718,20 @@ public class OrderController {
                 payment.setResponseCode(responseCode);
                 paymentRepository.save(payment);
 
-                // 8. Cập nhật CheckoutSession
                 session.setStatus(SessionStatus.COMPLETED);
                 session.setTransactionPaymentId(allParams.get("vnp_TransactionNo"));
                 session.setResponseCode(responseCode);
                 checkoutSessionRepository.save(session);
 
-                return ResponseEntity.ok(Map.of(
-                        "message", "Payment successful via VNPay",
-                        "orderId", order.getOrderId()
-                ));
+                response.sendRedirect("http://localhost:3001/payment-status?status=success&orderId=" + order.getOrderId());
+
+                return ResponseEntity.ok(Map.of("message", "Payment success"));
             } else {
-                // 9. Thanh toán thất bại
                 session.setStatus(SessionStatus.EXPIRED);
                 session.setResponseCode(responseCode);
                 checkoutSessionRepository.save(session);
+
+                response.sendRedirect("http://localhost:3001/payment-status?status=fail");
 
                 return ResponseEntity.ok(Map.of(
                         "message", "Payment failed via VNPay",
