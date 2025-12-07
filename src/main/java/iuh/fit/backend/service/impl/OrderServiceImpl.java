@@ -2,8 +2,10 @@ package iuh.fit.backend.service.impl;
 
 import java.time.LocalDateTime;
 
-import iuh.fit.backend.service.OrderService;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,9 +13,30 @@ import iuh.fit.backend.dto.requests.CreateOrderRequestDTO;
 import iuh.fit.backend.dto.requests.OrderFilter;
 import iuh.fit.backend.dto.requests.UpdateStatusOrderDTO;
 import iuh.fit.backend.dto.responses.OrderFullDetailDTO;
-import iuh.fit.backend.model.*;
-import iuh.fit.backend.model.enums.*;
-import iuh.fit.backend.repository.*;
+import iuh.fit.backend.model.Book;
+import iuh.fit.backend.model.Cart;
+import iuh.fit.backend.model.Customer;
+import iuh.fit.backend.model.DiscountCode;
+import iuh.fit.backend.model.Order;
+import iuh.fit.backend.model.OrderDetail;
+import iuh.fit.backend.model.OrderHistory;
+import iuh.fit.backend.model.Payment;
+import iuh.fit.backend.model.Staff;
+import iuh.fit.backend.model.User;
+import iuh.fit.backend.model.enums.OrderStatus;
+import iuh.fit.backend.model.enums.PaymentMethod;
+import iuh.fit.backend.model.enums.Role;
+import iuh.fit.backend.repository.BookRepository;
+import iuh.fit.backend.repository.CartItemRepository;
+import iuh.fit.backend.repository.CartRepository;
+import iuh.fit.backend.repository.CustomerRepository;
+import iuh.fit.backend.repository.DiscountCodeRepository;
+import iuh.fit.backend.repository.OrderDetailRepository;
+import iuh.fit.backend.repository.OrderHistoryRepository;
+import iuh.fit.backend.repository.OrderRepository;
+import iuh.fit.backend.repository.PaymentRepository;
+import iuh.fit.backend.repository.StaffRepository;
+import iuh.fit.backend.service.OrderService;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -133,13 +156,14 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderStatus.PENDING);
         order.setCustomer(customer);
 
-        // Apply discount/voucher if exists
-        if (request.getDiscountCode() != null && !request.getDiscountCode().isBlank()) {
-            DiscountCode code = discountCodeRepository.findById(request.getDiscountCode())
-                    .orElseThrow(() -> new RuntimeException("Invalid discount code"));
-
-            validateDiscountCode(code, order);
-            order.setDiscountCode(code);
+        // Fetch discount/voucher if exists: prefer voucherId, then discountCode (validate after building items)
+        DiscountCode pendingDiscountCode = null;
+        if (request.getVoucherId() != null && !request.getVoucherId().isBlank()) {
+            pendingDiscountCode = discountCodeRepository.findById(request.getVoucherId())
+                .orElseThrow(() -> new RuntimeException("Invalid voucher/discount id"));
+        } else if (request.getDiscountCode() != null && !request.getDiscountCode().isBlank()) {
+            pendingDiscountCode = discountCodeRepository.findById(request.getDiscountCode())
+                .orElseThrow(() -> new RuntimeException("Invalid discount code"));
         }
 
         // Get the next detail ID base to avoid duplicates in same transaction
@@ -179,14 +203,17 @@ public class OrderServiceImpl implements OrderService {
             bookRepository.save(book);
         }
 
-        // Calculate totals BEFORE saving - using calculated subtotal
-        if (order.getDiscountCode() != null) {
-            int percent = order.getDiscountCode().getPercent();
-            double discountAmount = subtotal * percent / 100.0;
-            order.setTotalAmount(subtotal - discountAmount);
-        } else {
-            order.setTotalAmount(subtotal);
+        // Validate and attach discount code AFTER items are present
+        if (pendingDiscountCode != null) {
+            validateDiscountCode(pendingDiscountCode, order);
+            order.setDiscountCode(pendingDiscountCode);
         }
+
+        // Calculate totals BEFORE saving - discount applies to items subtotal only
+        // Then add fixed shipping fee (e.g., 20,000 VND)
+        final double SHIPPING_FEE = 20000.0;
+        double itemsTotalWithDiscount = order.calcTotalWithDiscount();
+        order.setTotalAmount(itemsTotalWithDiscount + SHIPPING_FEE);
 
         // Save order ONCE with all details
         Order saved = orderRepository.save(order);

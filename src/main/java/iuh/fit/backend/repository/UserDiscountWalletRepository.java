@@ -24,6 +24,11 @@ public interface UserDiscountWalletRepository extends JpaRepository<UserDiscount
     List<UserDiscountWallet> findByCustomer(Customer customer);
 
     /**
+     * Lấy tất cả UserDiscountWallet theo userId (bao gồm đã dùng và chưa dùng)
+     */
+    List<UserDiscountWallet> findByCustomer_UserId(String userId);
+
+    /**
      * Check xem user có sở hữu voucher nào không
      */
     Optional<UserDiscountWallet> findByCustomerAndDiscountCodeAndUsedFalse(Customer customer, DiscountCode discountCode);

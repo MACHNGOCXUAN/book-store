@@ -26,4 +26,5 @@ public class AvailableVoucherDTO {
     private String voucherTag; // "Public", "⭐ Mã của bạn", "🎁 VIP", "💎 Diamond"
     
     private Boolean applicable; // có thể apply được không
+    private String reason; // lý do không áp dụng (nếu applicable=false)
 }

@@ -153,6 +153,92 @@ public class DiscountCodeServiceImpl implements iuh.fit.backend.service.Discount
         return discountAmount;
     }
 
+        @Override
+        public AvailableVoucherDTO getWalletVoucherById(Customer customer, String voucherId, double cartTotal) {
+        DiscountCode voucher = discountCodeRepository.findById(voucherId)
+            .orElseThrow(() -> new RuntimeException("Voucher không tồn tại"));
+
+        // Chỉ kiểm tra ví cho voucher không public (cá nhân hóa)
+        Optional<UserDiscountWallet> walletOpt = userDiscountWalletRepository
+            .findByCustomerAndDiscountCodeAndUsedFalse(customer, voucher);
+
+        if (walletOpt.isEmpty()) {
+            // Không sở hữu hoặc đã dùng
+            return AvailableVoucherDTO.builder()
+                .voucherId(voucher.getDiscountCodeId())
+                .voucherName(voucher.getName())
+                .discountPercent(voucher.getPercent())
+                .minPriceToApply(voucher.getMinPriceToApply())
+                .description(voucher.getDescription())
+                .isPublic(Boolean.TRUE.equals(voucher.getIsPublic()))
+                .isFromWallet(false)
+                .isExclusive(voucher.getMinTierRequired() != null)
+                .voucherTag(buildVoucherTag(voucher, Boolean.TRUE.equals(voucher.getIsPublic()), false))
+                .applicable(false)
+                .reason("Không sở hữu voucher hoặc voucher đã dùng")
+                .build();
+        }
+
+        boolean valid = isVoucherValid(voucher, customer, cartTotal);
+        String reason = null;
+        if (!valid) {
+            // Tạo lý do cơ bản từ các điều kiện
+            if (voucher.getQuantity() <= 0) reason = "Voucher đã hết số lượng";
+            else {
+                LocalDate today = LocalDate.now();
+                if (voucher.getStartDate().isAfter(today) || voucher.getEndDate().isBefore(today)) {
+                    reason = "Voucher không trong thời gian hiệu lực";
+                } else if (cartTotal < voucher.getMinPriceToApply()) {
+                    reason = "Tổng đơn chưa đạt mức tối thiểu";
+                } else if (voucher.getMinTierRequired() != null) {
+                    CustomerTier customerTier = customer.getTier() != null ? customer.getTier() : CustomerTier.NEW_USER;
+                    if (!isTierSufficient(customerTier, voucher.getMinTierRequired())) {
+                        reason = "Tier khách hàng không đủ điều kiện";
+                    }
+                }
+                if (reason == null) reason = "Voucher không hợp lệ";
+            }
+        }
+
+        return AvailableVoucherDTO.builder()
+            .voucherId(voucher.getDiscountCodeId())
+            .voucherName(voucher.getName())
+            .discountPercent(voucher.getPercent())
+            .minPriceToApply(voucher.getMinPriceToApply())
+            .description(voucher.getDescription())
+            .isPublic(Boolean.TRUE.equals(voucher.getIsPublic()))
+            .isFromWallet(true)
+            .isExclusive(voucher.getMinTierRequired() != null)
+            .voucherTag(buildVoucherTag(voucher, Boolean.TRUE.equals(voucher.getIsPublic()), true))
+                .applicable(valid)
+                .reason(reason)
+            .build();
+        }
+
+        @Override
+        @Transactional
+        public void markWalletVoucherUsed(Customer customer, String voucherId, String orderId) {
+        DiscountCode voucher = discountCodeRepository.findById(voucherId)
+            .orElseThrow(() -> new RuntimeException("Voucher không tồn tại"));
+
+        UserDiscountWallet wallet = userDiscountWalletRepository
+            .findByCustomerAndDiscountCodeAndUsedFalse(customer, voucher)
+            .orElseThrow(() -> new RuntimeException("Voucher không khả dụng hoặc đã được sử dụng"));
+
+        wallet.markAsUsed(orderId);
+        userDiscountWalletRepository.save(wallet);
+        }
+
+    @Override
+    public java.util.List<UserDiscountWallet> getWalletEntries(Customer customer) {
+        return userDiscountWalletRepository.findByCustomer(customer);
+    }
+
+    @Override
+    public java.util.List<UserDiscountWallet> getWalletEntriesByUserId(String userId) {
+        return userDiscountWalletRepository.findByCustomer_UserId(userId);
+    }
+
     /**
      * Phân phối voucher đến các khách hàng đủ điều kiện và thêm vào UserDiscountWallet.
      */
@@ -289,7 +375,7 @@ public class DiscountCodeServiceImpl implements iuh.fit.backend.service.Discount
         if (voucher.getMinTierRequired() == CustomerTier.VIP) {
             return "🎁 VIP";
         }
-        return "🎉 Công khai";
+        return Boolean.TRUE.equals(isPublic) ? "🎉 Công khai" : "🎟️ Cá nhân";
     }
 
     private boolean isTierSufficient(CustomerTier current, CustomerTier required) {

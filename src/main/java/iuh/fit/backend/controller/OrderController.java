@@ -389,7 +389,7 @@ public class OrderController {
         String token = authHeader.substring(7);
         String userId = jwtUtils.getUserIdFromToken(token);
         User user = userService.findUserById(userId);
-
+        System.out.println("Đã vao checkout");
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", "Invalid token"));

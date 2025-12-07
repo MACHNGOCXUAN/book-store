@@ -55,4 +55,26 @@ public interface DiscountCodeService {
      * @return số lượng bản ghi wallet đã thêm
      */
     int distributeVoucherToEligibleUsers(DiscountCode discountCode);
+
+    /**
+     * Lấy voucher trong ví của khách hàng theo voucherId và kiểm tra điều kiện áp dụng với cartTotal.
+     * Trả về AvailableVoucherDTO với cờ applicable và lý do (nếu cần).
+     */
+    AvailableVoucherDTO getWalletVoucherById(Customer customer, String voucherId, double cartTotal);
+
+    /**
+     * Đánh dấu voucher trong ví đã được sử dụng sau khi thanh toán thành công.
+     * Gán used=true, usedDate=now, usedInOrderId=orderId.
+     */
+    void markWalletVoucherUsed(Customer customer, String voucherId, String orderId);
+
+    /**
+     * Lấy tất cả bản ghi ví voucher của khách hàng.
+     */
+    java.util.List<iuh.fit.backend.model.UserDiscountWallet> getWalletEntries(Customer customer);
+
+    /**
+     * Lấy tất cả bản ghi ví voucher theo customer_id.
+     */
+    java.util.List<iuh.fit.backend.model.UserDiscountWallet> getWalletEntriesByUserId(String userId);
 }

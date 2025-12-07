@@ -148,4 +148,110 @@ public class DiscountCodeController {
             });
         }
     }
+
+    /* ========== Wallet Voucher APIs for Client Payment Flow ========== */
+
+    /**
+     * Danh sách voucher trong ví của khách hàng hiện tại
+     */
+    @GetMapping("/wallet")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    @Operation(summary = "Lấy tất cả voucher trong ví của khách hàng")
+    public ResponseEntity<List<Object>> getWalletVouchers(Authentication auth) {
+        Customer customer = customerRepository.findByUserId(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        List<iuh.fit.backend.model.UserDiscountWallet> wallets = discountCodeService.getWalletEntries(customer);
+
+        List<java.util.Map<String, Object>> result = wallets.stream().map(w -> {
+            DiscountCode dc = w.getDiscountCode();
+            java.util.Map<String, Object> m = new java.util.HashMap<>();
+            m.put("walletVoucherId", String.valueOf(w.getId()));
+            m.put("discountCodeId", dc.getDiscountCodeId());
+            m.put("name", dc.getName());
+            m.put("percent", dc.getPercent());
+            m.put("minPriceToApply", dc.getMinPriceToApply());
+            m.put("description", dc.getDescription());
+            m.put("expiryDate", dc.getEndDate());
+            m.put("used", Boolean.TRUE.equals(w.getUsed()));
+            m.put("source", Boolean.TRUE.equals(dc.getIsPublic()) ? "PUBLIC" : "EXCLUSIVE");
+            return m;
+        }).toList();
+
+        return ResponseEntity.ok((List) result);
+    }
+
+    /**
+     * Danh sách ví theo customer_id (dùng cho admin/staff)
+     */
+    @GetMapping("/wallet/by-customer/{userId}")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+    @Operation(summary = "Lấy tất cả voucher trong ví theo userId")
+    public ResponseEntity<List<Object>> getWalletVouchersByCustomerId(@PathVariable String userId) {
+        List<iuh.fit.backend.model.UserDiscountWallet> wallets = discountCodeService.getWalletEntriesByUserId(userId);
+
+        List<java.util.Map<String, Object>> result = wallets.stream().map(w -> {
+            DiscountCode dc = w.getDiscountCode();
+            java.util.Map<String, Object> m = new java.util.HashMap<>();
+            m.put("walletVoucherId", String.valueOf(w.getId()));
+            m.put("discountCodeId", dc.getDiscountCodeId());
+            m.put("name", dc.getName());
+            m.put("percent", dc.getPercent());
+            m.put("minPriceToApply", dc.getMinPriceToApply());
+            m.put("description", dc.getDescription());
+            m.put("expiryDate", dc.getEndDate());
+            m.put("used", Boolean.TRUE.equals(w.getUsed()));
+            m.put("source", Boolean.TRUE.equals(dc.getIsPublic()) ? "PUBLIC" : "EXCLUSIVE");
+            return m;
+        }).toList();
+
+        return ResponseEntity.ok((List) result);
+    }
+
+    /**
+     * Lấy voucher trong ví theo id và kiểm tra có thể áp dụng với cartTotal không
+     */
+    @GetMapping("/wallet/{voucherId}")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    @Operation(summary = "Lấy voucher trong ví theo id với kiểm tra điều kiện")
+    public ResponseEntity<AvailableVoucherDTO> getWalletVoucherById(
+            @PathVariable String voucherId,
+            @RequestParam double cartTotal,
+            Authentication auth) {
+        Customer customer = customerRepository.findByUserId(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        AvailableVoucherDTO dto = discountCodeService.getWalletVoucherById(customer, voucherId, cartTotal);
+        return ResponseEntity.ok(dto);
+    }
+
+    /**
+     * Đánh dấu voucher trong ví đã dùng sau khi thanh toán thành công.
+     * - Ship COD: gọi ngay khi khách xác nhận đơn.
+     * - Momo/VNPay: gọi sau khi gateway xác nhận thanh toán.
+     */
+    @PostMapping("/wallet/{voucherId}/mark-used")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    @Operation(summary = "Đánh dấu voucher trong ví đã dùng sau khi thanh toán thành công")
+    public ResponseEntity<?> markWalletVoucherUsed(
+            @PathVariable String voucherId,
+            @RequestParam String orderId,
+            Authentication auth) {
+        Customer customer = customerRepository.findByUserId(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        try {
+            discountCodeService.markWalletVoucherUsed(customer, voucherId, orderId);
+            return ResponseEntity.ok(new Object() {
+                public String voucherId_ret = voucherId;
+                public String orderId_ret = orderId;
+                public String message = "✓ Cập nhật voucher đã dùng thành công";
+            });
+        } catch (RuntimeException e) {
+            log.error("Mark wallet voucher used failed: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(new Object() {
+                public String error = e.getMessage();
+            });
+        }
+    }
 }
