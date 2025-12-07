@@ -5,7 +5,8 @@ import java.util.*;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import iuh.fit.backend.dto.requests.OrderInfoDTO;
+import iuh.fit.backend.config.VnpayConfig;
+import iuh.fit.backend.dto.requests.*;
 import iuh.fit.backend.model.*;
 import iuh.fit.backend.model.enums.OrderStatus;
 import iuh.fit.backend.model.enums.PaymentMethod;
@@ -14,8 +15,8 @@ import iuh.fit.backend.model.enums.SessionStatus;
 import iuh.fit.backend.payment.momo.MoMoPaymentResponse;
 import iuh.fit.backend.payment.momo.MoMoService;
 import iuh.fit.backend.repository.*;
-import iuh.fit.backend.service.MomoService;
-import iuh.fit.backend.service.OrderService;
+import iuh.fit.backend.service.*;
+import jakarta.servlet.http.HttpServletResponse;
 import org.json.JSONObject;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -23,15 +24,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-import iuh.fit.backend.dto.requests.CreateOrderRequestDTO;
-import iuh.fit.backend.dto.requests.OrderFilter;
-import iuh.fit.backend.dto.requests.UpdateStatusOrderDTO;
 import iuh.fit.backend.dto.responses.OrderFullDetailDTO;
 import iuh.fit.backend.dto.responses.PaymentQRCodeResponse;
 import iuh.fit.backend.payment.vnpay.VnpayQRCodeService;
 import iuh.fit.backend.payment.vnpay.VnpayService;
-import iuh.fit.backend.service.BookService;
-import iuh.fit.backend.service.UserService;
 import iuh.fit.backend.utils.JwtUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -55,6 +51,7 @@ public class OrderController {
     private final OrderRepository orderRepository;
     private final OrderHistoryRepository orderHistoryRepository;
     private final PaymentRepository paymentRepository;
+    private final VnpayPaymentService vnpayPaymentService;
 
     /** ----------------------- FILTER ORDERS ----------------------- */
     @PostMapping()
@@ -399,7 +396,6 @@ public class OrderController {
         }
 
         try {
-            // 1. VALIDATE STOCK và TÍNH TỔNG TIỀN
             List<OrderInfoDTO.OrderDetailRequest> orderDetails = request.getOrderDetails();
             long totalAmount = 0;
 
@@ -424,12 +420,10 @@ public class OrderController {
                 // totalAmount = applyDiscount(totalAmount, request.getDiscountCode());
             }
 
-            // 2. TẠO CHECKOUT SESSION (thay vì Order)
             CheckoutSession session = new CheckoutSession();
             session.setSessionId(UUID.randomUUID().toString());
             session.setCustomerId(userId);
 
-            // Lưu orderDetails dạng JSON
             ObjectMapper mapper = new ObjectMapper();
             session.setOrderDetailsJson(mapper.writeValueAsString(orderDetails));
 
@@ -443,7 +437,6 @@ public class OrderController {
 
             checkoutSessionRepository.save(session);
 
-            // 3. TẠO PAYMENT REQUEST VỚI MOMO
             if (totalAmount < 1000 || totalAmount > 50000000) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("message", "Số tiền không hợp lệ: " + totalAmount + " VND"));
@@ -452,34 +445,47 @@ public class OrderController {
             String orderInfo = "Thanh toán session " + session.getSessionId();
             String customOrderId = session.getSessionId() + "_" + System.currentTimeMillis();
 
-            String momoResponse = momoService.createPaymentRequest(
-                    String.valueOf(totalAmount),
-                    customOrderId,
-                    orderInfo
-            );
+            String paymentMethod = String.valueOf(request.getPaymentMethod());
+            Map<String, Object> response = new HashMap<>();
+            response.put("sessionId", session.getSessionId());
+            response.put("amount", totalAmount);
+            response.put("expiresAt", session.getExpiresAt());
 
-            JSONObject momoJson = new JSONObject(momoResponse);
-
-            if (momoJson.has("resultCode") && momoJson.getInt("resultCode") != 0) {
-                session.setStatus(SessionStatus.EXPIRED);
+            if("MOMO".equalsIgnoreCase(paymentMethod)) {
+                String momoResponse = momoService.createPaymentRequest(
+                        String.valueOf(totalAmount),
+                        customOrderId,
+                        orderInfo
+                );
+                JSONObject momoJson = new JSONObject(momoResponse);
+                if (momoJson.has("resultCode") && momoJson.getInt("resultCode") != 0) {
+                    session.setStatus(SessionStatus.EXPIRED);
+                    checkoutSessionRepository.save(session);
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                            .body(Map.of("message", "MoMo error: " + momoJson.optString("message")));
+                }
+                session.setTransactionPaymentId(momoJson.optString("orderId"));
                 checkoutSessionRepository.save(session);
+                response.put("paymentUrl", momoJson.optString("payUrl"));
+                response.put("message", "Checkout session created via MoMo");
+
+            } else if ("VNPAY".equalsIgnoreCase(paymentMethod)) {
+                VnpayRequest vnpayRequest = new VnpayRequest();
+                vnpayRequest.setAmount(String.valueOf(totalAmount));
+                checkoutSessionRepository.save(session);
+
+                String vnpayUrl = vnpayPaymentService.createPayment(vnpayRequest, session.getSessionId());
+                session.setStatus(SessionStatus.PENDING); // giữ trạng thái PENDING
+
+                response.put("paymentUrl", vnpayUrl);
+                response.put("message", "Checkout session created via VNPay");
+            } else {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message", "MoMo error: " + momoJson.optString("message")));
+                        .body(Map.of("message", "Phương thức thanh toán không hợp lệ"));
             }
-
-            String paymentUrl = momoJson.optString("payUrl", "");
-            String momoOrderId = momoJson.optString("orderId", "");
-
-            session.setMomoTransactionId(momoOrderId);
             checkoutSessionRepository.save(session);
 
-            return ResponseEntity.ok(Map.of(
-                    "sessionId", session.getSessionId(),
-                    "paymentUrl", paymentUrl,
-                    "amount", totalAmount,
-                    "expiresAt", session.getExpiresAt(),
-                    "message", "Checkout session created"
-            ));
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -610,6 +616,136 @@ public class OrderController {
                     .body(Map.of("message", "Failed to process callback: " + e.getMessage()));
         }
     }
+
+    @GetMapping("/vnpay/callback")
+    @Transactional
+    public ResponseEntity<?> handleVnpayCallback(@RequestParam Map<String, String> allParams, HttpServletResponse response) {
+        try {
+            String txnRef = allParams.get("vnp_TxnRef");
+            String responseCode = allParams.get("vnp_ResponseCode");
+            String vnpSecureHash = allParams.get("vnp_SecureHash");
+
+            Map<String, String> paramsToVerify = new HashMap<>(allParams);
+            paramsToVerify.remove("vnp_SecureHash");
+            paramsToVerify.remove("vnp_SecureHashType");
+
+            String calculatedHash = VnpayConfig.hashAllFields(paramsToVerify);
+
+            if (!calculatedHash.equals(vnpSecureHash)) {
+                allParams.entrySet().stream()
+                        .sorted(Map.Entry.comparingByKey())
+                        .forEach(entry ->
+                                System.out.println("   " + entry.getKey() + " = " + entry.getValue())
+                        );
+
+                paramsToVerify.entrySet().stream()
+                        .sorted(Map.Entry.comparingByKey())
+                        .forEach(entry ->
+                                System.out.println("   " + entry.getKey() + " = " + entry.getValue())
+                        );
+
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Chữ ký không hợp lệ"));
+            }
+
+            CheckoutSession session = checkoutSessionRepository.findById(txnRef)
+                    .orElseThrow(() -> new RuntimeException("Session not found"));
+
+            if (LocalDateTime.now().isAfter(session.getExpiresAt())) {
+                session.setStatus(SessionStatus.EXPIRED);
+                checkoutSessionRepository.save(session);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Session expired"));
+            }
+
+            if (session.getStatus() == SessionStatus.COMPLETED) {
+                return ResponseEntity.ok(Map.of("message", "Session already processed"));
+            }
+
+            if ("00".equals(responseCode)) {
+                ObjectMapper mapper = new ObjectMapper();
+                List<OrderInfoDTO.OrderDetailRequest> orderDetailDTOs = mapper.readValue(
+                        session.getOrderDetailsJson(),
+                        new TypeReference<List<OrderInfoDTO.OrderDetailRequest>>() {}
+                );
+
+                for (OrderInfoDTO.OrderDetailRequest detailDTO : orderDetailDTOs) {
+                    Optional<Book> book = bookService.findById(detailDTO.getBookId());
+                    if (book.isEmpty() || book.get().getStock() < detailDTO.getQuantity()) {
+                        session.setStatus(SessionStatus.EXPIRED);
+                        checkoutSessionRepository.save(session);
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body(Map.of("message", "Sản phẩm đã hết hàng"));
+                    }
+                }
+
+                Customer customer = customerRepository.findByUserId(session.getCustomerId())
+                        .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+                Order order = new Order();
+                order.setOrderId(generateOrderId());
+                order.setCustomer(customer);
+                order.setStatus(OrderStatus.PENDING);
+                order.setOrderDate(LocalDateTime.now());
+
+                List<OrderDetail> orderDetails = new ArrayList<>();
+                for (OrderInfoDTO.OrderDetailRequest detailDTO : orderDetailDTOs) {
+                    Book book = bookService.findById(detailDTO.getBookId()).get();
+                    book.setStock(book.getStock() - detailDTO.getQuantity());
+                    bookRepository.save(book);
+
+                    OrderDetail detail = new OrderDetail();
+                    detail.setOrderDetailId(UUID.randomUUID().toString());
+                    detail.setOrder(order);
+                    detail.setBook(book);
+                    detail.setQuantity(detailDTO.getQuantity());
+                    detail.setUnitPrice(book.getPrice());
+                    orderDetails.add(detail);
+                }
+                order.setOrderDetails(orderDetails);
+                order.recalcTotals();
+                orderRepository.save(order);
+
+                Payment payment = new Payment();
+                payment.setPaymentId(UUID.randomUUID().toString());
+                payment.setOrder(order);
+                payment.setMethod(PaymentMethod.VNPAY);
+                payment.setAmount(session.getTotalAmount());
+                payment.setStatus(PaymentStatus.COMPLETED);
+                payment.setTransactionId(allParams.get("vnp_TransactionNo"));
+                payment.setPaymentCreatedAt(session.getCreatedAt());
+                payment.setPaymentCompletedAt(LocalDateTime.now());
+                payment.setResponseCode(responseCode);
+                paymentRepository.save(payment);
+
+                session.setStatus(SessionStatus.COMPLETED);
+                session.setTransactionPaymentId(allParams.get("vnp_TransactionNo"));
+                session.setResponseCode(responseCode);
+                checkoutSessionRepository.save(session);
+
+                response.sendRedirect("http://localhost:3001/payment-status?status=success&orderId=" + order.getOrderId());
+
+                return ResponseEntity.ok(Map.of("message", "Payment success"));
+            } else {
+                session.setStatus(SessionStatus.EXPIRED);
+                session.setResponseCode(responseCode);
+                checkoutSessionRepository.save(session);
+
+                response.sendRedirect("http://localhost:3001/payment-status?status=fail");
+
+                return ResponseEntity.ok(Map.of(
+                        "message", "Payment failed via VNPay",
+                        "responseCode", responseCode
+                ));
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Failed to process VNPay callback: " + e.getMessage()));
+        }
+    }
+
 
     private String generateOrderId() {
         return "ORD" + System.currentTimeMillis();

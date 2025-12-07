@@ -75,7 +75,8 @@ public class SecurityConfig {
                                 "/api/banners/**",
                                 "/api/discounts/**",
                                 "/api/momo/**",
-                                "/api/orders/**"
+                                "/api/orders/**",
+                                "/api/vnpay/payment/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
