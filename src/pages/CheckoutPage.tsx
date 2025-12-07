@@ -24,14 +24,13 @@ import { type CartItemType } from "../components/CartItem";
 import VoucherSelector from "../components/VoucherSelector";
 import momoIcon from "../components/icons/logo-momo.png";
 import vnpayIcon from "../components/icons/logo-vnpay.jpg";
-import { API_BASE } from "../config/api";
 import {
   createAddress as createAddressAction,
   getAddresses,
 } from "../features/addresses/addressSlice";
 import { fetchCart } from "../features/cart/cartSlice";
 import { clearOrder, createOrder } from "../features/orders/ordersSlice";
-import { checkoutOrder, createMoMoPaymentOnly } from "../services/momoApi";
+import { checkoutOrder } from "../services/momoApi";
 import { fetchProvincesV1, transformV1Data } from "../services/provincesApi";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import type { Address } from "../types/Address";
@@ -186,6 +185,13 @@ const CheckoutPage: React.FC = () => {
   const shipping = 20000;
   const total = subtotal + shipping - discountAmount;
 
+  // Safe API base and URL builder to avoid double /api
+  const API_BASE: string = (import.meta.env && (import.meta.env as any).VITE_API_URL) || "http://localhost:8080/api";
+  const buildApiUrl = (path: string) => {
+    const base = API_BASE.replace(/\/$/, "");
+    return base.endsWith("/api") ? `${base}${path}` : `${base}/api${path}`;
+  };
+
   // Xử lý áp dụng mã giảm giá text input
   const handleApplyDiscountCode = async () => {
     if (!discountCode.trim()) {
@@ -285,6 +291,11 @@ const CheckoutPage: React.FC = () => {
         customerId: authUser.userId,
         orderDetails,
         paymentMethod: paymentMethod || "COD", // ⭐ Thêm payment method
+        // Pass computed totals to backend for verification
+        subtotal,
+        shipping,
+        total,
+        discountAmount,
       };
 
       // Chỉ thêm voucherId nếu có (không gửi null)
@@ -658,6 +669,30 @@ const CheckoutPage: React.FC = () => {
 
           // COD - chuyển hướng trực tiếp đến trang success
           if (result.payload && typeof result.payload === "object") {
+            // Mark voucher used in wallet if present
+            try {
+              if (selectedVoucherId) {
+                const token = localStorage.getItem("access_token") || "";
+                const orderId = (result.payload as any)?.order?.orderId;
+                if (orderId) {
+                  const resp = await fetch(
+                    buildApiUrl(`/discounts/wallet/${encodeURIComponent(selectedVoucherId)}/mark-used?orderId=${encodeURIComponent(orderId)}`),
+                    {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                      },
+                    }
+                  );
+                  if (!resp.ok) {
+                    console.warn("Mark-used failed:", resp.status);
+                  }
+                }
+              }
+            } catch (e) {
+              console.warn("Mark-used error:", e);
+            }
             dispatch(clearOrder());
             navigate("/order-success", {
               state: {
@@ -1234,9 +1269,9 @@ const CheckoutPage: React.FC = () => {
                       const isNewAddress =
                         !defaultAddr ||
                         defaultAddr.province !==
-                          currentOrderPayment.values.province ||
+                        currentOrderPayment.values.province ||
                         defaultAddr.specifics !==
-                          currentOrderPayment.values.specifics;
+                        currentOrderPayment.values.specifics;
 
                       if (isNewAddress) {
                         dispatch(
@@ -1270,7 +1305,7 @@ const CheckoutPage: React.FC = () => {
                         }
                       );
                     }
-                  } 
+                  }
 
                   setShowQRModal(false);
                   // Redirect tới trang success giống như COD flow
@@ -1284,14 +1319,14 @@ const CheckoutPage: React.FC = () => {
                     },
                   });
                 } catch (error) {
-                    console.error("❌ Error creating order:", error);
-                    toast.error("Có lỗi xảy ra khi tạo đơn hàng!", {
-                      position: "top-right",
-                      autoClose: 2000,
-                      toastId: "order-success",
-                    });
-                    successToastRef.current = true;
-                  }
+                  console.error("❌ Error creating order:", error);
+                  toast.error("Có lỗi xảy ra khi tạo đơn hàng!", {
+                    position: "top-right",
+                    autoClose: 2000,
+                    toastId: "order-success",
+                  });
+                  successToastRef.current = true;
+                }
               }}
               style={{
                 background: paymentMethod === "MOMO" ? "#d82d8b" : "#d32f2f",

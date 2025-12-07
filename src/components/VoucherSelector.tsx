@@ -1,8 +1,22 @@
-import { useState, useEffect } from "react";
-import { Card, Row, Col, Button, message, Spin, Empty, Drawer } from "antd";
 import { GiftOutlined } from "@ant-design/icons";
+import { Button, Card, Col, Drawer, Empty, message, Row, Spin } from "antd";
+import { useEffect, useState } from "react";
+import API from "../config/api";
 import { fetchWalletVouchers } from "../services/loyaltyService";
 import type { WalletVoucher } from "../types/Loyalty";
+// Derive API base safely without using 'any'
+const API_BASE: string = (typeof API === "object" && (API as { API_BASE?: string }).API_BASE)
+  || (import.meta.env && (import.meta.env as { VITE_API_URL?: string }).VITE_API_URL)
+  || "http://localhost:8080";
+
+// Build URL safely to avoid double /api in base
+const buildApiUrl = (path: string) => {
+  const base = API_BASE.replace(/\/$/, "");
+  if (base.endsWith("/api")) {
+    return `${base}${path}`;
+  }
+  return `${base}/api${path}`;
+};
 
 interface VoucherSelectorProps {
   cartTotal: number;
@@ -16,6 +30,8 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
   selectedVoucherId,
 }) => {
   const [vouchers, setVouchers] = useState<WalletVoucher[]>([]);
+  const [applicableMap, setApplicableMap] = useState<Record<string, boolean>>({});
+  const [reasonMap, setReasonMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedVoucher, setSelectedVoucher] = useState<WalletVoucher | null>(
@@ -30,6 +46,7 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
     if (cartTotal > 0 && token) {
       loadVouchers();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartTotal, token]);
 
   const loadVouchers = async () => {
@@ -58,7 +75,48 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
       });
 
       setVouchers(filtered);
-    } catch (error: any) {
+
+      // Validate applicability per voucher against backend
+      const results: Record<string, boolean> = {};
+      const reasons: Record<string, string> = {};
+      await Promise.all(
+        filtered.map(async (v) => {
+          try {
+            const resp = await fetch(
+              buildApiUrl(`/discounts/wallet/${encodeURIComponent(v.discountCodeId)}?cartTotal=${encodeURIComponent(cartTotal)}`),
+              {
+                method: "GET",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+            if (resp.ok) {
+              const dto = await resp.json();
+              results[v.discountCodeId] = !!dto.applicable;
+              if (dto.reason) {
+                reasons[v.discountCodeId] = String(dto.reason);
+              }
+            } else {
+              if (resp.status === 401) {
+                // Không khóa voucher khi chưa xác thực, hiển thị lý do thân thiện
+                results[v.discountCodeId] = true;
+                reasons[v.discountCodeId] = "Cần đăng nhập để kiểm tra điều kiện áp dụng";
+              } else {
+                results[v.discountCodeId] = false;
+                reasons[v.discountCodeId] = `HTTP ${resp.status}: Không thể kiểm tra điều kiện áp dụng`;
+              }
+            }
+          } catch {
+            results[v.discountCodeId] = false;
+            reasons[v.discountCodeId] = "Lỗi kết nối khi kiểm tra điều kiện";
+          }
+        })
+      );
+      setApplicableMap(results);
+      setReasonMap(reasons);
+    } catch {
       message.error("Lỗi khi tải danh sách voucher");
     } finally {
       setLoading(false);
@@ -68,6 +126,28 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
   const handleApplyVoucher = async (voucher: WalletVoucher) => {
     setIsApplying(true);
     try {
+      // Re-validate applicability before applying
+      const resp = await fetch(
+        buildApiUrl(`/discounts/wallet/${encodeURIComponent(voucher.discountCodeId)}?cartTotal=${encodeURIComponent(cartTotal)}`),
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (!resp.ok) {
+        if (resp.status === 401) {
+          throw new Error("Vui lòng đăng nhập để áp dụng voucher");
+        }
+        throw new Error(`Kiểm tra voucher thất bại (HTTP ${resp.status})`);
+      }
+      const dto = await resp.json();
+      if (!dto.applicable) {
+        throw new Error("Voucher không đủ điều kiện áp dụng với tổng đơn hiện tại");
+      }
+
       // Tính discount amount
       const discountAmount = (cartTotal * voucher.percent) / 100;
 
@@ -82,15 +162,18 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
 
       // Reload danh sách voucher để ẩn voucher đã được dùng
       loadVouchers();
-    } catch (error: any) {
-      message.error(error.message || "Lỗi khi áp dụng voucher");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Lỗi khi áp dụng voucher";
+      message.error(msg);
     } finally {
       setIsApplying(false);
     }
   };
 
   const renderVoucherCard = (voucher: WalletVoucher) => {
-    const isLocked = cartTotal < voucher.minPriceToApply;
+    const backendApplicable = applicableMap[voucher.discountCodeId];
+    const backendReason = reasonMap[voucher.discountCodeId];
+    const isLocked = cartTotal < voucher.minPriceToApply || backendApplicable === false;
     const isSelected = selectedVoucherId === voucher.discountCodeId;
 
     return (
@@ -178,7 +261,9 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
                 color: "#C92127",
               }}
             >
-              🔒 {voucher.description || "Không đủ điều kiện để áp dụng"}
+              🔒 {backendApplicable === false
+                ? backendReason || "Voucher không đủ điều kiện áp dụng với tổng đơn hiện tại"
+                : voucher.description || "Không đủ điều kiện để áp dụng"}
             </div>
           )}
         </Card>
@@ -201,6 +286,43 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
       >
         <GiftOutlined /> Chọn voucher ({vouchers.length})
       </Button>
+
+      {/* Applied voucher summary shown under the select button */}
+      {selectedVoucherId && (
+        (() => {
+          const applied = vouchers.find(v => v.discountCodeId === selectedVoucherId) || selectedVoucher;
+          if (!applied) return null;
+          const estimatedDiscount = (cartTotal * applied.percent) / 100;
+          return (
+            <Card
+              size="small"
+              style={{
+                marginTop: 12,
+                borderRadius: 8,
+                background: "#FFF5F5",
+                border: "1px solid #F5C3C5",
+              }}
+            >
+              <Row align="middle" gutter={12}>
+                <Col flex="none">
+                  <GiftOutlined style={{ fontSize: 18, color: "#C92127" }} />
+                </Col>
+                <Col flex="auto">
+                  <div style={{ fontWeight: 600, color: "#333" }}>{applied.name}</div>
+                  <div style={{ fontSize: 12, color: "#666" }}>
+                    Đã áp dụng: Giảm {applied.percent}% (~{estimatedDiscount.toLocaleString("vi-VN")}₫)
+                  </div>
+                </Col>
+                <Col flex="none">
+                  <Button size="small" type="link" onClick={() => setIsDrawerOpen(true)}>
+                    Thay đổi
+                  </Button>
+                </Col>
+              </Row>
+            </Card>
+          );
+        })()
+      )}
 
       <Drawer
         title={
