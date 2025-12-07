@@ -31,6 +31,7 @@ import {
   BarcodeOutlined,
 } from "@ant-design/icons";
 import { OrderDataType, OrderStatus } from "@/types/order.type";
+import { HorizontalTimeline } from "../ui/TimeLine";
 
 interface OrderDetailModalProps {
   isModalOpen: boolean;
@@ -63,6 +64,12 @@ const OrderDetailModal = ({
     },
     PROCESSING: {
       label: "Đang xử lý",
+      color: "blue",
+      icon: <ShoppingOutlined />,
+      step: 1,
+    },
+    SHIPPING: {
+      label: "Đang giao",
       color: "blue",
       icon: <ShoppingOutlined />,
       step: 1,
@@ -287,22 +294,39 @@ const OrderDetailModal = ({
                       <div className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3!">
                         Lịch sử đơn hàng
                       </div>
-                      <Timeline
-                        items={order?.orderHistories?.map(h => (
-                          {
-                            color: statusConfig[h.status].color,
-                            children: (
-                              <div>
-                                <div className="font-medium text-gray-900">
-                                  {statusConfig[h.status].label}
-                                </div>
-                                <div className="text-xs text-gray-500 mt-1">
-                                  {formatDate(h.timestamp)}
-                                </div>
+
+                      {/* Timeline theo chiểu dọc sử dụng của antd */}
+                      {/* <Timeline
+                        items={order?.orderHistories?.map((h) => ({
+                          color: statusConfig[h.status].color,
+                          children: (
+                            <div>
+                              <div className="font-medium text-gray-900">
+                                {statusConfig[h.status].label}
                               </div>
-                            ),
-                          }
-                        ))}
+                              <div className="text-xs text-gray-500 mt-1">
+                                {formatDate(h.timestamp)}
+                              </div>
+                            </div>
+                          ),
+                        }))}
+                      /> */}
+
+                      {/* custom time line */}
+                      <HorizontalTimeline
+                        items={order?.orderHistories?.map((h) => ({
+                          color: statusConfig[h.status].color,
+                          children: (
+                            <div>
+                              <div className="font-medium text-gray-900">
+                                {statusConfig[h.status].label}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                {formatDate(h.timestamp)}
+                              </div>
+                            </div>
+                          ),
+                        }))}
                       />
                     </>
                   )}
