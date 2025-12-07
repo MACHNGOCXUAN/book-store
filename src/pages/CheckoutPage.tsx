@@ -402,7 +402,7 @@ const CheckoutPage: React.FC = () => {
       //   }
       // }
 
-      if (paymentMethod === "MOMO") {
+      if (paymentMethod === "MOMO" || paymentMethod === "VNPAY") {
         if (total < 1000) {
           message.error(
             "Số tiền tối thiểu cho thanh toán MoMo là 1,000 VND. Vui lòng chọn phương thức thanh toán khác hoặc thêm sản phẩm vào giỏ hàng."
@@ -492,116 +492,116 @@ const CheckoutPage: React.FC = () => {
       }
 
       // Kiểm tra xem có phải thanh toán VNPay không
-      if (paymentMethod === "VNPAY") {
-        console.log("💳 Processing VNPay payment...");
+      // if (paymentMethod === "VNPAY") {
+      //   console.log("💳 Processing VNPay payment...");
 
-        // Validate VNPay amount constraints
-        if (total < 1000) {
-          message.error(
-            "Số tiền tối thiểu cho thanh toán VNPay là 1,000 VND. Vui lòng chọn phương thức thanh toán khác hoặc thêm sản phẩm vào giỏ hàng."
-          );
-          return;
-        }
+      //   // Validate VNPay amount constraints
+      //   if (total < 1000) {
+      //     message.error(
+      //       "Số tiền tối thiểu cho thanh toán VNPay là 1,000 VND. Vui lòng chọn phương thức thanh toán khác hoặc thêm sản phẩm vào giỏ hàng."
+      //     );
+      //     return;
+      //   }
 
-        if (total > 50000000) {
-          message.error(
-            "Số tiền tối đa cho thanh toán VNPay là 50,000,000 VND. Vui lòng chọn phương thức thanh toán khác."
-          );
-          return;
-        }
+      //   if (total > 50000000) {
+      //     message.error(
+      //       "Số tiền tối đa cho thanh toán VNPay là 50,000,000 VND. Vui lòng chọn phương thức thanh toán khác."
+      //     );
+      //     return;
+      //   }
 
-        const token = localStorage.getItem("access_token");
-        if (!token) {
-          message.error("Vui lòng đăng nhập!");
-          navigate("/login");
-          return;
-        }
+      //   const token = localStorage.getItem("access_token");
+      //   if (!token) {
+      //     message.error("Vui lòng đăng nhập!");
+      //     navigate("/login");
+      //     return;
+      //   }
 
-        try {
-          // Gọi API tạo VNPay payment - tạo order luôn
-          const vnpayResponse = await fetch(`${API_BASE}/orders/checkout`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(orderPayload),
-          }).then((r) => r.json());
+      //   try {
+      //     // Gọi API tạo VNPay payment - tạo order luôn
+      //     const vnpayResponse = await fetch(`${API_BASE}/orders/checkout`, {
+      //       method: "POST",
+      //       headers: {
+      //         "Content-Type": "application/json",
+      //         Authorization: `Bearer ${token}`,
+      //       },
+      //       body: JSON.stringify(orderPayload),
+      //     }).then((r) => r.json());
 
-          console.log("✅ VNPay order created:", vnpayResponse);
-          console.log("   Order ID:", vnpayResponse.order?.orderId);
-          console.log(
-            "   QR Code Base64:",
-            vnpayResponse.payment?.qrCodeBase64?.substring(0, 50) + "..."
-          );
+      //     console.log("✅ VNPay order created:", vnpayResponse);
+      //     console.log("   Order ID:", vnpayResponse.order?.orderId);
+      //     console.log(
+      //       "   QR Code Base64:",
+      //       vnpayResponse.payment?.qrCodeBase64?.substring(0, 50) + "..."
+      //     );
 
-          toast.success("Vui lòng quét mã QR để thanh toán VNPay.", {
-            position: "top-right",
-            autoClose: 2000,
-          });
+      //     toast.success("Vui lòng quét mã QR để thanh toán VNPay.", {
+      //       position: "top-right",
+      //       autoClose: 2000,
+      //     });
 
-          // Tạo address object
-          const currentAddress = {
-            main: 1,
-            province: values.province,
-            district: values.district,
-            ward: values.ward,
-            specifics: values.specifics,
-            receiverName: values.receiverName,
-            receiverPhone: values.receiverPhone,
-            isDefault: addressState.addresses.length === 0,
-          };
+      //     // Tạo address object
+      //     const currentAddress = {
+      //       main: 1,
+      //       province: values.province,
+      //       district: values.district,
+      //       ward: values.ward,
+      //       specifics: values.specifics,
+      //       receiverName: values.receiverName,
+      //       receiverPhone: values.receiverPhone,
+      //       isDefault: addressState.addresses.length === 0,
+      //     };
 
-          const defaultAddr = addressState.addresses.find((a) => a.isDefault);
-          const isNewAddress =
-            !defaultAddr ||
-            defaultAddr.province !== values.province ||
-            defaultAddr.specifics !== values.specifics;
+      //     const defaultAddr = addressState.addresses.find((a) => a.isDefault);
+      //     const isNewAddress =
+      //       !defaultAddr ||
+      //       defaultAddr.province !== values.province ||
+      //       defaultAddr.specifics !== values.specifics;
 
-          if (isNewAddress) {
-            console.log("💾 Saving new address...");
-            dispatch(
-              createAddressAction({
-                customerId: authUser.userId,
-                address: currentAddress as Address,
-              })
-            );
-          }
+      //     if (isNewAddress) {
+      //       console.log("💾 Saving new address...");
+      //       dispatch(
+      //         createAddressAction({
+      //           customerId: authUser.userId,
+      //           address: currentAddress as Address,
+      //         })
+      //       );
+      //     }
 
-          // Lưu order data để sau này nếu cần
-          setCurrentOrderPayment({
-            orderPayload: vnpayResponse.order, // Đã tạo order rồi
-            payment: vnpayResponse.payment,
-            address: currentAddress,
-            values: values,
-          });
+      //     // Lưu order data để sau này nếu cần
+      //     setCurrentOrderPayment({
+      //       orderPayload: vnpayResponse.order, // Đã tạo order rồi
+      //       payment: vnpayResponse.payment,
+      //       address: currentAddress,
+      //       values: values,
+      //     });
 
-          setShowQRModal(true);
-          return; // Dừng lại để không chạy logic bên dưới
-        } catch (error) {
-          console.error("❌ VNPay checkout error:", error);
+      //     setShowQRModal(true);
+      //     return; // Dừng lại để không chạy logic bên dưới
+      //   } catch (error) {
+      //     console.error("❌ VNPay checkout error:", error);
 
-          let errorMessage =
-            "Không thể tạo thanh toán VNPay. Vui lòng thử lại!";
+      //     let errorMessage =
+      //       "Không thể tạo thanh toán VNPay. Vui lòng thử lại!";
 
-          if (error instanceof Error) {
-            errorMessage = error.message;
-          } else if (typeof error === "object" && error !== null) {
-            const err = error as any;
-            if (err.response?.data?.message) {
-              errorMessage = err.response.data.message;
-            } else if (err.message) {
-              errorMessage = err.message;
-            }
-          }
+      //     if (error instanceof Error) {
+      //       errorMessage = error.message;
+      //     } else if (typeof error === "object" && error !== null) {
+      //       const err = error as any;
+      //       if (err.response?.data?.message) {
+      //         errorMessage = err.response.data.message;
+      //       } else if (err.message) {
+      //         errorMessage = err.message;
+      //       }
+      //     }
 
-          toast.error(errorMessage, {
-            position: "top-right",
-            autoClose: 3000,
-          });
-          return;
-        }
-      }
+      //     toast.error(errorMessage, {
+      //       position: "top-right",
+      //       autoClose: 3000,
+      //     });
+      //     return;
+      //   }
+      // }
 
       // Dispatch Redux action để tạo đơn (CHỈ cho COD)
 

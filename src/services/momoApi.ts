@@ -10,6 +10,7 @@ export interface MoMoCheckoutRequest {
         bookId: string;
         quantity: number;
     }>;
+    paymentMethod: "MOMO" | "VNPAY"
 }
 
 export interface MoMoCheckoutResponse {
