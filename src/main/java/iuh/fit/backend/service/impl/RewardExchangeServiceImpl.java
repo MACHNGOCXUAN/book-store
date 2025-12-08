@@ -1,26 +1,26 @@
 package iuh.fit.backend.service.impl;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import iuh.fit.backend.dto.requests.ExchangeRewardRequestDTO;
+import iuh.fit.backend.dto.responses.ExchangeRewardResponseDTO;
+import iuh.fit.backend.dto.responses.ExchangeableVoucherDTO;
 import iuh.fit.backend.model.Customer;
 import iuh.fit.backend.model.DiscountCode;
 import iuh.fit.backend.model.UserDiscountWallet;
 import iuh.fit.backend.model.enums.CustomerTier;
-import iuh.fit.backend.dto.requests.ExchangeRewardRequestDTO;
-import iuh.fit.backend.dto.responses.ExchangeableVoucherDTO;
-import iuh.fit.backend.dto.responses.ExchangeRewardResponseDTO;
+import iuh.fit.backend.repository.CustomerRepository;
 import iuh.fit.backend.repository.DiscountCodeRepository;
 import iuh.fit.backend.repository.UserDiscountWalletRepository;
-import iuh.fit.backend.repository.CustomerRepository;
 import iuh.fit.backend.service.RewardExchangeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -32,6 +32,17 @@ public class RewardExchangeServiceImpl implements RewardExchangeService {
     private final UserDiscountWalletRepository userDiscountWalletRepository;
     private final CustomerRepository customerRepository;
 
+    /**
+     * Tính tier của customer dựa trên loyalty points
+     * Tier thresholds: NEW_USER(0), REGULAR(100), VIP(500), DIAMOND(2000)
+     */
+    private CustomerTier calculateTierFromPoints(int loyaltyPoints) {
+        if (loyaltyPoints >= 2000) return CustomerTier.DIAMOND;
+        if (loyaltyPoints >= 500) return CustomerTier.VIP;
+        if (loyaltyPoints >= 100) return CustomerTier.REGULAR;
+        return CustomerTier.NEW_USER;
+    }
+
     @Override
     public List<ExchangeableVoucherDTO> getExchangeableVouchers(Customer customer) {
         log.info("Getting exchangeable vouchers for customer: {}", customer.getUserId());
@@ -39,8 +50,8 @@ public class RewardExchangeServiceImpl implements RewardExchangeService {
         // Lấy tất cả voucher có redeemable=true
         List<DiscountCode> redeemableVouchers = discountCodeRepository.findByRedeemableTrue();
 
-        int currentPoints = customer.getLoyaltyPoints() != null ? customer.getLoyaltyPoints() : 0;
-        CustomerTier currentTier = customer.getTier() != null ? customer.getTier() : CustomerTier.NEW_USER;
+        int currentPoints = java.util.Optional.ofNullable(customer.getLoyaltyPoints()).orElse(0);
+        CustomerTier currentTier = calculateTierFromPoints(currentPoints);
 
         return redeemableVouchers.stream()
                 .map(voucher -> buildExchangeableVoucherDTO(voucher, currentPoints, currentTier))
@@ -112,16 +123,17 @@ public class RewardExchangeServiceImpl implements RewardExchangeService {
         }
 
         // Check 3: User có đủ điểm không
-        int currentPoints = customer.getLoyaltyPoints() != null ? customer.getLoyaltyPoints() : 0;
+        Integer loyaltyPointsObj = customer.getLoyaltyPoints();
+        int currentPoints = loyaltyPointsObj != null ? loyaltyPointsObj : 0;
         if (currentPoints < discountCode.getRedeemCost()) {
             int pointsNeeded = discountCode.getRedeemCost() - currentPoints;
             throw new RuntimeException("🔒 Cần thêm " + pointsNeeded + " điểm để đổi voucher này");
         }
 
-        // Check 4: User có tier đủ không
+        // Check 4: User có tier đủ không (dựa trên điểm, không dùng backend tier)
         if (discountCode.getMinTierRequired() != null) {
-            CustomerTier customerTier = customer.getTier() != null ? customer.getTier() : CustomerTier.NEW_USER;
-            if (!isTierSufficient(customerTier, discountCode.getMinTierRequired())) {
+            CustomerTier calculatedTier = calculateTierFromPoints(currentPoints);
+            if (!isTierSufficient(calculatedTier, discountCode.getMinTierRequired())) {
                 throw new RuntimeException("🔒 Chỉ dành cho " + getTierDisplayName(discountCode.getMinTierRequired()) + " trở lên");
             }
         }
