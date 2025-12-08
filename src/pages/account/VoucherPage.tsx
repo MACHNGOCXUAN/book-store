@@ -22,9 +22,11 @@ const VoucherPage = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const API_BASE: string = (typeof API === "object" && (API as { API_BASE?: string }).API_BASE)
-    || (import.meta.env && (import.meta.env as { VITE_API_URL?: string }).VITE_API_URL)
-    || "http://localhost:8080/api";
+  const API_BASE: string =
+    (typeof API === "object" && (API as { API_BASE?: string }).API_BASE) ||
+    (import.meta.env &&
+      (import.meta.env as { VITE_API_URL?: string }).VITE_API_URL) ||
+    "http://localhost:8080/api";
   const buildApiUrl = (path: string) => {
     const base = API_BASE.replace(/\/$/, "");
     return base.endsWith("/api") ? `${base}${path}` : `${base}/api${path}`;
@@ -54,22 +56,28 @@ const VoucherPage = () => {
         const data = await resp.json();
         console.log("📱 Loaded wallet vouchers:", data);
         // data là mảng map DTO trả từ backend
-        const normalized = (Array.isArray(data) ? data : []).map((m: Record<string, unknown>) => ({
-          walletVoucherId: String(m.walletVoucherId ?? m.discountCodeId ?? ""),
-          discountCodeId: String(m.discountCodeId ?? ""),
-          name: String(m.name ?? ""),
-          percent: Number(m.percent ?? 0),
-          minPriceToApply: Number(m.minPriceToApply ?? 0),
-          description: String(m.description ?? ""),
-          expiryDate: String(m.expiryDate ?? new Date().toISOString()),
-          createdDate: new Date().toISOString(),
-          used: Boolean(m.used),
-          source: ((m.source === "EXCLUSIVE") ? "EXCLUSIVE" : "PUBLIC") as WalletVoucher["source"],
-        })) as WalletVoucher[];
+        const normalized = (Array.isArray(data) ? data : []).map(
+          (m: Record<string, unknown>) => ({
+            walletVoucherId: String(
+              m.walletVoucherId ?? m.discountCodeId ?? ""
+            ),
+            discountCodeId: String(m.discountCodeId ?? ""),
+            name: String(m.name ?? ""),
+            percent: Number(m.percent ?? 0),
+            minPriceToApply: Number(m.minPriceToApply ?? 0),
+            description: String(m.description ?? ""),
+            expiryDate: String(m.expiryDate ?? new Date().toISOString()),
+            createdDate: new Date().toISOString(),
+            used: Boolean(m.used),
+            source: (m.source === "EXCLUSIVE"
+              ? "EXCLUSIVE"
+              : "PUBLIC") as WalletVoucher["source"],
+          })
+        ) as WalletVoucher[];
         setWalletVouchers(normalized as WalletVoucher[]);
       } catch (error) {
         console.error("Error loading vouchers:", error);
-        if (!(error instanceof Error && (error.message === "No token found"))) {
+        if (!(error instanceof Error && error.message === "No token found")) {
           message.error("Không thể tải danh sách voucher");
         }
       } finally {
@@ -99,18 +107,22 @@ const VoucherPage = () => {
         return;
       }
       const data = await resp.json();
-      const normalized = (Array.isArray(data) ? data : []).map((m: Record<string, unknown>) => ({
-        walletVoucherId: String(m.walletVoucherId ?? m.discountCodeId ?? ""),
-        discountCodeId: String(m.discountCodeId ?? ""),
-        name: String(m.name ?? ""),
-        percent: Number(m.percent ?? 0),
-        minPriceToApply: Number(m.minPriceToApply ?? 0),
-        description: String(m.description ?? ""),
-        expiryDate: String(m.expiryDate ?? new Date().toISOString()),
-        createdDate: new Date().toISOString(),
-        used: Boolean(m.used),
-        source: ((m.source === "EXCLUSIVE") ? "EXCLUSIVE" : "PUBLIC") as WalletVoucher["source"],
-      })) as WalletVoucher[];
+      const normalized = (Array.isArray(data) ? data : []).map(
+        (m: Record<string, unknown>) => ({
+          walletVoucherId: String(m.walletVoucherId ?? m.discountCodeId ?? ""),
+          discountCodeId: String(m.discountCodeId ?? ""),
+          name: String(m.name ?? ""),
+          percent: Number(m.percent ?? 0),
+          minPriceToApply: Number(m.minPriceToApply ?? 0),
+          description: String(m.description ?? ""),
+          expiryDate: String(m.expiryDate ?? new Date().toISOString()),
+          createdDate: new Date().toISOString(),
+          used: Boolean(m.used),
+          source: (m.source === "EXCLUSIVE"
+            ? "EXCLUSIVE"
+            : "PUBLIC") as WalletVoucher["source"],
+        })
+      ) as WalletVoucher[];
       setWalletVouchers(normalized as WalletVoucher[]);
       message.success("Đã làm mới danh sách voucher");
     } catch {
@@ -305,7 +317,13 @@ const VoucherPage = () => {
       ),
       children: (
         <>
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              marginBottom: 12,
+            }}
+          >
             <Button onClick={handleRefresh} loading={refreshing} size="small">
               Làm mới
             </Button>
@@ -341,7 +359,13 @@ const VoucherPage = () => {
       ),
       children: (
         <>
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              marginBottom: 12,
+            }}
+          >
             <Button onClick={handleRefresh} loading={refreshing} size="small">
               Làm mới
             </Button>

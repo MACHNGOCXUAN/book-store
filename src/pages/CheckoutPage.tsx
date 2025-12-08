@@ -186,7 +186,9 @@ const CheckoutPage: React.FC = () => {
   const total = subtotal + shipping - discountAmount;
 
   // Safe API base and URL builder to avoid double /api
-  const API_BASE: string = (import.meta.env && (import.meta.env as any).VITE_API_URL) || "http://localhost:8080/api";
+  const API_BASE: string =
+    (import.meta.env && (import.meta.env as any).VITE_API_URL) ||
+    "http://localhost:8080/api";
   const buildApiUrl = (path: string) => {
     const base = API_BASE.replace(/\/$/, "");
     return base.endsWith("/api") ? `${base}${path}` : `${base}/api${path}`;
@@ -228,8 +230,8 @@ const CheckoutPage: React.FC = () => {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
           errorData.error ||
-          errorData.message ||
-          `Lỗi ${response.status}: Không thể áp dụng mã giảm giá`
+            errorData.message ||
+            `Lỗi ${response.status}: Không thể áp dụng mã giảm giá`
         );
       }
 
@@ -309,109 +311,6 @@ const CheckoutPage: React.FC = () => {
       }
 
       console.log("📤 Dispatching createOrder with payload:", orderPayload);
-
-      // Kiểm tra xem có phải thanh toán MoMo không
-      // if (paymentMethod === "MOMO") {
-      //   console.log("💳 Processing MoMo payment...");
-
-      //   // Validate MoMo amount constraints
-      //   if (total < 1000) {
-      //     message.error("Số tiền tối thiểu cho thanh toán MoMo là 1,000 VND. Vui lòng chọn phương thức thanh toán khác hoặc thêm sản phẩm vào giỏ hàng.");
-      //     return;
-      //   }
-
-      //   if (total > 50000000) {
-      //     message.error("Số tiền tối đa cho thanh toán MoMo là 50,000,000 VND. Vui lòng chọn phương thức thanh toán khác.");
-      //     return;
-      //   }
-
-      //   const token = localStorage.getItem("access_token");
-      //   if (!token) {
-      //     message.error("Vui lòng đăng nhập!");
-      //     navigate("/login");
-      //     return;
-      //   }
-
-      //   try {
-      //     // Gọi API tạo MoMo payment (KHÔNG tạo order)
-      //     // const momoResponse = await createMoMoPaymentOnly(orderPayload, token);
-      //     const momoResponse = await checkoutOrder(orderPayload, token);
-      //     console.log("✅ MoMo payment created (no order yet):", momoResponse);
-      //     console.log("   Payment data:", momoResponse.payment);
-      //     console.log("   QR Code URL:", momoResponse.payment?.qrCodeUrl);
-
-      //     toast.success("Vui lòng quét mã QR để thanh toán.", {
-      //       position: "top-right",
-      //       autoClose: 2000,
-      //     });
-
-      //     // Lưu địa chỉ nếu là mới
-      //     const currentAddress = {
-      //       main: 1,
-      //       province: values.province,
-      //       district: values.district,
-      //       ward: values.ward,
-      //       specifics: values.specifics,
-      //       receiverName: values.receiverName,
-      //       receiverPhone: values.receiverPhone,
-      //       isDefault: addressState.addresses.length === 0,
-      //     };
-
-      //     const defaultAddr = addressState.addresses.find((a) => a.isDefault);
-      //     const isNewAddress =
-      //       !defaultAddr ||
-      //       defaultAddr.province !== values.province ||
-      //       defaultAddr.specifics !== values.specifics;
-
-      //     if (isNewAddress) {
-      //       console.log("💾 Saving new address...");
-      //       dispatch(
-      //         createAddressAction({
-      //           customerId: authUser.userId,
-      //           address: currentAddress as Address,
-      //         })
-      //       );
-      //     }
-
-      //     // KHÔNG reload cart vì chưa tạo order
-      //     // dispatch(fetchCart());
-
-      //     // Hiển thị modal QR MoMo - lưu cả orderPayload và address để dùng sau
-      //     setCurrentOrderPayment({
-      //       orderPayload: momoResponse.orderRequest, // Lưu để tạo order sau
-      //       payment: momoResponse.payment,
-      //       address: currentAddress,
-      //       values: values, // Lưu form values
-      //     });
-      //     setShowQRModal(true);
-
-      //     return; // Dừng lại để không chạy logic bên dưới
-      //   } catch (error) {
-      //     console.error("❌ MoMo checkout error:", error);
-
-      //     // Lấy thông báo lỗi chi tiết
-      //     let errorMessage = "Không thể tạo thanh toán MoMo. Vui lòng thử lại!";
-
-      //     if (error instanceof Error) {
-      //       errorMessage = error.message;
-      //     } else if (typeof error === 'object' && error !== null) {
-      //       const err = error as any;
-      //       if (err.response?.data?.message) {
-      //         errorMessage = err.response.data.message;
-      //       } else if (err.message) {
-      //         errorMessage = err.message;
-      //       }
-      //     }
-
-      //     console.error("📋 Error message:", errorMessage);
-
-      //     toast.error(errorMessage, {
-      //       position: "top-right",
-      //       autoClose: 5000,
-      //     });
-      //     return;
-      //   }
-      // }
 
       if (paymentMethod === "MOMO" || paymentMethod === "VNPAY") {
         if (total < 1000) {
@@ -502,120 +401,6 @@ const CheckoutPage: React.FC = () => {
         }
       }
 
-      // Kiểm tra xem có phải thanh toán VNPay không
-      // if (paymentMethod === "VNPAY") {
-      //   console.log("💳 Processing VNPay payment...");
-
-      //   // Validate VNPay amount constraints
-      //   if (total < 1000) {
-      //     message.error(
-      //       "Số tiền tối thiểu cho thanh toán VNPay là 1,000 VND. Vui lòng chọn phương thức thanh toán khác hoặc thêm sản phẩm vào giỏ hàng."
-      //     );
-      //     return;
-      //   }
-
-      //   if (total > 50000000) {
-      //     message.error(
-      //       "Số tiền tối đa cho thanh toán VNPay là 50,000,000 VND. Vui lòng chọn phương thức thanh toán khác."
-      //     );
-      //     return;
-      //   }
-
-      //   const token = localStorage.getItem("access_token");
-      //   if (!token) {
-      //     message.error("Vui lòng đăng nhập!");
-      //     navigate("/login");
-      //     return;
-      //   }
-
-      //   try {
-      //     // Gọi API tạo VNPay payment - tạo order luôn
-      //     const vnpayResponse = await fetch(`${API_BASE}/orders/checkout`, {
-      //       method: "POST",
-      //       headers: {
-      //         "Content-Type": "application/json",
-      //         Authorization: `Bearer ${token}`,
-      //       },
-      //       body: JSON.stringify(orderPayload),
-      //     }).then((r) => r.json());
-
-      //     console.log("✅ VNPay order created:", vnpayResponse);
-      //     console.log("   Order ID:", vnpayResponse.order?.orderId);
-      //     console.log(
-      //       "   QR Code Base64:",
-      //       vnpayResponse.payment?.qrCodeBase64?.substring(0, 50) + "..."
-      //     );
-
-      //     toast.success("Vui lòng quét mã QR để thanh toán VNPay.", {
-      //       position: "top-right",
-      //       autoClose: 2000,
-      //     });
-
-      //     // Tạo address object
-      //     const currentAddress = {
-      //       main: 1,
-      //       province: values.province,
-      //       district: values.district,
-      //       ward: values.ward,
-      //       specifics: values.specifics,
-      //       receiverName: values.receiverName,
-      //       receiverPhone: values.receiverPhone,
-      //       isDefault: addressState.addresses.length === 0,
-      //     };
-
-      //     const defaultAddr = addressState.addresses.find((a) => a.isDefault);
-      //     const isNewAddress =
-      //       !defaultAddr ||
-      //       defaultAddr.province !== values.province ||
-      //       defaultAddr.specifics !== values.specifics;
-
-      //     if (isNewAddress) {
-      //       console.log("💾 Saving new address...");
-      //       dispatch(
-      //         createAddressAction({
-      //           customerId: authUser.userId,
-      //           address: currentAddress as Address,
-      //         })
-      //       );
-      //     }
-
-      //     // Lưu order data để sau này nếu cần
-      //     setCurrentOrderPayment({
-      //       orderPayload: vnpayResponse.order, // Đã tạo order rồi
-      //       payment: vnpayResponse.payment,
-      //       address: currentAddress,
-      //       values: values,
-      //     });
-
-      //     setShowQRModal(true);
-      //     return; // Dừng lại để không chạy logic bên dưới
-      //   } catch (error) {
-      //     console.error("❌ VNPay checkout error:", error);
-
-      //     let errorMessage =
-      //       "Không thể tạo thanh toán VNPay. Vui lòng thử lại!";
-
-      //     if (error instanceof Error) {
-      //       errorMessage = error.message;
-      //     } else if (typeof error === "object" && error !== null) {
-      //       const err = error as any;
-      //       if (err.response?.data?.message) {
-      //         errorMessage = err.response.data.message;
-      //       } else if (err.message) {
-      //         errorMessage = err.message;
-      //       }
-      //     }
-
-      //     toast.error(errorMessage, {
-      //       position: "top-right",
-      //       autoClose: 3000,
-      //     });
-      //     return;
-      //   }
-      // }
-
-      // Dispatch Redux action để tạo đơn (CHỈ cho COD)
-
       if (paymentMethod === "COD") {
         const result = await dispatch(createOrder(orderPayload));
         console.log("📥 Order result:", result);
@@ -676,7 +461,11 @@ const CheckoutPage: React.FC = () => {
                 const orderId = (result.payload as any)?.order?.orderId;
                 if (orderId) {
                   const resp = await fetch(
-                    buildApiUrl(`/discounts/wallet/${encodeURIComponent(selectedVoucherId)}/mark-used?orderId=${encodeURIComponent(orderId)}`),
+                    buildApiUrl(
+                      `/discounts/wallet/${encodeURIComponent(
+                        selectedVoucherId
+                      )}/mark-used?orderId=${encodeURIComponent(orderId)}`
+                    ),
                     {
                       method: "POST",
                       headers: {
@@ -694,13 +483,9 @@ const CheckoutPage: React.FC = () => {
               console.warn("Mark-used error:", e);
             }
             dispatch(clearOrder());
-            navigate("/order-success", {
-              state: {
-                order: result.payload.order,
-                paymentMethod,
-                address: currentAddress,
-              },
-            });
+            navigate(
+              `/payment-status?status=success&orderId=${result.payload.order?.orderId}`
+            );
           }
         } else {
           console.log("❌ Order creation failed:", result);
@@ -1244,9 +1029,9 @@ const CheckoutPage: React.FC = () => {
                   const isNewAddress =
                     !defaultAddr ||
                     defaultAddr.province !==
-                    currentOrderPayment?.values.province ||
+                      currentOrderPayment?.values.province ||
                     defaultAddr.specifics !==
-                    currentOrderPayment?.values.specifics;
+                      currentOrderPayment?.values.specifics;
 
                   if (isNewAddress && currentOrderPayment?.address) {
                     dispatch(
@@ -1269,9 +1054,9 @@ const CheckoutPage: React.FC = () => {
                       const isNewAddress =
                         !defaultAddr ||
                         defaultAddr.province !==
-                        currentOrderPayment.values.province ||
+                          currentOrderPayment.values.province ||
                         defaultAddr.specifics !==
-                        currentOrderPayment.values.specifics;
+                          currentOrderPayment.values.specifics;
 
                       if (isNewAddress) {
                         dispatch(
@@ -1287,14 +1072,11 @@ const CheckoutPage: React.FC = () => {
 
                       // Navigate to success page
                       dispatch(clearOrder());
-                      navigate("/order-success", {
-                        state: {
-                          order: (result.payload as any)?.order,
-                          paymentMethod: paymentMethod,
-                          address: currentOrderPayment.address,
-                          payment: currentOrderPayment.payment,
-                        },
-                      });
+                      navigate(
+                        `/payment-status?status=success&orderId=${
+                          (result.payload as any)?.order?.orderId
+                        }`
+                      );
                       setShowQRModal(false);
                     } else {
                       toast.error(
@@ -1310,14 +1092,9 @@ const CheckoutPage: React.FC = () => {
                   setShowQRModal(false);
                   // Redirect tới trang success giống như COD flow
                   dispatch(clearOrder());
-                  navigate("/order-success", {
-                    state: {
-                      order: currentOrderPayment?.orderPayload,
-                      paymentMethod: paymentMethod,
-                      address: currentOrderPayment?.address,
-                      payment: currentOrderPayment?.payment,
-                    },
-                  });
+                  navigate(
+                    `/payment-status?status=success&orderId=${currentOrderPayment?.orderPayload?.orderId}`
+                  );
                 } catch (error) {
                   console.error("❌ Error creating order:", error);
                   toast.error("Có lỗi xảy ra khi tạo đơn hàng!", {
@@ -1346,7 +1123,7 @@ const CheckoutPage: React.FC = () => {
             </Text>
             {/* Hiển thị QR cho cả MoMo và VNPay */}
             {paymentMethod === "MOMO" &&
-              currentOrderPayment?.payment?.qrCodeUrl ? (
+            currentOrderPayment?.payment?.qrCodeUrl ? (
               <>
                 <div
                   style={{
@@ -1377,8 +1154,8 @@ const CheckoutPage: React.FC = () => {
                     Hạn thanh toán:{" "}
                     {currentOrderPayment.payment.expiresAt
                       ? new Date(
-                        currentOrderPayment.payment.expiresAt
-                      ).toLocaleString("vi-VN")
+                          currentOrderPayment.payment.expiresAt
+                        ).toLocaleString("vi-VN")
                       : "15 phút từ bây giờ"}
                   </Text>
                 </div>
@@ -1434,8 +1211,8 @@ const CheckoutPage: React.FC = () => {
                     Hạn thanh toán:{" "}
                     {currentOrderPayment.payment.expiresAt
                       ? new Date(
-                        currentOrderPayment.payment.expiresAt
-                      ).toLocaleString("vi-VN")
+                          currentOrderPayment.payment.expiresAt
+                        ).toLocaleString("vi-VN")
                       : "15 phút từ bây giờ"}
                   </Text>
                 </div>

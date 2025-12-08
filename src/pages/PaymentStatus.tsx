@@ -1,9 +1,21 @@
-import { useEffect, useState } from 'react';
-import { CheckCircle, XCircle, Package, ShoppingCart, Clock, CreditCard, MapPin, Phone, Mail, ChevronRight, AlertCircle } from 'lucide-react';
-import "../styles/payment.css"
-import { useLocation } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from '../hooks/hooks';
-import { getOrderDetail } from '../features/orders/ordersSlice';
+import { useEffect, useState } from "react";
+import {
+  CheckCircle,
+  XCircle,
+  Package,
+  ShoppingCart,
+  Clock,
+  CreditCard,
+  MapPin,
+  Phone,
+  Mail,
+  ChevronRight,
+  AlertCircle,
+} from "lucide-react";
+import "../styles/payment.css";
+import { useLocation } from "react-router-dom";
+import { useAppDispatch, useAppSelector } from "../hooks/hooks";
+import { getOrderDetail } from "../features/orders/ordersSlice";
 
 const PaymentSuccess = ({ orderId, orderData }) => {
   const [copied, setCopied] = useState(false);
@@ -32,14 +44,14 @@ const PaymentSuccess = ({ orderId, orderData }) => {
               <div className="order-id-row">
                 <span className="order-id-value">{orderId}</span>
                 <button onClick={copyOrderId} className="copy-button">
-                  {copied ? '✓ Đã sao chép' : 'Sao chép'}
+                  {copied ? "✓ Đã sao chép" : "Sao chép"}
                 </button>
               </div>
             </div>
             <div className="total-section">
               <span className="total-label">Tổng tiền</span>
               <div className="total-amount">
-                {orderData.totalAmount.toLocaleString('vi-VN')}đ
+                {orderData.totalAmount.toLocaleString("vi-VN")}đ
               </div>
             </div>
           </div>
@@ -71,7 +83,9 @@ const PaymentSuccess = ({ orderId, orderData }) => {
                 <div className="timeline-node timeline-node-active">
                   <CheckCircle size={20} />
                 </div>
-                <p className="timeline-label timeline-label-active">Đã đặt hàng</p>
+                <p className="timeline-label timeline-label-active">
+                  Đã đặt hàng
+                </p>
                 <p className="timeline-time">Vừa xong</p>
               </div>
               <div className="timeline-line"></div>
@@ -79,7 +93,9 @@ const PaymentSuccess = ({ orderId, orderData }) => {
                 <div className="timeline-node timeline-node-pending">
                   <Package size={20} />
                 </div>
-                <p className="timeline-label timeline-label-pending">Đang xử lý</p>
+                <p className="timeline-label timeline-label-pending">
+                  Đang xử lý
+                </p>
                 <p className="timeline-time">Chờ xác nhận</p>
               </div>
               <div className="timeline-line"></div>
@@ -87,7 +103,9 @@ const PaymentSuccess = ({ orderId, orderData }) => {
                 <div className="timeline-node timeline-node-pending">
                   <Package size={20} />
                 </div>
-                <p className="timeline-label timeline-label-pending">Đang giao</p>
+                <p className="timeline-label timeline-label-pending">
+                  Đang giao
+                </p>
               </div>
             </div>
           </div>
@@ -103,7 +121,9 @@ const PaymentSuccess = ({ orderId, orderData }) => {
                   <p className="item-name">{item.name}</p>
                   <p className="item-quantity">SL: {item.quantity}</p>
                 </div>
-                <p className="item-price">{item.price.toLocaleString('vi-VN')}đ</p>
+                <p className="item-price">
+                  {item.price.toLocaleString("vi-VN")}đ
+                </p>
               </div>
             ))}
           </div>
@@ -129,16 +149,16 @@ const PaymentSuccess = ({ orderId, orderData }) => {
         </div>
 
         <div className="button-group">
-          <button 
-            onClick={() => window.location.href = '/orders/' + orderId}
+          <button
+            onClick={() => (window.location.href = "/orders/" + orderId)}
             className="payment-button payment-button-primary"
           >
             <Package size={20} />
             <span>Kiểm tra đơn hàng</span>
             <ChevronRight size={16} />
           </button>
-          <button 
-            onClick={() => window.location.href = '/'}
+          <button
+            onClick={() => (window.location.href = "/")}
             className="payment-button payment-button-secondary"
           >
             <ShoppingCart size={20} />
@@ -153,22 +173,24 @@ const PaymentSuccess = ({ orderId, orderData }) => {
 const PaymentFailed = ({ errorCode, errorMessage }) => {
   const getErrorDetails = (code) => {
     const errors = {
-      '07': {
-        title: 'Giao dịch bị từ chối',
-        desc: 'Ngân hàng của bạn đã từ chối giao dịch này. Vui lòng kiểm tra lại thẻ hoặc liên hệ ngân hàng.'
+      "07": {
+        title: "Giao dịch bị từ chối",
+        desc: "Ngân hàng của bạn đã từ chối giao dịch này. Vui lòng kiểm tra lại thẻ hoặc liên hệ ngân hàng.",
       },
-      '09': {
-        title: 'Thẻ chưa đăng ký dịch vụ',
-        desc: 'Thẻ của bạn chưa được đăng ký dịch vụ thanh toán online. Vui lòng liên hệ ngân hàng để kích hoạt.'
+      "09": {
+        title: "Thẻ chưa đăng ký dịch vụ",
+        desc: "Thẻ của bạn chưa được đăng ký dịch vụ thanh toán online. Vui lòng liên hệ ngân hàng để kích hoạt.",
       },
-      '24': {
-        title: 'Giao dịch bị hủy',
-        desc: 'Bạn đã hủy giao dịch thanh toán.'
+      "24": {
+        title: "Giao dịch bị hủy",
+        desc: "Bạn đã hủy giao dịch thanh toán.",
       },
       default: {
-        title: 'Thanh toán không thành công',
-        desc: errorMessage || 'Đã có lỗi xảy ra trong quá trình thanh toán. Vui lòng thử lại.'
-      }
+        title: "Thanh toán không thành công",
+        desc:
+          errorMessage ||
+          "Đã có lỗi xảy ra trong quá trình thanh toán. Vui lòng thử lại.",
+      },
     };
     return errors[code] || errors.default;
   };
@@ -193,9 +215,7 @@ const PaymentFailed = ({ errorCode, errorMessage }) => {
               <div className="error-text">
                 <p className="error-title">Chi tiết lỗi</p>
                 <p className="error-description">{errorDetails.desc}</p>
-                {errorCode && (
-                  <p className="error-code">Mã lỗi: {errorCode}</p>
-                )}
+                {errorCode && <p className="error-code">Mã lỗi: {errorCode}</p>}
               </div>
             </div>
           </div>
@@ -235,7 +255,8 @@ const PaymentFailed = ({ errorCode, errorMessage }) => {
             <div className="info-text">
               <p className="info-title">Cần hỗ trợ?</p>
               <p className="info-description">
-                Đội ngũ chăm sóc khách hàng của chúng tôi sẵn sàng hỗ trợ bạn 24/7
+                Đội ngũ chăm sóc khách hàng của chúng tôi sẵn sàng hỗ trợ bạn
+                24/7
               </p>
               <div className="contact-list">
                 <div className="contact-item">
@@ -252,16 +273,16 @@ const PaymentFailed = ({ errorCode, errorMessage }) => {
         </div>
 
         <div className="button-group">
-          <button 
-            onClick={() => window.location.href = '/cart'}
+          <button
+            onClick={() => (window.location.href = "/cart")}
             className="payment-button payment-button-primary button-full"
           >
             <CreditCard size={20} />
             <span>Thử lại thanh toán</span>
             <ChevronRight size={16} />
           </button>
-          <button 
-            onClick={() => window.location.href = '/'}
+          <button
+            onClick={() => (window.location.href = "/")}
             className="payment-button payment-button-secondary button-full"
           >
             <ShoppingCart size={20} />
@@ -274,56 +295,53 @@ const PaymentFailed = ({ errorCode, errorMessage }) => {
 };
 
 const PaymentStatus = () => {
-  const dispatch = useAppDispatch()
-  const { currentOrder } = useAppSelector(state => state.orders)
+  const dispatch = useAppDispatch();
+  const { currentOrder } = useAppSelector((state) => state.orders);
 
   const location = useLocation();
   const params = new URLSearchParams(location.search);
 
-  const status = params.get('status');
-  const orderId = params.get('orderId');
+  const status = params.get("status");
+  const orderId = params.get("orderId");
 
   useEffect(() => {
-    if(orderId) {
-      dispatch(getOrderDetail(orderId))
+    if (orderId) {
+      dispatch(getOrderDetail(orderId));
     }
-  }, [dispatch, orderId])
+  }, [dispatch, orderId]);
 
-  if(!orderId && status=="success") {
-    return <div>Không có dữ liệu</div>
+  if (!orderId && status == "success") {
+    return <div>Không có dữ liệu</div>;
   }
-  
 
   const mockSuccessData = {
     totalAmount: currentOrder?.totalAmount,
     orderTime: currentOrder?.orderDate,
     paymentMethod: currentOrder?.payments[0].method,
     shippingAddress: currentOrder?.customer.address,
-    items: currentOrder?.orderDetails.map(item => {
+    items: currentOrder?.orderDetails.map((item) => {
       return {
         name: item.book.title,
         quantity: item.quantity,
         price: item.unitPrice,
-        image: item.book.coverImage
-      }
-    })
+        image: item.book.coverImage,
+      };
+    }),
   };
 
-  if(!currentOrder) {
-    return (
-      <div>Loading</div>
-    )
+  if (!currentOrder) {
+    return <div>Loading</div>;
   }
 
   return (
     <div>
-      {status === 'success' ? (
-        <PaymentSuccess 
+      {status === "success" ? (
+        <PaymentSuccess
           orderId={currentOrder?.orderId}
           orderData={mockSuccessData}
         />
       ) : (
-        <PaymentFailed 
+        <PaymentFailed
           errorCode="07"
           errorMessage="Giao dịch bị từ chối bởi ngân hàng"
         />

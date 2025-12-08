@@ -5,9 +5,11 @@ import API from "../config/api";
 import { fetchWalletVouchers } from "../services/loyaltyService";
 import type { WalletVoucher } from "../types/Loyalty";
 // Derive API base safely without using 'any'
-const API_BASE: string = (typeof API === "object" && (API as { API_BASE?: string }).API_BASE)
-  || (import.meta.env && (import.meta.env as { VITE_API_URL?: string }).VITE_API_URL)
-  || "http://localhost:8080";
+const API_BASE: string =
+  (typeof API === "object" && (API as { API_BASE?: string }).API_BASE) ||
+  (import.meta.env &&
+    (import.meta.env as { VITE_API_URL?: string }).VITE_API_URL) ||
+  "http://localhost:8080";
 
 // Build URL safely to avoid double /api in base
 const buildApiUrl = (path: string) => {
@@ -30,7 +32,9 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
   selectedVoucherId,
 }) => {
   const [vouchers, setVouchers] = useState<WalletVoucher[]>([]);
-  const [applicableMap, setApplicableMap] = useState<Record<string, boolean>>({});
+  const [applicableMap, setApplicableMap] = useState<Record<string, boolean>>(
+    {}
+  );
   const [reasonMap, setReasonMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -83,7 +87,11 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
         filtered.map(async (v) => {
           try {
             const resp = await fetch(
-              buildApiUrl(`/discounts/wallet/${encodeURIComponent(v.discountCodeId)}?cartTotal=${encodeURIComponent(cartTotal)}`),
+              buildApiUrl(
+                `/discounts/wallet/${encodeURIComponent(
+                  v.discountCodeId
+                )}?cartTotal=${encodeURIComponent(cartTotal)}`
+              ),
               {
                 method: "GET",
                 headers: {
@@ -102,10 +110,13 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
               if (resp.status === 401) {
                 // Không khóa voucher khi chưa xác thực, hiển thị lý do thân thiện
                 results[v.discountCodeId] = true;
-                reasons[v.discountCodeId] = "Cần đăng nhập để kiểm tra điều kiện áp dụng";
+                reasons[v.discountCodeId] =
+                  "Cần đăng nhập để kiểm tra điều kiện áp dụng";
               } else {
                 results[v.discountCodeId] = false;
-                reasons[v.discountCodeId] = `HTTP ${resp.status}: Không thể kiểm tra điều kiện áp dụng`;
+                reasons[
+                  v.discountCodeId
+                ] = `HTTP ${resp.status}: Không thể kiểm tra điều kiện áp dụng`;
               }
             }
           } catch {
@@ -128,7 +139,11 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
     try {
       // Re-validate applicability before applying
       const resp = await fetch(
-        buildApiUrl(`/discounts/wallet/${encodeURIComponent(voucher.discountCodeId)}?cartTotal=${encodeURIComponent(cartTotal)}`),
+        buildApiUrl(
+          `/discounts/wallet/${encodeURIComponent(
+            voucher.discountCodeId
+          )}?cartTotal=${encodeURIComponent(cartTotal)}`
+        ),
         {
           method: "GET",
           headers: {
@@ -145,7 +160,9 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
       }
       const dto = await resp.json();
       if (!dto.applicable) {
-        throw new Error("Voucher không đủ điều kiện áp dụng với tổng đơn hiện tại");
+        throw new Error(
+          "Voucher không đủ điều kiện áp dụng với tổng đơn hiện tại"
+        );
       }
 
       // Tính discount amount
@@ -173,7 +190,8 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
   const renderVoucherCard = (voucher: WalletVoucher) => {
     const backendApplicable = applicableMap[voucher.discountCodeId];
     const backendReason = reasonMap[voucher.discountCodeId];
-    const isLocked = cartTotal < voucher.minPriceToApply || backendApplicable === false;
+    const isLocked =
+      cartTotal < voucher.minPriceToApply || backendApplicable === false;
     const isSelected = selectedVoucherId === voucher.discountCodeId;
 
     return (
@@ -261,8 +279,10 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
                 color: "#C92127",
               }}
             >
-              🔒 {backendApplicable === false
-                ? backendReason || "Voucher không đủ điều kiện áp dụng với tổng đơn hiện tại"
+              🔒{" "}
+              {backendApplicable === false
+                ? backendReason ||
+                  "Voucher không đủ điều kiện áp dụng với tổng đơn hiện tại"
                 : voucher.description || "Không đủ điều kiện để áp dụng"}
             </div>
           )}
@@ -288,9 +308,11 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
       </Button>
 
       {/* Applied voucher summary shown under the select button */}
-      {selectedVoucherId && (
+      {selectedVoucherId &&
         (() => {
-          const applied = vouchers.find(v => v.discountCodeId === selectedVoucherId) || selectedVoucher;
+          const applied =
+            vouchers.find((v) => v.discountCodeId === selectedVoucherId) ||
+            selectedVoucher;
           if (!applied) return null;
           const estimatedDiscount = (cartTotal * applied.percent) / 100;
           return (
@@ -308,21 +330,27 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
                   <GiftOutlined style={{ fontSize: 18, color: "#C92127" }} />
                 </Col>
                 <Col flex="auto">
-                  <div style={{ fontWeight: 600, color: "#333" }}>{applied.name}</div>
+                  <div style={{ fontWeight: 600, color: "#333" }}>
+                    {applied.name}
+                  </div>
                   <div style={{ fontSize: 12, color: "#666" }}>
-                    Đã áp dụng: Giảm {applied.percent}% (~{estimatedDiscount.toLocaleString("vi-VN")}₫)
+                    Đã áp dụng: Giảm {applied.percent}% (~
+                    {estimatedDiscount.toLocaleString("vi-VN")}₫)
                   </div>
                 </Col>
                 <Col flex="none">
-                  <Button size="small" type="link" onClick={() => setIsDrawerOpen(true)}>
+                  <Button
+                    size="small"
+                    type="link"
+                    onClick={() => setIsDrawerOpen(true)}
+                  >
                     Thay đổi
                   </Button>
                 </Col>
               </Row>
             </Card>
           );
-        })()
-      )}
+        })()}
 
       <Drawer
         title={

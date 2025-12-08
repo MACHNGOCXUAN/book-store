@@ -19,7 +19,7 @@ import ReviewPage from "../pages/ReviewPage";
 import ArticlesPage from "../pages/ArticlesPage";
 import ArticleDetailPage from "../pages/ArticleDetailPage";
 import CheckoutPage from "../pages/CheckoutPage";
-import OrderSuccessPage from "../pages/OrderSuccessPage";
+// import OrderSuccessPage from "../pages/OrderSuccessPage";
 import OrderHistoryPage from "../pages/orders/OrderHistoryPage";
 import OrderPendingPage from "../pages/orders/OrderPendingPage";
 import OrderProcessingPage from "../pages/orders/OrderProcessingPage";
@@ -144,17 +144,13 @@ const router = createBrowserRouter([
         element: <CheckoutPage />,
       },
       {
-        path: "order-success",
-        element: <OrderSuccessPage />,
-      },
-      {
         path: "login-required",
         element: <LoginRequiredPage />,
       },
       {
         path: "payment-status",
-        element: <PaymentStatus/>
-      }
+        element: <PaymentStatus />,
+      },
     ],
   },
 ]);
