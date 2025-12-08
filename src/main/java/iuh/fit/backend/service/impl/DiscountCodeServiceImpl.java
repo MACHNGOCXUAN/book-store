@@ -191,7 +191,14 @@ public class DiscountCodeServiceImpl implements iuh.fit.backend.service.Discount
                 } else if (cartTotal < voucher.getMinPriceToApply()) {
                     reason = "Tổng đơn chưa đạt mức tối thiểu";
                 } else if (voucher.getMinTierRequired() != null) {
-                    CustomerTier customerTier = customer.getTier() != null ? customer.getTier() : CustomerTier.NEW_USER;
+                    Integer pointsObj = customer.getLoyaltyPoints();
+                    int loyaltyPoints;
+                    if (pointsObj != null) {
+                        loyaltyPoints = pointsObj;
+                    } else {
+                        loyaltyPoints = 0;
+                    }
+                    CustomerTier customerTier = calculateTierFromPoints(loyaltyPoints);
                     if (!isTierSufficient(customerTier, voucher.getMinTierRequired())) {
                         reason = "Tier khách hàng không đủ điều kiện";
                     }
@@ -385,7 +392,14 @@ public class DiscountCodeServiceImpl implements iuh.fit.backend.service.Discount
 
         // Check 4: Tier requirement
         if (voucher.getMinTierRequired() != null) {
-            CustomerTier customerTier = customer.getTier() != null ? customer.getTier() : CustomerTier.NEW_USER;
+            int loyaltyPoints;
+            Integer pointsObj = customer.getLoyaltyPoints();
+            if (pointsObj != null) {
+                loyaltyPoints = pointsObj;
+            } else {
+                loyaltyPoints = 0;
+            }
+            CustomerTier customerTier = calculateTierFromPoints(loyaltyPoints);
             if (!isTierSufficient(customerTier, voucher.getMinTierRequired())) {
                 log.debug("Voucher {} failed: tier insufficient. customerTier={}, minTierRequired={}", 
                     voucher.getDiscountCodeId(), customerTier, voucher.getMinTierRequired());
