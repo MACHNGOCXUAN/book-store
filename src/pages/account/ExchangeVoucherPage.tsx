@@ -3,6 +3,7 @@ import {
   Badge,
   Button,
   Card,
+  Collapse,
   Col,
   Empty,
   Modal,
@@ -17,6 +18,16 @@ import {
   fetchLoyaltyInfo,
 } from "../../services/loyaltyService";
 import type { ExchangeableVoucher, LoyaltyInfo } from "../../types/Loyalty";
+
+// Tier thresholds and colors
+const TIER_THRESHOLDS = {
+  NEW_USER: { min: 0, color: "#A0A0A0", name: "Khách hàng mới" },
+  REGULAR: { min: 100, color: "#FF9800", name: "Thành viên thường xuyên" },
+  VIP: { min: 500, color: "#4CAF50", name: "Thành viên VIP" },
+  DIAMOND: { min: 2000, color: "#2196F3", name: "Thành viên Diamond" },
+};
+
+const TIER_ORDER = ["NEW_USER", "REGULAR", "VIP", "DIAMOND"];
 
 const ExchangeVoucherPage = () => {
   const [loyaltyInfo, setLoyaltyInfo] = useState<LoyaltyInfo | null>(null);
@@ -83,15 +94,15 @@ const ExchangeVoucherPage = () => {
       voucher.minTierRequired !== "NEW_USER" &&
       voucher.minTierRequired !== null
     ) {
-      // Kiểm tra tier (nếu có yêu cầu)
+      // Kiểm tra tier dựa trên điểm hiện tại (không dùng currentTier từ backend)
       const tierHierarchy: { [key: string]: number } = {
         NEW_USER: 0,
         REGULAR: 1,
         VIP: 2,
         DIAMOND: 3,
       };
-      const currentTierLevel =
-        tierHierarchy[loyaltyInfo.currentTier as string] || 0;
+      const calculatedTier = calculateTierFromPoints(loyaltyInfo.currentPoints);
+      const currentTierLevel = tierHierarchy[calculatedTier] || 0;
       const requiredTierLevel = tierHierarchy[voucher.minTierRequired] || 0;
 
       if (currentTierLevel < requiredTierLevel) {
@@ -140,29 +151,53 @@ const ExchangeVoucherPage = () => {
     }
   };
 
+  // Calculate tier based on current points (ignore backend currentTier)
+  const calculateTierFromPoints = (currentPoints: number): string => {
+    for (let i = TIER_ORDER.length - 1; i >= 0; i--) {
+      const tier = TIER_ORDER[i];
+      const threshold = TIER_THRESHOLDS[tier as keyof typeof TIER_THRESHOLDS].min;
+      if (currentPoints >= threshold) {
+        return tier;
+      }
+    }
+    return "NEW_USER";
+  };
+
   const getTierInfo = () => {
-    const tierColors: { [key: string]: string } = {
-      NEW_USER: "#A0A0A0",
-      REGULAR: "#FF9800",
-      VIP: "#4CAF50",
-      DIAMOND: "#2196F3",
-    };
+    const tier = calculateTierFromPoints(loyaltyInfo?.currentPoints || 0);
     return {
-      color: tierColors[loyaltyInfo?.currentTier || "NEW_USER"],
-      tierName: loyaltyInfo?.tierName || "Khách hàng mới",
+      tier,
+      color: TIER_THRESHOLDS[tier as keyof typeof TIER_THRESHOLDS]?.color || "#A0A0A0",
+      tierName: TIER_THRESHOLDS[tier as keyof typeof TIER_THRESHOLDS]?.name || "Khách hàng mới",
     };
   };
 
+  const getPointsToNextTier = (currentPoints: number): { nextTier: string; pointsNeeded: number } => {
+    for (const tier of TIER_ORDER) {
+      const threshold = TIER_THRESHOLDS[tier as keyof typeof TIER_THRESHOLDS].min;
+      if (currentPoints < threshold) {
+        return {
+          nextTier: TIER_THRESHOLDS[tier as keyof typeof TIER_THRESHOLDS].name,
+          pointsNeeded: threshold - currentPoints,
+        };
+      }
+    }
+    return { nextTier: "Diamond", pointsNeeded: 0 };
+  };
+
+  const currentTierInfo = getPointsToNextTier(loyaltyInfo?.currentPoints || 0);
+
   const renderVoucherCard = (voucher: ExchangeableVoucher) => {
     // Determine eligibility purely from client-visible rules (points + tier),
-    // not the backend isExchangeable flag to avoid false locks.
+    // calculated from current points, not the backend isExchangeable flag.
     const tierHierarchy: { [key: string]: number } = {
       NEW_USER: 0,
       REGULAR: 1,
       VIP: 2,
       DIAMOND: 3,
     };
-    const currentTierLevel = tierHierarchy[(loyaltyInfo?.currentTier as string) || "NEW_USER"] || 0;
+    const calculatedTier = calculateTierFromPoints(loyaltyInfo?.currentPoints || 0);
+    const currentTierLevel = tierHierarchy[calculatedTier] || 0;
     const requiredTierLevel = tierHierarchy[voucher.minTierRequired || "NEW_USER"] || 0;
     const meetsTier = currentTierLevel >= requiredTierLevel;
     const hasPoints = (loyaltyInfo?.currentPoints || 0) >= voucher.redeemCost;
@@ -307,8 +342,8 @@ const ExchangeVoucherPage = () => {
                       : "#FFE6E6",
                   borderRadius: 6,
                   border: `1px solid ${loyaltyInfo.currentPoints >= voucher.redeemCost
-                      ? "#D0D9FF"
-                      : "#FFD9D9"
+                    ? "#D0D9FF"
+                    : "#FFD9D9"
                     }`,
                 }}
               >
@@ -404,71 +439,206 @@ const ExchangeVoucherPage = () => {
           <Card
             style={{
               marginBottom: 24,
-              background: "#FFFFFF",
-              border: "1px solid #E8E8E8",
-              borderRadius: 8,
+              background: getTierInfo().color,
+              border: `2px solid ${getTierInfo().color}`,
+              borderRadius: 12,
             }}
           >
-            <Row gutter={[32, 24]} align="middle">
-              <Col xs={24} sm={8}>
-                <div style={{ textAlign: "center", padding: "12px 0" }}>
-                  <div
-                    style={{
-                      fontSize: 24,
-                      fontWeight: 700,
-                      color: "#C92127",
-                      marginBottom: 6,
-                    }}
-                  >
-                    {loyaltyInfo.currentPoints}
-                  </div>
-                  <div style={{ fontSize: 13, color: "#999", fontWeight: 500 }}>
-                    Điểm hiện tại
-                  </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: "24px",
+              }}
+            >
+              {/* Left: Current Points */}
+              <div style={{ flex: 1, minWidth: "120px", textAlign: "center" }}>
+                <div
+                  style={{
+                    fontSize: 32,
+                    fontWeight: 700,
+                    color: "white",
+                    marginBottom: 6,
+                  }}
+                >
+                  {loyaltyInfo.currentPoints}
                 </div>
-              </Col>
+                <div style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", fontWeight: 500 }}>
+                  Điểm hiện tại
+                </div>
+              </div>
 
-              <Col xs={24} sm={8}>
-                <div style={{ textAlign: "center", padding: "12px 0" }}>
-                  <div
-                    style={{
-                      display: "inline-block",
-                      padding: "8px 16px",
-                      background: getTierInfo().color,
-                      color: "white",
-                      borderRadius: 6,
-                      fontSize: 14,
-                      fontWeight: 600,
-                      marginBottom: 6,
-                    }}
-                  >
-                    {loyaltyInfo.tierName}
-                  </div>
-                  <div style={{ fontSize: 13, color: "#999", fontWeight: 500 }}>
-                    Hạng thành viên
-                  </div>
+              {/* Center: Rank Badge */}
+              <div style={{ flex: 1, minWidth: "150px", textAlign: "center" }}>
+                <div
+                  style={{
+                    display: "inline-block",
+                    padding: "12px 20px",
+                    background: "rgba(255,255,255,0.95)",
+                    color: getTierInfo().color,
+                    borderRadius: 8,
+                    fontSize: 16,
+                    fontWeight: 700,
+                    marginBottom: 8,
+                    boxShadow: "0 4px 8px rgba(0,0,0,0.15)",
+                  }}
+                >
+                  {getTierInfo().tierName}
                 </div>
-              </Col>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.85)" }}>
+                  Hạng thành viên
+                </div>
+              </div>
 
-              <Col xs={24} sm={8}>
-                <div style={{ textAlign: "center", padding: "12px 0" }}>
-                  <div
-                    style={{
-                      fontSize: 24,
-                      fontWeight: 700,
-                      color: "#FF9800",
-                      marginBottom: 6,
-                    }}
-                  >
-                    {loyaltyInfo.pointsToNextTier}
-                  </div>
-                  <div style={{ fontSize: 13, color: "#999", fontWeight: 500 }}>
-                    Điểm đến tier kế tiếp
-                  </div>
+              {/* Right: Points to Next Tier */}
+              <div style={{ flex: 1, minWidth: "150px", textAlign: "center" }}>
+                <div
+                  style={{
+                    fontSize: 28,
+                    fontWeight: 700,
+                    color: "white",
+                    marginBottom: 6,
+                  }}
+                >
+                  {currentTierInfo.pointsNeeded === 0 ? "🏆" : currentTierInfo.pointsNeeded}
                 </div>
-              </Col>
-            </Row>
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", fontWeight: 500 }}>
+                  {currentTierInfo.pointsNeeded === 0
+                    ? "Rank cao nhất"
+                    : `Điểm cần để đến ${currentTierInfo.nextTier}`}
+                </div>
+              </div>
+            </div>
           </Card>
+        )}
+
+        {/* Tier Hierarchy */}
+        {loyaltyInfo && (
+          <Collapse
+            style={{
+              marginBottom: 24,
+              borderRadius: 8,
+            }}
+            items={[
+              {
+                key: "1",
+                label: (
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>
+                    📊 Hệ thống rank
+                  </div>
+                ),
+                children: (
+                  <Row gutter={[16, 16]}>
+                    {TIER_ORDER.map((tier) => {
+                      const tierInfo = TIER_THRESHOLDS[tier as keyof typeof TIER_THRESHOLDS];
+                      const calculatedTier = calculateTierFromPoints(loyaltyInfo.currentPoints || 0);
+                      const isCurrentTier = calculatedTier === tier;
+                      const isReached = (loyaltyInfo.currentPoints || 0) >= tierInfo.min;
+                      const pointsInThisTier = Math.max(0, (loyaltyInfo.currentPoints || 0) - tierInfo.min);
+
+                      // Find next tier threshold
+                      const tierIndex = TIER_ORDER.indexOf(tier);
+                      const nextTierThreshold = tierIndex < TIER_ORDER.length - 1
+                        ? TIER_THRESHOLDS[TIER_ORDER[tierIndex + 1] as keyof typeof TIER_THRESHOLDS].min
+                        : null;
+                      const pointsToNextInThisRank = nextTierThreshold ? nextTierThreshold - tierInfo.min : null;
+
+                      return (
+                        <Col xs={24} sm={12} key={tier}>
+                          <Card
+                            style={{
+                              borderRadius: 8,
+                              border: isCurrentTier ? `2px solid ${tierInfo.color}` : "1px solid #E8E8E8",
+                              background: isCurrentTier ? `${tierInfo.color}08` : "#FFFFFF",
+                            }}
+                          >
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                              <div
+                                style={{
+                                  display: "inline-block",
+                                  padding: "6px 12px",
+                                  background: tierInfo.color,
+                                  color: "white",
+                                  borderRadius: 6,
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {tierInfo.name}
+                              </div>
+                              {isCurrentTier && (
+                                <span style={{ color: tierInfo.color, fontWeight: 600, fontSize: 12 }}>
+                                  ✓ Hiện tại
+                                </span>
+                              )}
+                              {isReached && !isCurrentTier && (
+                                <span style={{ color: tierInfo.color, fontWeight: 600, fontSize: 12 }}>
+                                  ✓ Đã đạt
+                                </span>
+                              )}
+                            </div>
+
+                            <div
+                              style={{
+                                padding: "12px",
+                                background: "#F5F5F5",
+                                borderRadius: 6,
+                                marginBottom: 12,
+                              }}
+                            >
+                              <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
+                                Yêu cầu: <strong>{tierInfo.min} điểm</strong>
+                              </div>
+                              {pointsToNextInThisRank && nextTierThreshold && (
+                                <div style={{ fontSize: 12, color: "#666" }}>
+                                  Khoảng: {tierInfo.min} - {nextTierThreshold - 1} điểm
+                                </div>
+                              )}
+                            </div>
+
+                            {isCurrentTier && pointsToNextInThisRank && (
+                              <div
+                                style={{
+                                  padding: "12px",
+                                  background: `${tierInfo.color}15`,
+                                  borderRadius: 6,
+                                  border: `1px solid ${tierInfo.color}40`,
+                                }}
+                              >
+                                <div style={{ fontSize: 12, color: "#333", marginBottom: 4 }}>
+                                  Tiến độ: <strong>{pointsInThisTier} / {pointsToNextInThisRank} điểm</strong>
+                                </div>
+                                <div
+                                  style={{
+                                    width: "100%",
+                                    height: 8,
+                                    background: "#E0E0E0",
+                                    borderRadius: 4,
+                                    overflow: "hidden",
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      width: `${(pointsInThisTier / pointsToNextInThisRank) * 100}%`,
+                                      height: "100%",
+                                      background: tierInfo.color,
+                                      transition: "width 0.3s ease",
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </Card>
+                        </Col>
+                      );
+                    })}
+                  </Row>
+                ),
+              },
+            ]}
+          />
         )}
 
         {/* Voucher List */}
