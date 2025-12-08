@@ -14,4 +14,5 @@ public interface CartItemRepository extends JpaRepository<CartItem, String> {
     List<CartItem> findByCart_CartId(String cartId);
     @Query("SELECT MAX(c.cartItemId) from CartItem c")
     String findMaxCartItemId();
+    CartItem findByBook_BookIdAndCart_Customer_UserId(String bookId, String userId);
 }

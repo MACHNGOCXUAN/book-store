@@ -24,7 +24,7 @@ public class MomoService {
     private static final String ACCESS_KEY = "F8BBA842ECF85";
     private static final String SECRET_KEY = "K951B6PE1waDMi640xX08PD3vg6EkVlz";
     private static final String REDIRECT_URL = "http://localhost:3001/account/orders";
-    private static final String IPN_URL = "https://unshredded-ronnie-atrial.ngrok-free.dev/api/orders/momo/callback";
+    private static final String IPN_URL = "https://noisily-solutus-una.ngrok-free.dev/api/orders/momo/callback";
     private static final String REQUEST_TYPE = "payWithMethod";
 
     public String createPaymentRequest(String amount, String orderId, String orderInfo) {

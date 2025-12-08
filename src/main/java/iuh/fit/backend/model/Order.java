@@ -65,31 +65,12 @@ public class Order {
                         .sum();
     }
 
-    /** Số tiền còn nợ = tổng đơn - đã thanh toán (không âm) */
-    public double calcDueAmount() {
-        double due = calcItemsTotal() - calcPaidAmount();
-        return due < 0 ? 0 : due;
-    }
-
     /** Gọi thủ công khi bạn muốn cập nhật total trong code dịch vụ (không có discount) */
     public void recalcTotals() {
         this.totalAmount = calcItemsTotal();
     }
 
-    /** Gọi khi có discount - tính total với discount đã trừ */
-    public void setTotalAmountWithDiscount() {
-        if (this.discountCode != null) {
-            double subtotal = calcItemsTotal();
-            int percent = this.discountCode.getPercent();
-            double discountAmount = subtotal * percent / 100.0;
-            this.totalAmount = subtotal - discountAmount;
-            log.info("💰 setTotalAmountWithDiscount: subtotal={}, percent={}, discountAmount={}, finalTotal={}", 
-                    subtotal, percent, discountAmount, this.totalAmount);
-        } else {
-            this.totalAmount = calcItemsTotal();
-            log.info("💰 setTotalAmountWithDiscount (NO DISCOUNT): totalAmount={}", this.totalAmount);
-        }
-    }
+
 
     /** Tính tổng tiền có tính đến discount (dùng để check, không set) */
     public double calcTotalWithDiscount() {

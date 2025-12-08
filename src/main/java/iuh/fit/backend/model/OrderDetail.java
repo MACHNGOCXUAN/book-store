@@ -20,11 +20,5 @@ public class OrderDetail {
     @ManyToOne
     @JoinColumn(name = "book_id", nullable = false)
     private Book book;
-
-    /** Thành tiền dòng */
-    @Transient
-    public double getLineTotal() {
-        return unitPrice * quantity;
-    }
 }
 

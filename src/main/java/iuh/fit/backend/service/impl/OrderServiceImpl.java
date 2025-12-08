@@ -2,6 +2,7 @@ package iuh.fit.backend.service.impl;
 
 import java.time.LocalDateTime;
 
+import iuh.fit.backend.controller.OrderController;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -53,19 +54,21 @@ public class OrderServiceImpl implements OrderService {
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
     private final OrderDetailRepository orderDetailRepository;
-
+    private String generateOrderId() {
+        return "ORD" + System.currentTimeMillis();
+    }
     /* ==========================================================
        🔹 PRIVATE HELPERS
        ========================================================== */
 
-    private String generateNextOrderId() {
-        String last = orderRepository.findMaxOrderId();
-        int next = 1;
-        if (last != null && last.startsWith("ORD")) {
-            next = Integer.parseInt(last.substring(3)) + 1;
-        }
-        return "ORD" + String.format("%03d", next);
-    }
+//    private String generateNextOrderId() {
+//        String last = orderRepository.findMaxOrderId();
+//        int next = 1;
+//        if (last != null && last.startsWith("ORD")) {
+//            next = Integer.parseInt(last.substring(3)) + 1;
+//        }
+//        return "ORD" + String.format("%03d", next);
+//    }
 
     private String generateNextOrderDetailId() {
         String last = orderDetailRepository.findMaxOrderDetailId();
@@ -151,7 +154,7 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
 
         Order order = new Order();
-        order.setOrderId(generateNextOrderId());
+        order.setOrderId(generateOrderId());
         order.setOrderDate(LocalDateTime.now());
         order.setStatus(OrderStatus.PENDING);
         order.setCustomer(customer);

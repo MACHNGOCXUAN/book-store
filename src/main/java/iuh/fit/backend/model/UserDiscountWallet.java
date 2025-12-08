@@ -84,10 +84,4 @@ public class UserDiscountWallet {
         this.usedInOrderId = orderId;
     }
 
-    /**
-     * Check nếu voucher còn valid để dùng
-     */
-    public boolean isValidToUse() {
-        return !this.used && this.discountCode != null;
-    }
 }

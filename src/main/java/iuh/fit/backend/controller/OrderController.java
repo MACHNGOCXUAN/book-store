@@ -57,7 +57,8 @@ public class OrderController {
     private final OrderHistoryRepository orderHistoryRepository;
     private final PaymentRepository paymentRepository;
     private final VnpayPaymentService vnpayPaymentService;
-
+    private final CartItemRepository cartItemRepository;
+    private final DiscountCodeRepository discountCodeRepository;
     private final JavaMailSender mailSender;
     private final SpringTemplateEngine templateEngine;
     private final String mailTo = "machngocxuan2004@gmail.com";
@@ -107,7 +108,7 @@ public class OrderController {
 
         if (updated) {
             String status = updateStatusOrderDTO.getStatus().toString();
-            if ("COMPLETED".equalsIgnoreCase(status) || "CANCELLED".equalsIgnoreCase(status)) {
+            if ("COMPLETED".equalsIgnoreCase(status)) {
                 try {
                     Context context = new Context();
 
@@ -139,6 +140,9 @@ public class OrderController {
                     helper.setSubject("Xác nhận đơn hàng đã được giao");
                     helper.setText(html, true);
 
+                    Optional<Customer> customer = customerRepository.findById(order.getCustomer().getUserId());
+                    customer.get().setLoyaltyPoints((int) (customer.get().getLoyaltyPoints() + order.getTotalAmount()/1000));
+                    customerRepository.save(customer.get());
                     // 4. Gửi email
                     mailSender.send(message);
                 } catch (Exception e) {
@@ -171,7 +175,7 @@ public class OrderController {
     public ResponseEntity<?> createOrder(
             @RequestBody CreateOrderRequestDTO request,
             @RequestHeader("Authorization") String authHeader) {
-
+        System.out.println( "HI"+  createOrder(request, authHeader));
         User user = getUserFromToken(authHeader);
         if (user == null) return unauthorized();
 
@@ -182,221 +186,6 @@ public class OrderController {
         }
     }
 
-    /** ----------------------- CHECKOUT VNPay ----------------------- */
-    @PostMapping("/checkout")
-    public ResponseEntity<?> checkout(
-            @RequestBody CreateOrderRequestDTO request,
-            @RequestHeader("Authorization") String authHeader,
-            HttpServletRequest httpRequest) {
-
-        User user = getUserFromToken(authHeader);
-        if (user == null) return unauthorized();
-
-        try {
-            // ⭐ Set payment method if not provided
-            if (request.getPaymentMethod() == null || request.getPaymentMethod().isBlank()) {
-                request.setPaymentMethod("VNPAY");
-            }
-            
-            OrderFullDetailDTO createdOrder = orderService.createOrder(request, user);
-            String orderId = createdOrder.getOrderId();
-            long totalAmount = Math.round(createdOrder.getTotalAmount());
-
-            String clientIp = getClientIp(httpRequest);
-
-            String paymentUrl = vnpayService.createPaymentUrl(orderId, totalAmount, clientIp);
-            String qrCodeBase64 = qrCodeService.generateQRCodeBase64(paymentUrl);
-
-            // ⭐ Update Payment with QR code info
-            orderService.updatePaymentWithQRCode(orderId, paymentUrl, qrCodeBase64);
-
-            PaymentQRCodeResponse paymentResponse = PaymentQRCodeResponse.builder()
-                    .orderId(orderId)
-                    .amount(totalAmount)
-                    .paymentUrl(paymentUrl)
-                    .qrCodeBase64(qrCodeBase64)
-                    .expiresAt(System.currentTimeMillis() + 900_000)
-                    .message("Order created successfully. Scan QR code to pay.")
-                    .build();
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(
-                    Map.of("order", createdOrder, "payment", paymentResponse)
-            );
-
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of("message", e.getMessage()));
-        }
-    }
-
-    /** ----------------------- CHECKOUT Momo ----------------------- */
-    @PostMapping("/checkout-momo")
-    public ResponseEntity<?> checkoutWithMomo(
-            @RequestBody CreateOrderRequestDTO request,
-            @RequestHeader("Authorization") String authHeader,
-            HttpServletRequest httpRequest) {
-
-        User user = getUserFromToken(authHeader);
-        if (user == null) return unauthorized();
-
-        try {
-            // ⭐ Set payment method if not provided
-            if (request.getPaymentMethod() == null || request.getPaymentMethod().isBlank()) {
-                request.setPaymentMethod("MOMO");
-            }
-            
-            OrderFullDetailDTO createdOrder = orderService.createOrder(request, user);
-            String orderId = createdOrder.getOrderId();
-            long totalAmount = Math.round(createdOrder.getTotalAmount());
-
-            String momoOrderId = orderId + "_" + System.currentTimeMillis();
-            MoMoPaymentResponse momoResponse = moMoService.createPayment(
-                    momoOrderId, totalAmount, "Thanh toán đơn hàng " + orderId
-            );
-
-            if (!momoResponse.isSuccess()) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("message", "MoMo error: " + momoResponse.getMessage()));
-            }
-
-            // ⭐ Update Payment with MoMo URL
-            orderService.updatePaymentWithQRCode(orderId, momoResponse.getPayUrl(), momoResponse.getQrCodeUrl());
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(
-                    Map.of(
-                            "order", createdOrder,
-                            "payment", Map.of(
-                                    "orderId", orderId,
-                                    "amount", totalAmount,
-                                    "payUrl", momoResponse.getPayUrl(),
-                                    "qrCodeUrl", momoResponse.getQrCodeUrl(),
-                                    "deeplink", momoResponse.getDeeplink(),
-                                    "expiresAt", System.currentTimeMillis() + 900_000
-                            )
-                    )
-            );
-
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of("message", e.getMessage()));
-        }
-    }
-
-    /** ----------------------- CREATE MOMO PAYMENT ONLY (NO ORDER) ----------------------- */
-    @PostMapping("/create-momo-payment-only")
-    public ResponseEntity<?> createMoMoPaymentOnly(
-            @RequestBody CreateOrderRequestDTO request,
-            @RequestHeader("Authorization") String authHeader) {
-
-        User user = getUserFromToken(authHeader);
-        if (user == null) return unauthorized();
-
-        try {
-            long totalAmount = 0;
-            
-            // Calculate total from order details
-            for (CreateOrderRequestDTO.OrderDetailRequest detailRequest : request.getOrderDetails()) {
-                var book = bookService.findById(detailRequest.getBookId()).orElseThrow(
-                        () -> new RuntimeException("Book not found: " + detailRequest.getBookId()));
-                double unitPrice = book.getPrice() * (100 - book.getDiscountPercent()) / 100.0;
-                totalAmount += (long) (unitPrice * detailRequest.getQuantity());
-            }
-
-            String momoOrderId = "TEMP_" + System.currentTimeMillis();
-            MoMoPaymentResponse momoResponse = moMoService.createPayment(
-                    momoOrderId, totalAmount, "Thanh toán đơn hàng"
-            );
-
-            if (!momoResponse.isSuccess()) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("message", "MoMo error: " + momoResponse.getMessage()));
-            }
-
-            // ⭐ Clean up the request to avoid sending null values
-            CreateOrderRequestDTO cleanedRequest = new CreateOrderRequestDTO();
-            cleanedRequest.setCustomerId(request.getCustomerId());
-            cleanedRequest.setOrderDetails(request.getOrderDetails());
-            // Only set voucherId/discountCode if they have values
-            if (request.getVoucherId() != null && !request.getVoucherId().isBlank()) {
-                cleanedRequest.setVoucherId(request.getVoucherId());
-            }
-            if (request.getDiscountCode() != null && !request.getDiscountCode().isBlank()) {
-                cleanedRequest.setDiscountCode(request.getDiscountCode());
-            }
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(
-                    Map.of(
-                            "payment", Map.of(
-                                    "tempOrderId", momoOrderId,
-                                    "amount", totalAmount,
-                                    "payUrl", momoResponse.getPayUrl(),
-                                    "qrCodeUrl", momoResponse.getQrCodeUrl(),
-                                    "deeplink", momoResponse.getDeeplink(),
-                                    "expiresAt", System.currentTimeMillis() + 900_000
-                            ),
-                            "orderRequest", cleanedRequest
-                    )
-            );
-
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of("message", e.getMessage()));
-        }
-    }
-
-    /** ----------------------- CREATE VNPAY PAYMENT ONLY (NO ORDER) ----------------------- */
-    @PostMapping("/create-vnpay-payment-only")
-    public ResponseEntity<?> createVNPayPaymentOnly(
-            @RequestBody CreateOrderRequestDTO request,
-            @RequestHeader("Authorization") String authHeader,
-            HttpServletRequest httpRequest) {
-
-        User user = getUserFromToken(authHeader);
-        if (user == null) return unauthorized();
-
-        try {
-            long totalAmount = 0;
-            
-            // Calculate total from order details
-            for (CreateOrderRequestDTO.OrderDetailRequest detailRequest : request.getOrderDetails()) {
-                var book = bookService.findById(detailRequest.getBookId()).orElseThrow(
-                        () -> new RuntimeException("Book not found: " + detailRequest.getBookId()));
-                double unitPrice = book.getPrice() * (100 - book.getDiscountPercent()) / 100.0;
-                totalAmount += (long) (unitPrice * detailRequest.getQuantity());
-            }
-
-            String tempOrderId = "TEMP_" + System.currentTimeMillis();
-            String clientIp = getClientIp(httpRequest);
-
-            String paymentUrl = vnpayService.createPaymentUrl(tempOrderId, totalAmount, clientIp);
-            String qrCodeBase64 = qrCodeService.generateQRCodeBase64(paymentUrl);
-
-            // ⭐ Clean up the request to avoid sending null values
-            CreateOrderRequestDTO cleanedRequest = new CreateOrderRequestDTO();
-            cleanedRequest.setCustomerId(request.getCustomerId());
-            cleanedRequest.setOrderDetails(request.getOrderDetails());
-            // Only set voucherId/discountCode if they have values
-            if (request.getVoucherId() != null && !request.getVoucherId().isBlank()) {
-                cleanedRequest.setVoucherId(request.getVoucherId());
-            }
-            if (request.getDiscountCode() != null && !request.getDiscountCode().isBlank()) {
-                cleanedRequest.setDiscountCode(request.getDiscountCode());
-            }
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(
-                    Map.of(
-                            "payment", Map.of(
-                                    "tempOrderId", tempOrderId,
-                                    "amount", totalAmount,
-                                    "paymentUrl", paymentUrl,
-                                    "qrCodeBase64", qrCodeBase64,
-                                    "expiresAt", System.currentTimeMillis() + 900_000
-                            ),
-                            "orderRequest", cleanedRequest
-                    )
-            );
-
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of("message", e.getMessage()));
-        }
-    }
 
     /** ----------------------- REORDER ----------------------- */
     @PostMapping("/{id}/reorder")
@@ -411,6 +200,80 @@ public class OrderController {
             return ResponseEntity.status(HttpStatus.CREATED).body(orderService.reorderFromOrder(id, user));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+    @PostMapping("/checkout")
+    public ResponseEntity<?> checkout(
+            @RequestBody CreateOrderRequestDTO request,
+            @RequestHeader("Authorization") String authHeader,
+            HttpServletRequest httpRequest) {
+
+        System.out.println("HI" + request);
+        User user = getUserFromToken(authHeader);
+        if (user == null) return unauthorized();
+
+        try {
+            long total = 0;                   // Tổng giá sản phẩm
+            long discountPercent = 0;         // % giảm giá
+            long shippingFee = 20000;         // phí ship cố định
+
+            // 🔹 Lấy voucher nếu có
+            if (request.getVoucherId() != null) {
+                Optional<DiscountCode> discountCode = discountCodeRepository.findById(request.getVoucherId());
+                discountPercent = discountCode.map(DiscountCode::getPercent).orElse(0);
+            }
+
+            // 🔹 Loop chi tiết order
+            for (CreateOrderRequestDTO.OrderDetailRequest detail : request.getOrderDetails()) {
+                Optional<Book> book = bookService.findById(detail.getBookId());
+                if (book.isEmpty()) {
+                    return ResponseEntity.badRequest()
+                            .body(Map.of("message", "Sách không tồn tại: " + detail.getBookId()));
+                }
+
+                Book b = book.get();
+
+                if (b.getStock() < detail.getQuantity()) {
+                    return ResponseEntity.badRequest()
+                            .body(Map.of("message", "Sản phẩm '" + b.getTitle() + "' không đủ hàng. Còn " + b.getStock() + " cuốn"));
+                }
+
+                long priceAfterDiscount = (long) (b.getPrice() - (b.getPrice() * b.getDiscountPercent() / 100));
+                total += priceAfterDiscount * detail.getQuantity();
+            }
+
+            // ⭐ Tính tổng tiền thanh toán
+            long totalAmount = (total + shippingFee) - (total * discountPercent / 100);
+
+
+            // 🔹 Tạo order
+            OrderFullDetailDTO createdOrder = orderService.createOrder(request, user);
+            String orderId = createdOrder.getOrderId();
+            System.out.println("OrderId: " + orderId);
+
+            String clientIp = getClientIp(httpRequest);
+
+            // 🔹 Tạo URL thanh toán
+            String paymentUrl = vnpayService.createPaymentUrl(orderId, totalAmount, clientIp);
+            String qrCodeBase64 = qrCodeService.generateQRCodeBase64(paymentUrl);
+
+            // 🔹 Update Payment
+            orderService.updatePaymentWithQRCode(orderId, paymentUrl, qrCodeBase64);
+
+            PaymentQRCodeResponse paymentResponse = PaymentQRCodeResponse.builder()
+                    .orderId(orderId)
+                    .amount(totalAmount)
+                    .paymentUrl(paymentUrl)
+                    .qrCodeBase64(qrCodeBase64)
+                    .expiresAt(System.currentTimeMillis() + 900_000)
+                    .message("Order created successfully. Scan QR code to pay.")
+                    .build();
+
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(Map.of("order", createdOrder, "payment", paymentResponse));
+
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("message", e.getMessage()));
         }
     }
 
@@ -451,6 +314,8 @@ public class OrderController {
         try {
             List<OrderInfoDTO.OrderDetailRequest> orderDetails = request.getOrderDetails();
             long totalAmount = 0;
+            long total = 0;
+            long discountPercent = 0;
 
             for (OrderInfoDTO.OrderDetailRequest detail : orderDetails) {
                 Optional<Book> book = bookService.findById(detail.getBookId());
@@ -462,7 +327,17 @@ public class OrderController {
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                             .body(Map.of("message", "Sản phẩm '" + book.get().getTitle() + "' không đủ hàng. Còn " + book.get().getStock() + " cuốn"));
                 }
-                totalAmount += (long) (book.get().getPrice() * detail.getQuantity());
+                total += (long) ((book.get().getPrice() - book.get().getPrice()*book.get().getDiscountPercent()/100) * detail.getQuantity() );
+                Optional<DiscountCode> discountCode;
+                if (request.getVoucherId() != null){
+                    discountCode = discountCodeRepository.findById(request.getVoucherId());
+                    if (discountCode.isEmpty()) {
+                        discountPercent = 0;
+                    }else {
+                        discountPercent = discountCode.get().getPercent();
+                    }
+                }
+                totalAmount = (total + 20000) - (total * discountPercent/100);
             }
 
             // TODO: Apply voucher/discount nếu có
@@ -620,6 +495,8 @@ public class OrderController {
                     detail.setQuantity(detailDTO.getQuantity());
                     detail.setUnitPrice(book.get().getPrice());
                     orderDetails.add(detail);
+                    CartItem cartItem = cartItemRepository.findByBook_BookIdAndCart_Customer_UserId(book.get().getBookId(), customer.getUserId());
+                    cartItemRepository.delete(cartItem);
                 }
                 order.setOrderDetails(orderDetails);
                 order.recalcTotals();
@@ -754,6 +631,9 @@ public class OrderController {
                     detail.setQuantity(detailDTO.getQuantity());
                     detail.setUnitPrice(book.getPrice());
                     orderDetails.add(detail);
+
+                    CartItem cartItem = cartItemRepository.findByBook_BookIdAndCart_Customer_UserId(book.getBookId(), customer.getUserId());
+                    cartItemRepository.delete(cartItem);
                 }
                 order.setOrderDetails(orderDetails);
                 order.recalcTotals();
@@ -803,4 +683,5 @@ public class OrderController {
     private String generateOrderId() {
         return "ORD" + System.currentTimeMillis();
     }
+
 }
