@@ -284,42 +284,45 @@ public class DiscountCodeServiceImpl implements iuh.fit.backend.service.Discount
         List<Customer> candidates;
 
         boolean isPublic = Boolean.TRUE.equals(discountCode.getIsPublic());
-        LocalDate now = LocalDate.now();
         List<Customer> allCustomers = customerRepository.findAll();
         log.info("[VoucherDist] Total customers in DB: {}", allCustomers.size());
 
         if (discountCode.getMinTierRequired() == CustomerTier.NEW_USER) {
-            // NEW_USER: trong vòng 3 tháng gần đây
-            LocalDate threshold = now.minusMonths(3);
-            candidates = allCustomers.stream()
-                    .filter(c -> c.getRegistrationDate() != null && !c.getRegistrationDate().isBefore(threshold))
-                    .collect(Collectors.toList());
-            log.info("[VoucherDist] NEW_USER candidates (reg >= {}): {}", threshold, candidates.size());
+            // NEW_USER: tất cả khách hàng (vì NEW_USER là tier thấp nhất)
+            candidates = allCustomers;
+            log.info("[VoucherDist] NEW_USER candidates: {} (all customers)", candidates.size());
         } else if (isPublic) {
-            // Public: tất cả khách hàng đang hoạt động, có tier đáp ứng nếu minTierRequired khác null
+            // Public: chỉ khách hàng có điểm đủ cho tier yêu cầu
             candidates = allCustomers.stream()
                     .filter(c -> {
                         if (discountCode.getMinTierRequired() == null) return true;
-                        CustomerTier tier = c.getTier() != null ? c.getTier() : CustomerTier.NEW_USER;
-                        return isTierSufficient(tier, discountCode.getMinTierRequired());
+                        int points = java.util.Optional.ofNullable(c.getLoyaltyPoints()).orElse(0);
+                        CustomerTier calculatedTier = calculateTierFromPoints(points);
+                        return isTierSufficient(calculatedTier, discountCode.getMinTierRequired());
                     })
                     .collect(Collectors.toList());
-            log.info("[VoucherDist] PUBLIC candidates (minTierRequired={}): {}", discountCode.getMinTierRequired(), candidates.size());
+            log.info("[VoucherDist] PUBLIC candidates (minTierRequired={}, filtered by points): {}", 
+                discountCode.getMinTierRequired(), candidates.size());
         } else {
-            // Không public và không NEW_USER: phân phối theo minTierRequired nếu có
+            // Không public: phân phối dựa trên điểm loyalty của customer
             candidates = allCustomers.stream()
                     .filter(c -> {
                         if (discountCode.getMinTierRequired() == null) return true;
-                        CustomerTier tier = c.getTier() != null ? c.getTier() : CustomerTier.NEW_USER;
-                        return isTierSufficient(tier, discountCode.getMinTierRequired());
+                        int points = java.util.Optional.ofNullable(c.getLoyaltyPoints()).orElse(0);
+                        CustomerTier calculatedTier = calculateTierFromPoints(points);
+                        return isTierSufficient(calculatedTier, discountCode.getMinTierRequired());
                     })
                     .collect(Collectors.toList());
-            log.info("[VoucherDist] NON-PUBLIC candidates (minTierRequired={}): {}", discountCode.getMinTierRequired(), candidates.size());
+            log.info("[VoucherDist] NON-PUBLIC candidates (minTierRequired={}, filtered by points): {}", 
+                discountCode.getMinTierRequired(), candidates.size());
         }
 
         // Log chi tiết một vài ứng viên đầu tiên
         candidates.stream().limit(10).forEach(c -> {
-            log.debug("[VoucherDist] Candidate userId={}, regDate={}, tier={}", c.getUserId(), c.getRegistrationDate(), c.getTier());
+            int points = java.util.Optional.ofNullable(c.getLoyaltyPoints()).orElse(0);
+            CustomerTier tier = calculateTierFromPoints(points);
+            log.debug("[VoucherDist] Candidate userId={}, loyaltyPoints={}, calculatedTier={}", 
+                c.getUserId(), points, tier);
         });
 
         // Tạo wallet entries, tránh trùng
@@ -346,6 +349,17 @@ public class DiscountCodeServiceImpl implements iuh.fit.backend.service.Discount
     }
 
     /* ========== Helper Methods ========== */
+
+    /**
+     * Tính tier của customer dựa trên loyalty points
+     * Tier thresholds: NEW_USER(0), REGULAR(100), VIP(500), DIAMOND(2000)
+     */
+    private CustomerTier calculateTierFromPoints(int loyaltyPoints) {
+        if (loyaltyPoints >= 2000) return CustomerTier.DIAMOND;
+        if (loyaltyPoints >= 500) return CustomerTier.VIP;
+        if (loyaltyPoints >= 100) return CustomerTier.REGULAR;
+        return CustomerTier.NEW_USER;
+    }
 
     private boolean isVoucherValid(DiscountCode voucher, Customer customer, double cartTotal) {
         // Check 1: Quantity > 0
