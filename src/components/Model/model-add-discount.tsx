@@ -75,8 +75,8 @@ const ModalAddDiscount = ({ isModalOpen, setIsModalOpen }: any) => {
       redeemCost: values.redeemable ? values.redeemCost : null,
       minTierRequired:
         values.minTierRequired === null ? null : values.minTierRequired,
-      // Chỉ set quantity cho public voucher, private voucher đặt = 0
-      quantity: values.isPublic ? values.quantity : 0,
+      // Gửi quantity cho cả public và private voucher
+      quantity: values.quantity,
       // maxQuantityCanUse luôn bắt buộc (lượt dùng tối đa/khách)
       maxQuantityCanUse: values.maxQuantityCanUse,
     };
