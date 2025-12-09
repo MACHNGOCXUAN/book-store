@@ -79,6 +79,7 @@ public class RewardExchangeServiceImpl implements RewardExchangeService {
                 .customer(customer)
                 .discountCode(voucher)
                 .used(false)
+                .remainingUses(1)
                 .acquiredDate(LocalDateTime.now())
                 .build();
 

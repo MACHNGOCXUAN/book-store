@@ -202,6 +202,8 @@ public class DiscountCodeController {
     public ResponseEntity<List<Object>> getWalletVouchers(Authentication auth) {
         Customer customer = customerRepository.findByUserId(auth.getName())
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
+        
+        System.out.println("🔐 Getting wallet for customer userId: " + auth.getName());
 
         // 1. Lấy PUBLIC vouchers không hết hạn, chưa sử dụng
         List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
@@ -220,6 +222,7 @@ public class DiscountCodeController {
                 m.put("description", dc.getDescription());
                 m.put("endDate", dc.getEndDate());
                 m.put("used", false);
+                m.put("remainingUses", dc.getQuantity());
                 m.put("source", "PUBLIC");
                 result.add(m);
             }
@@ -227,7 +230,9 @@ public class DiscountCodeController {
         
         // 2. Lấy wallet entries (vouchers đã đổi)
         List<iuh.fit.backend.model.UserDiscountWallet> wallets = discountCodeService.getWalletEntries(customer);
+        System.out.println("📦 Wallet entries for userId " + auth.getName() + ": " + wallets.size());
         for (UserDiscountWallet w : wallets) {
+            System.out.println("  - Wallet ID: " + w.getId() + ", UserId: " + w.getCustomer().getUserId() + ", Used: " + w.getUsed());
             DiscountCode dc = w.getDiscountCode();
             java.util.Map<String, Object> m = new java.util.HashMap<>();
             m.put("walletVoucherId", String.valueOf(w.getId()));
@@ -238,6 +243,7 @@ public class DiscountCodeController {
             m.put("description", dc.getDescription());
             m.put("endDate", dc.getEndDate());
             m.put("used", Boolean.TRUE.equals(w.getUsed()));
+            m.put("remainingUses", w.getRemainingUses() != null ? w.getRemainingUses() : 1);
             m.put("source", "EXCLUSIVE");
             result.add(m);
         }
@@ -265,6 +271,7 @@ public class DiscountCodeController {
             m.put("description", dc.getDescription());
             m.put("endDate", dc.getEndDate());
             m.put("used", Boolean.TRUE.equals(w.getUsed()));
+            m.put("remainingUses", w.getRemainingUses() != null ? w.getRemainingUses() : 1);
             m.put("source", Boolean.TRUE.equals(dc.getIsPublic()) ? "PUBLIC" : "EXCLUSIVE");
             return m;
         }).toList();
