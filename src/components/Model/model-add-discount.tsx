@@ -1,4 +1,5 @@
 "use client";
+import { useMyNotification } from "@/hooks/notification";
 import { useAppDispatch, useAppSelector } from "@/stores/hooks";
 import {
   createDiscount,
@@ -26,7 +27,6 @@ import {
 } from "antd";
 import dayjs from "dayjs";
 import React, { useEffect } from "react";
-import { useMyNotification } from "@/hooks/notification";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -252,16 +252,13 @@ const ModalAddDiscount = ({ isModalOpen, setIsModalOpen }: any) => {
             </Form.Item>
           </Col>
           <Col span={8}>
-            {/* Chỉ hiển thị Số lượng nếu isPublic = true */}
-            {isPublic && (
-              <Form.Item
-                label="Số lượng (Public)"
-                name="quantity"
-                rules={discountQuantityValidationRules}
-              >
-                <InputNumber min={1} style={{ width: "100%" }} />
-              </Form.Item>
-            )}
+            <Form.Item
+              label="Số lượng"
+              name="quantity"
+              rules={discountQuantityValidationRules}
+            >
+              <InputNumber min={1} style={{ width: "100%" }} />
+            </Form.Item>
           </Col>
           <Col span={8}>
             {/* Hiển thị maxQuantityCanUse khi chọn MANY_TIME hoặc khi isPrivate */}
