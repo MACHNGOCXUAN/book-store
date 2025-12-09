@@ -1,7 +1,7 @@
 "use client";
 import { useAppDispatch, useAppSelector } from "@/stores/hooks";
 import { loginUser } from "@/stores/slices/auth.slice";
-import { loginUsernameValidationRules, passwordValidationRules } from "@/utils/validation";
+import { loginUsernameValidationRules } from "@/utils/validation";
 import type { FormProps } from "antd";
 import { Button, Form, Input } from "antd";
 import { useRouter } from "next/navigation";
@@ -59,7 +59,6 @@ const LoginPage = () => {
           </Form.Item>
           <Form.Item<FieldType>
             name="password"
-            rules={passwordValidationRules}
             className="mb-2"
           >
             <Input.Password
