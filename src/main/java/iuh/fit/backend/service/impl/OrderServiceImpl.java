@@ -37,6 +37,8 @@ import iuh.fit.backend.repository.OrderHistoryRepository;
 import iuh.fit.backend.repository.OrderRepository;
 import iuh.fit.backend.repository.PaymentRepository;
 import iuh.fit.backend.repository.StaffRepository;
+import iuh.fit.backend.repository.UserDiscountWalletRepository;
+import iuh.fit.backend.model.UserDiscountWallet;
 import iuh.fit.backend.service.OrderService;
 import lombok.RequiredArgsConstructor;
 
@@ -54,6 +56,7 @@ public class OrderServiceImpl implements OrderService {
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
     private final OrderDetailRepository orderDetailRepository;
+    private final UserDiscountWalletRepository userDiscountWalletRepository;
     private String generateOrderId() {
         return "ORD" + System.currentTimeMillis();
     }
@@ -159,11 +162,29 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderStatus.PENDING);
         order.setCustomer(customer);
 
-        // Fetch discount/voucher if exists: prefer voucherId, then discountCode (validate after building items)
+        // Fetch discount/voucher if exists: prefer voucherId (walletVoucherId), then discountCode (validate after building items)
         DiscountCode pendingDiscountCode = null;
         if (request.getVoucherId() != null && !request.getVoucherId().isBlank()) {
-            pendingDiscountCode = discountCodeRepository.findById(request.getVoucherId())
-                .orElseThrow(() -> new RuntimeException("Invalid voucher/discount id"));
+            try {
+                // voucherId is now walletVoucherId (Long), need to resolve it to discountCodeId
+                Long walletVoucherId = Long.parseLong(request.getVoucherId());
+                UserDiscountWallet wallet = userDiscountWalletRepository.findById(walletVoucherId)
+                    .orElseThrow(() -> new RuntimeException("Invalid wallet voucher id: " + walletVoucherId));
+                
+                // Verify customer owns this wallet voucher
+                if (!wallet.getCustomer().getUserId().equals(customer.getUserId())) {
+                    throw new RuntimeException("Customer does not own this voucher");
+                }
+                
+                pendingDiscountCode = wallet.getDiscountCode();
+                if (pendingDiscountCode == null) {
+                    throw new RuntimeException("Discount code not found for wallet voucher");
+                }
+            } catch (NumberFormatException e) {
+                // If voucherId is not a valid Long, try treating it as discountCodeId (backward compatibility)
+                pendingDiscountCode = discountCodeRepository.findById(request.getVoucherId())
+                    .orElseThrow(() -> new RuntimeException("Invalid voucher/discount id"));
+            }
         } else if (request.getDiscountCode() != null && !request.getDiscountCode().isBlank()) {
             pendingDiscountCode = discountCodeRepository.findById(request.getDiscountCode())
                 .orElseThrow(() -> new RuntimeException("Invalid discount code"));

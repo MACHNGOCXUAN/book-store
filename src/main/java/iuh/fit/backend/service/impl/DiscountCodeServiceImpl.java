@@ -158,15 +158,14 @@ public class DiscountCodeServiceImpl implements iuh.fit.backend.service.Discount
 
         @Override
         public AvailableVoucherDTO getWalletVoucherById(Customer customer, String voucherId, double cartTotal) {
-        DiscountCode voucher = discountCodeRepository.findById(voucherId)
-            .orElseThrow(() -> new RuntimeException("Voucher không tồn tại"));
+        // voucherId là walletVoucherId (id của user_discount_wallet)
+        UserDiscountWallet wallet = userDiscountWalletRepository.findById(Long.parseLong(voucherId))
+            .orElseThrow(() -> new RuntimeException("Voucher không tồn tại trong ví"));
+        
+        DiscountCode voucher = wallet.getDiscountCode();
 
-        // Chỉ kiểm tra ví cho voucher không public (cá nhân hóa)
-        Optional<UserDiscountWallet> walletOpt = userDiscountWalletRepository
-            .findByCustomerAndDiscountCodeAndUsedFalse(customer, voucher);
-
-        if (walletOpt.isEmpty()) {
-            // Không sở hữu hoặc đã dùng
+        // Kiểm tra wallet đã dùng chưa
+        if (Boolean.TRUE.equals(wallet.getUsed())) {
             return AvailableVoucherDTO.builder()
                 .voucherId(voucher.getDiscountCodeId())
                 .voucherName(voucher.getName())
@@ -174,11 +173,11 @@ public class DiscountCodeServiceImpl implements iuh.fit.backend.service.Discount
                 .minPriceToApply(voucher.getMinPriceToApply())
                 .description(voucher.getDescription())
                 .isPublic(Boolean.TRUE.equals(voucher.getIsPublic()))
-                .isFromWallet(false)
+                .isFromWallet(true)
                 .isExclusive(voucher.getMinTierRequired() != null)
-                .voucherTag(buildVoucherTag(voucher, Boolean.TRUE.equals(voucher.getIsPublic()), false))
+                .voucherTag(buildVoucherTag(voucher, Boolean.TRUE.equals(voucher.getIsPublic()), true))
                 .applicable(false)
-                .reason("Không sở hữu voucher hoặc voucher đã dùng")
+                .reason("Voucher đã được sử dụng")
                 .build();
         }
 
@@ -228,17 +227,31 @@ public class DiscountCodeServiceImpl implements iuh.fit.backend.service.Discount
         @Override
         @Transactional
         public void markWalletVoucherUsed(Customer customer, String voucherId, String orderId) {
-        DiscountCode voucher = discountCodeRepository.findById(voucherId)
-            .orElseThrow(() -> new RuntimeException("Voucher không tồn tại"));
+        // voucherId là walletVoucherId (id của user_discount_wallet)
+        UserDiscountWallet wallet = userDiscountWalletRepository.findById(Long.parseLong(voucherId))
+            .orElseThrow(() -> new RuntimeException("Voucher không tồn tại trong ví"));
+        
+        // Kiểm tra quyền sở hữu
+        if (!wallet.getCustomer().getUserId().equals(customer.getUserId())) {
+            throw new RuntimeException("Bạn không có quyền sử dụng voucher này");
+        }
 
-        UserDiscountWallet wallet = userDiscountWalletRepository
-            .findByCustomerAndDiscountCodeAndUsedFalse(customer, voucher)
-            .orElseThrow(() -> new RuntimeException("Voucher không khả dụng hoặc đã được sử dụng"));
-
-        // ⭐ Decrement remainingUses
+        // ⭐ Decrement remainingUses trong wallet
         wallet.decrementRemainingUses();
         wallet.setUsedInOrderId(orderId);
         wallet.setUsedDate(LocalDateTime.now());
+        
+        // ⭐ Decrement quantity trong DiscountCode
+        DiscountCode discountCode = wallet.getDiscountCode();
+        if (discountCode != null) {
+            int currentQuantity = discountCode.getQuantity();
+            if (currentQuantity > 0) {
+                discountCode.setQuantity(currentQuantity - 1);
+                discountCodeRepository.save(discountCode);
+                log.info("Discounted quantity for code {} reduced to {}", 
+                        discountCode.getDiscountCodeId(), discountCode.getQuantity());
+            }
+        }
         
         // Set used=true nếu remainingUses = 0
         if (wallet.isExhausted()) {

@@ -23,17 +23,18 @@ public class MomoService {
     private static final String PARTNER_CODE = "MOMO";
     private static final String ACCESS_KEY = "F8BBA842ECF85";
     private static final String SECRET_KEY = "K951B6PE1waDMi640xX08PD3vg6EkVlz";
-    private static final String REDIRECT_URL = "http://localhost:3001/account/orders";
+    private static final String REDIRECT_URL_BASE = "http://localhost:8080/api/orders/momo/redirect";
     private static final String IPN_URL = "https://noisily-solutus-una.ngrok-free.dev/api/orders/momo/callback";
     private static final String REQUEST_TYPE = "payWithMethod";
 
-    public String createPaymentRequest(String amount, String orderId, String orderInfo) {
+    public String createPaymentRequest(String amount, String orderId, String orderInfo, String sessionId) {
         try {
-            String extraData = "";
+            String requestId = "MOMO" + System.currentTimeMillis();
+            String extraData = sessionId; // Lưu sessionId vào extraData để query orderId sau callback
             String rawSignature = String.format(
                     "accessKey=%s&amount=%s&extraData=%s&ipnUrl=%s&orderId=%s&orderInfo=%s&partnerCode=%s&redirectUrl=%s&requestId=%s&requestType=%s",
-                    ACCESS_KEY, amount, extraData, IPN_URL, orderId, orderInfo, PARTNER_CODE, REDIRECT_URL,
-                    orderId, REQUEST_TYPE);
+                    ACCESS_KEY, amount, extraData, IPN_URL, orderId, orderInfo, PARTNER_CODE, REDIRECT_URL_BASE,
+                    requestId, REQUEST_TYPE);
 
             String signature = signHmacSHA256(rawSignature, SECRET_KEY);
             System.out.println("Generated Signature: " + signature);
@@ -41,11 +42,11 @@ public class MomoService {
             JSONObject requestBody = new JSONObject();
             requestBody.put("partnerCode", PARTNER_CODE);
             requestBody.put("accessKey", ACCESS_KEY);
-            requestBody.put("requestId", orderId);
+            requestBody.put("requestId", requestId);
             requestBody.put("amount", amount);
             requestBody.put("orderId", orderId);
             requestBody.put("orderInfo", orderInfo);
-            requestBody.put("redirectUrl", REDIRECT_URL);
+            requestBody.put("redirectUrl", REDIRECT_URL_BASE);
             requestBody.put("ipnUrl", IPN_URL);
             requestBody.put("extraData", extraData);
             requestBody.put("requestType", REQUEST_TYPE);
@@ -157,3 +158,4 @@ public class MomoService {
     }
 
 }
+

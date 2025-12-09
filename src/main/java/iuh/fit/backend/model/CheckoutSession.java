@@ -31,5 +31,7 @@ public class CheckoutSession {
 
     private String transactionPaymentId;
     private String responseCode;
+    
+    private String orderId; // Lưu orderId sau khi Order được tạo thành công
 
 }

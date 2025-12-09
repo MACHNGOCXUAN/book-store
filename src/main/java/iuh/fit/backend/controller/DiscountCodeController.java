@@ -194,41 +194,20 @@ public class DiscountCodeController {
 
     /**
      * Danh sách voucher trong ví của khách hàng hiện tại
-     * Bao gồm: PUBLIC vouchers + Wallet entries (vouchers đã đổi/nhận)
+     * Chỉ bao gồm: Wallet entries (vouchers đã đổi/nhận từ DB user_discount_wallet)
      */
     @GetMapping("/wallet")
     @PreAuthorize("hasRole('CUSTOMER')")
-    @Operation(summary = "Lấy tất cả voucher trong ví của khách hàng (public + wallet)")
+    @Operation(summary = "Lấy tất cả voucher trong ví của khách hàng từ user_discount_wallet")
     public ResponseEntity<List<Object>> getWalletVouchers(Authentication auth) {
         Customer customer = customerRepository.findByUserId(auth.getName())
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
         
         System.out.println("🔐 Getting wallet for customer userId: " + auth.getName());
 
-        // 1. Lấy PUBLIC vouchers không hết hạn, chưa sử dụng
         List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
         
-        // Lấy public vouchers
-        List<DiscountCode> publicVouchers = discountCodeRepository.findByIsPublicTrue();
-        java.time.LocalDate today = java.time.LocalDate.now();
-        for (DiscountCode dc : publicVouchers) {
-            if (dc.getQuantity() > 0 && !dc.getStartDate().isAfter(today) && !dc.getEndDate().isBefore(today)) {
-                java.util.Map<String, Object> m = new java.util.HashMap<>();
-                m.put("walletVoucherId", dc.getDiscountCodeId() + "_public");
-                m.put("discountCodeId", dc.getDiscountCodeId());
-                m.put("name", dc.getName());
-                m.put("percent", dc.getPercent());
-                m.put("minPriceToApply", dc.getMinPriceToApply());
-                m.put("description", dc.getDescription());
-                m.put("endDate", dc.getEndDate());
-                m.put("used", false);
-                m.put("remainingUses", dc.getQuantity());
-                m.put("source", "PUBLIC");
-                result.add(m);
-            }
-        }
-        
-        // 2. Lấy wallet entries (vouchers đã đổi)
+        // Lấy CHỈ wallet entries (vouchers đã đổi) từ user_discount_wallet
         List<iuh.fit.backend.model.UserDiscountWallet> wallets = discountCodeService.getWalletEntries(customer);
         System.out.println("📦 Wallet entries for userId " + auth.getName() + ": " + wallets.size());
         for (UserDiscountWallet w : wallets) {

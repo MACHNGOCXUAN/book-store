@@ -12,7 +12,6 @@ import iuh.fit.backend.model.enums.OrderStatus;
 import iuh.fit.backend.model.enums.PaymentMethod;
 import iuh.fit.backend.model.enums.PaymentStatus;
 import iuh.fit.backend.model.enums.SessionStatus;
-import iuh.fit.backend.payment.momo.MoMoPaymentResponse;
 import iuh.fit.backend.payment.momo.MoMoService;
 import iuh.fit.backend.repository.*;
 import iuh.fit.backend.service.*;
@@ -62,7 +61,45 @@ public class OrderController {
     private final UserDiscountWalletRepository userDiscountWalletRepository;
     private final JavaMailSender mailSender;
     private final SpringTemplateEngine templateEngine;
-    private final String mailTo = "machngocxuan2004@gmail.com";
+    private final String mailTo = "machngocxuan2004@gmail.com"; // Consider removing if unused
+
+    /** ----------------------- MOMO REDIRECT HANDLER ----------------------- */
+    @GetMapping("/momo/redirect")
+    public org.springframework.web.servlet.view.RedirectView handleMoMoRedirect(
+            @RequestParam String orderId,
+            @RequestParam(required = false) String resultCode,
+            @RequestParam(required = false) String message) {
+        try {
+            System.out.println("🔍 MoMo Redirect: orderId=" + orderId + ", resultCode=" + resultCode);
+            
+            // Tách sessionId từ orderId (format: sessionId_timestamp)
+            String sessionId = orderId.split("_")[0];
+            
+            // Lấy CheckoutSession để tìm real OrderId
+            CheckoutSession session = checkoutSessionRepository.findById(sessionId)
+                    .orElseThrow(() -> new RuntimeException("Session not found: " + sessionId));
+            
+            String realOrderId = session.getOrderId();
+            
+            if (realOrderId == null) {
+                System.out.println("❌ Real orderId not found in session " + sessionId);
+                return new org.springframework.web.servlet.view.RedirectView(
+                    "http://localhost:3001/payment-status?orderId=ERROR&resultCode=9999");
+            }
+            
+            System.out.println("✅ Real orderId=" + realOrderId + " (fakeOrderId was " + orderId + ")");
+            
+            // Redirect tới frontend với real orderId
+            return new org.springframework.web.servlet.view.RedirectView(
+                "http://localhost:3001/payment-status?orderId=" + realOrderId + "&resultCode=" + (resultCode != null ? resultCode : "0"));
+            
+        } catch (Exception e) {
+            System.err.println("❌ MoMo Redirect Error: " + e.getMessage());
+            e.printStackTrace();
+            return new org.springframework.web.servlet.view.RedirectView(
+                "http://localhost:3001/payment-status?orderId=ERROR&resultCode=9999");
+        }
+    }
 
     /** ----------------------- FILTER ORDERS ----------------------- */
     @PostMapping()
@@ -87,6 +124,50 @@ public class OrderController {
         return ResponseEntity.ok(response);
     }
 
+    /** ----------------------- GET ORDER ID FROM SESSION ID ----------------------- */
+    @GetMapping("/session/{sessionId}/order-id")
+    public ResponseEntity<?> getOrderIdBySessionId(@PathVariable("sessionId") String sessionId) {
+        try {
+            CheckoutSession session = checkoutSessionRepository.findById(sessionId)
+                    .orElseThrow(() -> new RuntimeException("Session not found"));
+            
+            // Nếu session đã lưu orderId, dùng cách này
+            if (session.getOrderId() != null) {
+                return ResponseEntity.ok(Map.of("orderId", session.getOrderId()));
+            }
+            
+            // Nếu không, query từ Order dựa trên customerId (userId) và thời gian tạo gần nhất
+            String customerId = session.getCustomerId();
+            OrderStatus pendingStatus = OrderStatus.PENDING;
+            
+            // Query các order của customer có status PENDING được tạo gần đây nhất
+            Page<Order> orders = orderRepository.findByFilterCustomer(
+                    pendingStatus,
+                    LocalDateTime.now().minusMinutes(20), // Lấy order được tạo trong 20 phút gần đây
+                    null,
+                    null,
+                    customerId,
+                    org.springframework.data.domain.PageRequest.of(0, 1, org.springframework.data.domain.Sort.by("orderDate").descending())
+            );
+            
+            if (orders.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("message", "Order not found for this session"));
+            }
+            
+            Order latestOrder = orders.getContent().get(0);
+            
+            // Lưu orderId vào session để lần sau nhanh hơn
+            session.setOrderId(latestOrder.getOrderId());
+            checkoutSessionRepository.save(session);
+            
+            return ResponseEntity.ok(Map.of("orderId", latestOrder.getOrderId()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Failed to fetch order: " + e.getMessage()));
+        }
+    }
+
     /** ----------------------- GET ORDER BY ID ----------------------- */
     @GetMapping("/{id}")
     public ResponseEntity<?> getOrderById(@PathVariable("id") String id) {
@@ -95,6 +176,7 @@ public class OrderController {
 
     /** ----------------------- UPDATE ORDER STATUS ----------------------- */
     @PutMapping("/update-status")
+    @Transactional // Ensure transactionality for status update and loyalty points/email
     public ResponseEntity<?> updateOrder(
             @RequestBody UpdateStatusOrderDTO updateStatusOrderDTO,
             @RequestHeader("Authorization") String authHeader) {
@@ -108,28 +190,29 @@ public class OrderController {
         boolean updated = orderService.updateOrderStatus(updateStatusOrderDTO, user);
 
         if (updated) {
-            String status = updateStatusOrderDTO.getStatus().toString();
-            if ("COMPLETED".equalsIgnoreCase(status)) {
+            if (updateStatusOrderDTO.getStatus() == OrderStatus.COMPLETED) {
                 try {
-                    Context context = new Context();
-
                     OrderFullDetailDTO order = orderService.getOrderById(updateStatusOrderDTO.getOrderId());
 
-                    // Thông tin đơn hàng
+                    // 1. Cập nhật Loyalty Points
+                    Optional<Customer> customerOpt = customerRepository.findById(order.getCustomer().getUserId());
+                    if (customerOpt.isPresent()) {
+                        Customer customer = customerOpt.get();
+                        // Assuming 1 point per 1000 VND
+                        customer.setLoyaltyPoints((int) (customer.getLoyaltyPoints() + order.getTotalAmount() / 1000));
+                        customerRepository.save(customer);
+                    }
+
+                    // 2. Gửi email
+                    Context context = new Context();
                     context.setVariable("orderId", order.getOrderId());
                     context.setVariable("email", order.getCustomer().getEmail());
                     context.setVariable("phone", order.getCustomer().getPhoneNumber());
                     context.setVariable("orderDate", order.getOrderDate());
-
-                    // Thông tin giao hàng
                     context.setVariable("receiverName", order.getCustomer().getFullName());
                     context.setVariable("shippingAddress", order.getCustomer().getAddress());
                     context.setVariable("receiverPhone", order.getCustomer().getPhoneNumber());
-
-                    // Danh sách sách
                     context.setVariable("orderItems", order.getOrderDetails());
-
-                    // Tổng tiền
                     context.setVariable("totalAmount", order.getTotalAmount());
 
                     String html = templateEngine.process("mail-template.html", context);
@@ -141,19 +224,16 @@ public class OrderController {
                     helper.setSubject("Xác nhận đơn hàng đã được giao");
                     helper.setText(html, true);
 
-                    Optional<Customer> customer = customerRepository.findById(order.getCustomer().getUserId());
-                    customer.get().setLoyaltyPoints((int) (customer.get().getLoyaltyPoints() + order.getTotalAmount()/1000));
-                    customerRepository.save(customer.get());
-                    // 4. Gửi email
                     mailSender.send(message);
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    System.err.println("Error sending completion email or updating loyalty points: " + e.getMessage());
+                    // Log the error but continue, as the order status update was successful
                 }
             }
 
             return ResponseEntity.ok(Map.of("message", "Cập nhật thành công!"));
         } else {
-            return ResponseEntity.status(500).body(Map.of("message", "Cập nhật thất bại!"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "Cập nhật thất bại!"));
         }
     }
 
@@ -176,7 +256,8 @@ public class OrderController {
     public ResponseEntity<?> createOrder(
             @RequestBody CreateOrderRequestDTO request,
             @RequestHeader("Authorization") String authHeader) {
-        System.out.println( "HI"+  createOrder(request, authHeader));
+        // System.out.println("HI" + createOrder(request, authHeader)); // Recursive call removed
+
         User user = getUserFromToken(authHeader);
         if (user == null) return unauthorized();
 
@@ -203,28 +284,35 @@ public class OrderController {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
+
+    /** ----------------------- CHECKOUT VNPAY (QR GENERATION - DEPRECATED/OLD FLOW) ----------------------- */
     @PostMapping("/checkout")
     public ResponseEntity<?> checkout(
             @RequestBody CreateOrderRequestDTO request,
             @RequestHeader("Authorization") String authHeader,
             HttpServletRequest httpRequest) {
 
-        System.out.println("HI" + request);
         User user = getUserFromToken(authHeader);
         if (user == null) return unauthorized();
 
         try {
-            long total = 0;                   // Tổng giá sản phẩm
-            long discountPercent = 0;         // % giảm giá
-            long shippingFee = 20000;         // phí ship cố định
+            long total = 0;
+            long discountPercent = 0;
+            long shippingFee = 20000;
 
-            // 🔹 Lấy voucher nếu có
             if (request.getVoucherId() != null) {
-                Optional<DiscountCode> discountCode = discountCodeRepository.findById(request.getVoucherId());
-                discountPercent = discountCode.map(DiscountCode::getPercent).orElse(0);
+                try {
+                    Long walletVoucherId = Long.parseLong(request.getVoucherId());
+                    UserDiscountWallet wallet = userDiscountWalletRepository.findById(walletVoucherId).orElse(null);
+                    if (wallet != null && wallet.getDiscountCode() != null) {
+                        discountPercent = wallet.getDiscountCode().getPercent();
+                    }
+                } catch (NumberFormatException e) {
+                    Optional<DiscountCode> discountCode = discountCodeRepository.findById(request.getVoucherId());
+                    discountPercent = discountCode.map(DiscountCode::getPercent).orElse(0);
+                }
             }
 
-            // 🔹 Loop chi tiết order
             for (CreateOrderRequestDTO.OrderDetailRequest detail : request.getOrderDetails()) {
                 Optional<Book> book = bookService.findById(detail.getBookId());
                 if (book.isEmpty()) {
@@ -243,22 +331,17 @@ public class OrderController {
                 total += priceAfterDiscount * detail.getQuantity();
             }
 
-            // ⭐ Tính tổng tiền thanh toán
             long totalAmount = (total + shippingFee) - (total * discountPercent / 100);
 
-
-            // 🔹 Tạo order
             OrderFullDetailDTO createdOrder = orderService.createOrder(request, user);
             String orderId = createdOrder.getOrderId();
             System.out.println("OrderId: " + orderId);
 
             String clientIp = getClientIp(httpRequest);
 
-            // 🔹 Tạo URL thanh toán
             String paymentUrl = vnpayService.createPaymentUrl(orderId, totalAmount, clientIp);
             String qrCodeBase64 = qrCodeService.generateQRCodeBase64(paymentUrl);
 
-            // 🔹 Update Payment
             orderService.updatePaymentWithQRCode(orderId, paymentUrl, qrCodeBase64);
 
             PaymentQRCodeResponse paymentResponse = PaymentQRCodeResponse.builder()
@@ -278,25 +361,7 @@ public class OrderController {
         }
     }
 
-    /** ----------------------- HELPERS ----------------------- */
-    private User getUserFromToken(String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
-        String token = authHeader.substring(7);
-        return userService.findUserById(jwtUtils.getUserIdFromToken(token));
-    }
-
-    private String getClientIp(HttpServletRequest request) {
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        return (xForwardedFor != null && !xForwardedFor.isBlank())
-                ? xForwardedFor.split(",")[0]
-                : request.getRemoteAddr();
-    }
-
-    private ResponseEntity<?> unauthorized() {
-        return ResponseEntity.status(401).body(Map.of("message", "Missing or invalid token"));
-    }
-
-
+    /** ----------------------- CHECKOUT SESSION (MOMO/VNPAY) ----------------------- */
     @PostMapping("/checkout-order")
     @Transactional
     public ResponseEntity<?> createCheckoutSession(
@@ -308,8 +373,7 @@ public class OrderController {
         User user = userService.findUserById(userId);
         System.out.println("Đã vao checkout");
         if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("message", "Invalid token"));
+            return unauthorized();
         }
 
         try {
@@ -318,7 +382,7 @@ public class OrderController {
             long discountPercent = 0;
             long shippingFee = 20000;
 
-            // 🔹 Loop chi tiết order để tính total
+            // 🔹 Loop chi tiết order để tính total và kiểm tra stock
             for (OrderInfoDTO.OrderDetailRequest detail : orderDetails) {
                 Optional<Book> book = bookService.findById(detail.getBookId());
                 if (book.isEmpty()) {
@@ -335,38 +399,35 @@ public class OrderController {
 
             // 🔹 Lấy voucher nếu có
             if (request.getVoucherId() != null) {
-                Optional<DiscountCode> discountCode = discountCodeRepository.findById(request.getVoucherId());
-                discountPercent = discountCode.map(DiscountCode::getPercent).orElse(0);
-            }
-
-            // 🔹 Nếu có discountCode (text input), tìm theo code và lấy percent
-            if (request.getDiscountCode() != null && discountPercent == 0) {
-                // Giả sử DiscountCode có field code, hoặc tìm theo criteria khác
-                // Có thể cần thêm repository method để tìm theo code
-                // Tạm thời, nếu voucherId không có, cố gắng tìm theo discountCode
-                // (Điều này phụ thuộc vào cấu trúc backend của bạn)
+                try {
+                    Long walletVoucherId = Long.parseLong(request.getVoucherId());
+                    UserDiscountWallet wallet = userDiscountWalletRepository.findById(walletVoucherId).orElse(null);
+                    if (wallet != null && wallet.getDiscountCode() != null) {
+                        discountPercent = wallet.getDiscountCode().getPercent();
+                    }
+                } catch (NumberFormatException e) {
+                    Optional<DiscountCode> discountCode = discountCodeRepository.findById(request.getVoucherId());
+                    discountPercent = discountCode.map(DiscountCode::getPercent).orElse(0);
+                }
             }
 
             // ⭐ Tính tổng tiền thanh toán
             long totalAmount = (total + shippingFee) - (total * discountPercent / 100);
 
+            // 🔹 Tạo Checkout Session
             CheckoutSession session = new CheckoutSession();
             session.setSessionId(UUID.randomUUID().toString());
             session.setCustomerId(userId);
 
             ObjectMapper mapper = new ObjectMapper();
             session.setOrderDetailsJson(mapper.writeValueAsString(orderDetails));
-            System.out.println();
             session.setTotalAmount(totalAmount);
-            session.setVoucherId(request.getVoucherId());
-            session.setDiscountCode(request.getDiscountCode());
+            session.setVoucherId(request.getVoucherId()); // Sử dụng voucherId (Long)
+            session.setDiscountCode(request.getVoucherId()); // Cập nhật lại logic setDiscountCode nếu nó lưu walletVoucherId
             session.setPaymentMethod(String.valueOf(request.getPaymentMethod()));
             session.setStatus(SessionStatus.PENDING);
             session.setCreatedAt(LocalDateTime.now());
-            session.setExpiresAt(LocalDateTime.now().plusMinutes(15)); // Hết hạn sau 15 phút
-            if(request.getVoucherId() != null) {
-                session.setDiscountCode(request.getVoucherId());
-            }
+            session.setExpiresAt(LocalDateTime.now().plusMinutes(15));
 
             checkoutSessionRepository.save(session);
 
@@ -388,7 +449,8 @@ public class OrderController {
                 String momoResponse = momoService.createPaymentRequest(
                         String.valueOf(totalAmount),
                         customOrderId,
-                        orderInfo
+                        orderInfo,
+                        session.getSessionId()  // Pass sessionId để lưu vào extraData
                 );
                 JSONObject momoJson = new JSONObject(momoResponse);
                 if (momoJson.has("resultCode") && momoJson.getInt("resultCode") != 0) {
@@ -405,10 +467,9 @@ public class OrderController {
             } else if ("VNPAY".equalsIgnoreCase(paymentMethod)) {
                 VnpayRequest vnpayRequest = new VnpayRequest();
                 vnpayRequest.setAmount(String.valueOf(totalAmount));
-                checkoutSessionRepository.save(session);
 
                 String vnpayUrl = vnpayPaymentService.createPayment(vnpayRequest, session.getSessionId());
-                session.setStatus(SessionStatus.PENDING); // giữ trạng thái PENDING
+                session.setStatus(SessionStatus.PENDING);
 
                 response.put("paymentUrl", vnpayUrl);
                 response.put("message", "Checkout session created via VNPay");
@@ -427,6 +488,7 @@ public class OrderController {
         }
     }
 
+    /** ----------------------- MOMO CALLBACK ----------------------- */
     @PostMapping("/momo/callback")
     @Transactional
     public ResponseEntity<?> handleMoMoCallback(@RequestBody Map<String, Object> payload) {
@@ -462,100 +524,104 @@ public class OrderController {
                         new TypeReference<List<OrderInfoDTO.OrderDetailRequest>>() {}
                 );
 
+                Customer customer = customerRepository.findByUserId(session.getCustomerId())
+                        .orElseThrow(() -> new RuntimeException("Customer not found with id: " + session.getCustomerId()));
+
+                // 1. Kiểm tra lại tồn kho và chuẩn bị OrderDetails
+                List<OrderDetail> orderDetails = new ArrayList<>();
+                DiscountCode discountCode = null;
+
                 for (OrderInfoDTO.OrderDetailRequest detailDTO : orderDetailDTOs) {
-                    Optional<Book> book = bookService.findById(detailDTO.getBookId());
-                    if (book.isEmpty() || book.get().getStock() < detailDTO.getQuantity()) {
-                        // Hoan tien
-//                        momoService.refundPayment(momoOrderId, session.getTotalAmount());
+                    Optional<Book> bookOpt = bookService.findById(detailDTO.getBookId());
+
+                    if (bookOpt.isEmpty() || bookOpt.get().getStock() < detailDTO.getQuantity()) {
+                        // Stock check fail -> REFUND (Logic mock, cần API refund thật)
+                        // momoService.refundPayment(momoOrderId, session.getTotalAmount());
 
                         session.setStatus(SessionStatus.EXPIRED);
                         checkoutSessionRepository.save(session);
 
                         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                                .body(Map.of("message", "Sản phẩm đã hết hàng, tiền sẽ được hoàn lại"));
+                                .body(Map.of("message", "Sản phẩm đã hết hàng, tiền sẽ được hoàn lại (mock)"));
+                    }
+
+                    Book book = bookOpt.get();
+
+                    // Cập nhật stock ngay trước khi tạo đơn
+                    book.setStock(book.getStock() - detailDTO.getQuantity());
+                    bookRepository.save(book);
+
+                    // Xóa CartItem
+                    CartItem cartItem = cartItemRepository.findByBook_BookIdAndCart_Customer_UserId(book.getBookId(), customer.getUserId());
+                    if (cartItem != null) {
+                        cartItemRepository.delete(cartItem);
+                    }
+
+                    // Tạo OrderDetail Model
+                    OrderDetail detail = new OrderDetail();
+                    detail.setOrderDetailId(UUID.randomUUID().toString());
+                    detail.setBook(book);
+                    detail.setQuantity(detailDTO.getQuantity());
+                    detail.setUnitPrice(book.getPrice());
+                    // Order object will be set later
+                    orderDetails.add(detail);
+                }
+
+                // 2. Xử lý Voucher và DiscountCode
+                String walletVoucherId = session.getDiscountCode();
+                if (walletVoucherId != null) {
+                    try {
+                        Long voucherId = Long.parseLong(walletVoucherId);
+                        UserDiscountWallet wallet = userDiscountWalletRepository.findById(voucherId).orElse(null);
+                        if (wallet != null) {
+                            discountCode = wallet.getDiscountCode();
+                        }
+                    } catch (NumberFormatException e) {
+                        discountCode = discountCodeRepository.findById(walletVoucherId).orElse(null);
                     }
                 }
 
-                Customer customer = customerRepository.findByUserId(session.getCustomerId())
-                        .orElseThrow(() -> new RuntimeException("Khong ton tai khach hang co id: " + session.getCustomerId()));
-
-
+                // 3. Tạo Order
                 Order order = new Order();
                 order.setOrderId(generateOrderId());
                 order.setCustomer(customer);
                 order.setStatus(OrderStatus.PENDING);
                 order.setOrderDate(LocalDateTime.now());
-
-
-                String discountCodeId = session.getDiscountCode();
-
-                DiscountCode discountCode = null;
-
-                if (discountCodeId != null) {
-                    discountCode = discountCodeRepository.findById(discountCodeId).orElse(null);
-                }
-
                 order.setDiscountCode(discountCode);
-
-                List<OrderDetail> orderDetails = new ArrayList<>();
-                for (OrderInfoDTO.OrderDetailRequest detailDTO : orderDetailDTOs) {
-                    Optional<Book> book = bookService.findById(detailDTO.getBookId());
-
-                    book.get().setStock(book.get().getStock() - detailDTO.getQuantity());
-                    bookRepository.save(book.get());
-
-                    OrderDetail detail = new OrderDetail();
-                    detail.setOrderDetailId(UUID.randomUUID().toString());
-                    detail.setOrder(order);
-                    detail.setBook(book.get());
-                    detail.setQuantity(detailDTO.getQuantity());
-                    detail.setUnitPrice(book.get().getPrice());
-                    orderDetails.add(detail);
-                    CartItem cartItem = cartItemRepository.findByBook_BookIdAndCart_Customer_UserId(book.get().getBookId(), customer.getUserId());
-                    cartItemRepository.delete(cartItem);
-                }
-                order.setOrderDetails(orderDetails);
                 order.setTotalAmount(session.getTotalAmount());
+
+                // Cài đặt Order cho OrderDetails và save Order
+                orderDetails.forEach(detail -> detail.setOrder(order));
+                order.setOrderDetails(orderDetails);
                 orderRepository.save(order);
 
+                // 4. Lưu Order History
                 OrderHistory orderHistory = new OrderHistory();
                 orderHistory.setTimestamp(LocalDateTime.now());
                 orderHistory.setOrder(order);
                 orderHistory.setStatus(OrderStatus.PENDING);
                 orderHistory.setId(UUID.randomUUID().toString());
-
                 orderHistoryRepository.save(orderHistory);
 
+                // 5. Lưu Payment
                 Payment payment = new Payment();
                 payment.setPaymentId(UUID.randomUUID().toString());
                 payment.setOrder(order);
-                payment.setMethod(PaymentMethod.valueOf(session.getPaymentMethod()));
+                payment.setMethod(PaymentMethod.MOMO);
                 payment.setAmount(session.getTotalAmount());
                 payment.setStatus(PaymentStatus.COMPLETED);
-                payment.setTransactionId(momoOrderId);
+                payment.setTransactionId(String.valueOf(payload.get("transId"))); // Convert to String safely
                 payment.setPaymentCreatedAt(session.getCreatedAt());
                 payment.setPaymentCompletedAt(LocalDateTime.now());
                 payment.setResponseCode(resultCode);
                 paymentRepository.save(payment);
 
-                // 🔹 Giảm remaining_uses của voucher từ UserDiscountWallet nếu có
-                if (session.getDiscountCode() != null) {
-                    DiscountCode appliedDiscountCode = discountCodeRepository.findById(session.getDiscountCode()).orElse(null);
-                    if (appliedDiscountCode != null) {
-                        Optional<UserDiscountWallet> walletOpt = userDiscountWalletRepository
-                                .findByCustomerAndDiscountCodeAndUsedFalse(customer, appliedDiscountCode);
-                        if (walletOpt.isPresent()) {
-                            UserDiscountWallet wallet = walletOpt.get();
-                            wallet.decrementRemainingUses();
-                            if (wallet.isExhausted()) {
-                                wallet.markAsUsed(order.getOrderId());
-                            }
-                            userDiscountWalletRepository.save(wallet);
-                        }
-                    }
-                }
+                // 6. Giảm lượt dùng Voucher
+                updateVoucherUsage(session.getDiscountCode(), customer.getUserId(), order.getOrderId());
 
+                // 7. Hoàn thành Session
                 session.setStatus(SessionStatus.COMPLETED);
+                session.setOrderId(order.getOrderId()); // Lưu orderId vào session
                 checkoutSessionRepository.save(session);
 
                 return ResponseEntity.ok(Map.of(
@@ -576,10 +642,11 @@ public class OrderController {
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Failed to process callback: " + e.getMessage()));
+                    .body(Map.of("message", "Failed to process MoMo callback: " + e.getMessage()));
         }
     }
 
+    /** ----------------------- VNPAY CALLBACK ----------------------- */
     @GetMapping("/vnpay/callback")
     @Transactional
     public ResponseEntity<?> handleVnpayCallback(@RequestParam Map<String, String> allParams, HttpServletResponse response) {
@@ -595,18 +662,6 @@ public class OrderController {
             String calculatedHash = VnpayConfig.hashAllFields(paramsToVerify);
 
             if (!calculatedHash.equals(vnpSecureHash)) {
-                allParams.entrySet().stream()
-                        .sorted(Map.Entry.comparingByKey())
-                        .forEach(entry ->
-                                System.out.println("   " + entry.getKey() + " = " + entry.getValue())
-                        );
-
-                paramsToVerify.entrySet().stream()
-                        .sorted(Map.Entry.comparingByKey())
-                        .forEach(entry ->
-                                System.out.println("   " + entry.getKey() + " = " + entry.getValue())
-                        );
-
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("message", "Chữ ký không hợp lệ"));
             }
@@ -632,61 +687,85 @@ public class OrderController {
                         new TypeReference<List<OrderInfoDTO.OrderDetailRequest>>() {}
                 );
 
-                for (OrderInfoDTO.OrderDetailRequest detailDTO : orderDetailDTOs) {
-                    Optional<Book> book = bookService.findById(detailDTO.getBookId());
-                    if (book.isEmpty() || book.get().getStock() < detailDTO.getQuantity()) {
-                        session.setStatus(SessionStatus.EXPIRED);
-                        checkoutSessionRepository.save(session);
-                        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                                .body(Map.of("message", "Sản phẩm đã hết hàng"));
-                    }
-                }
-
                 Customer customer = customerRepository.findByUserId(session.getCustomerId())
                         .orElseThrow(() -> new RuntimeException("Customer not found"));
 
+                // 1. Kiểm tra lại tồn kho và chuẩn bị OrderDetails
+                List<OrderDetail> orderDetails = new ArrayList<>();
+                DiscountCode discountCode = null;
+
+                for (OrderInfoDTO.OrderDetailRequest detailDTO : orderDetailDTOs) {
+                    Optional<Book> bookOpt = bookService.findById(detailDTO.getBookId());
+
+                    if (bookOpt.isEmpty() || bookOpt.get().getStock() < detailDTO.getQuantity()) {
+                        // Stock check fail -> Không hoàn tiền qua VNPAY ở đây, chỉ đánh dấu session expired
+                        session.setStatus(SessionStatus.EXPIRED);
+                        checkoutSessionRepository.save(session);
+                        // Redirect to fail page
+                        response.sendRedirect("http://localhost:3001/payment-status?status=fail&reason=outofstock");
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body(Map.of("message", "Sản phẩm đã hết hàng"));
+                    }
+
+                    Book book = bookOpt.get();
+
+                    // Cập nhật stock ngay trước khi tạo đơn
+                    book.setStock(book.getStock() - detailDTO.getQuantity());
+                    bookRepository.save(book);
+
+                    // Xóa CartItem
+                    CartItem cartItem = cartItemRepository.findByBook_BookIdAndCart_Customer_UserId(book.getBookId(), customer.getUserId());
+                    if (cartItem != null) {
+                        cartItemRepository.delete(cartItem);
+                    }
+
+                    // Tạo OrderDetail Model
+                    OrderDetail detail = new OrderDetail();
+                    detail.setOrderDetailId(UUID.randomUUID().toString());
+                    detail.setBook(book);
+                    detail.setQuantity(detailDTO.getQuantity());
+                    detail.setUnitPrice(book.getPrice());
+                    // Order object will be set later
+                    orderDetails.add(detail);
+                }
+
+                // 2. Xử lý Voucher và DiscountCode
+                String walletVoucherId = session.getDiscountCode();
+                if (walletVoucherId != null) {
+                    try {
+                        Long voucherId = Long.parseLong(walletVoucherId);
+                        UserDiscountWallet wallet = userDiscountWalletRepository.findById(voucherId).orElse(null);
+                        if (wallet != null) {
+                            discountCode = wallet.getDiscountCode();
+                        }
+                    } catch (NumberFormatException e) {
+                        discountCode = discountCodeRepository.findById(walletVoucherId).orElse(null);
+                    }
+                }
+
+                // 3. Tạo Order
                 Order order = new Order();
                 order.setOrderId(generateOrderId());
                 order.setCustomer(customer);
                 order.setStatus(OrderStatus.PENDING);
                 order.setOrderDate(LocalDateTime.now());
-
-                String discountCodeId = session.getDiscountCode();
-
-                DiscountCode discountCode = null;
-
-                System.out.println("ijojjl: " + discountCodeId);
-
-                if (discountCodeId != null) {
-                    discountCode = discountCodeRepository.findById(discountCodeId).orElse(null);
-                }
-
-                System.out.println("discountCode: " + discountCode);
-
                 order.setDiscountCode(discountCode);
-
-
-                List<OrderDetail> orderDetails = new ArrayList<>();
-                for (OrderInfoDTO.OrderDetailRequest detailDTO : orderDetailDTOs) {
-                    Book book = bookService.findById(detailDTO.getBookId()).get();
-                    book.setStock(book.getStock() - detailDTO.getQuantity());
-                    bookRepository.save(book);
-
-                    OrderDetail detail = new OrderDetail();
-                    detail.setOrderDetailId(UUID.randomUUID().toString());
-                    detail.setOrder(order);
-                    detail.setBook(book);
-                    detail.setQuantity(detailDTO.getQuantity());
-                    detail.setUnitPrice(book.getPrice());
-                    orderDetails.add(detail);
-
-                    CartItem cartItem = cartItemRepository.findByBook_BookIdAndCart_Customer_UserId(book.getBookId(), customer.getUserId());
-                    cartItemRepository.delete(cartItem);
-                }
-                order.setOrderDetails(orderDetails);
                 order.setTotalAmount(session.getTotalAmount());
+
+                // Cài đặt Order cho OrderDetails và save Order
+                orderDetails.forEach(detail -> detail.setOrder(order));
+                order.setOrderDetails(orderDetails);
                 orderRepository.save(order);
 
+                // 4. Lưu Order History
+                OrderHistory orderHistory = new OrderHistory();
+                orderHistory.setTimestamp(LocalDateTime.now());
+                orderHistory.setOrder(order);
+                orderHistory.setStatus(OrderStatus.PENDING);
+                orderHistory.setId(UUID.randomUUID().toString());
+                orderHistoryRepository.save(orderHistory);
+
+                // 5. Lưu Payment
                 Payment payment = new Payment();
                 payment.setPaymentId(UUID.randomUUID().toString());
                 payment.setOrder(order);
@@ -699,28 +778,16 @@ public class OrderController {
                 payment.setResponseCode(responseCode);
                 paymentRepository.save(payment);
 
-                // 🔹 Giảm remaining_uses của voucher từ UserDiscountWallet nếu có
-                if (session.getDiscountCode() != null) {
-                    DiscountCode appliedDiscountCode = discountCodeRepository.findById(session.getDiscountCode()).orElse(null);
-                    if (appliedDiscountCode != null) {
-                        Optional<UserDiscountWallet> walletOpt = userDiscountWalletRepository
-                                .findByCustomerAndDiscountCodeAndUsedFalse(customer, appliedDiscountCode);
-                        if (walletOpt.isPresent()) {
-                            UserDiscountWallet wallet = walletOpt.get();
-                            wallet.decrementRemainingUses();
-                            if (wallet.isExhausted()) {
-                                wallet.markAsUsed(order.getOrderId());
-                            }
-                            userDiscountWalletRepository.save(wallet);
-                        }
-                    }
-                }
+                // 6. Giảm lượt dùng Voucher
+                updateVoucherUsage(session.getDiscountCode(), customer.getUserId(), order.getOrderId());
 
+                // 7. Hoàn thành Session
                 session.setStatus(SessionStatus.COMPLETED);
                 session.setTransactionPaymentId(allParams.get("vnp_TransactionNo"));
                 session.setResponseCode(responseCode);
                 checkoutSessionRepository.save(session);
 
+                // 8. Redirect
                 response.sendRedirect("http://localhost:3001/payment-status?status=success&orderId=" + order.getOrderId());
 
                 return ResponseEntity.ok(Map.of("message", "Payment success"));
@@ -729,6 +796,7 @@ public class OrderController {
                 session.setResponseCode(responseCode);
                 checkoutSessionRepository.save(session);
 
+                // Redirect to fail page
                 response.sendRedirect("http://localhost:3001/payment-status?status=fail");
 
                 return ResponseEntity.ok(Map.of(
@@ -739,14 +807,77 @@ public class OrderController {
 
         } catch (Exception e) {
             e.printStackTrace();
+            // Redirect to fail page on internal error
+            try {
+                response.sendRedirect("http://localhost:3001/payment-status?status=fail");
+            } catch (Exception ignore) {}
+
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Failed to process VNPay callback: " + e.getMessage()));
         }
     }
 
 
-    private String generateOrderId() {
-        return "ORD" + System.currentTimeMillis();
+    /** ----------------------- VOUCHER USAGE HELPER ----------------------- */
+    private void updateVoucherUsage(String walletVoucherId, String customerId, String orderId) {
+        if (walletVoucherId != null) {
+            try {
+                // 1. Giảm remaining_uses của voucher từ UserDiscountWallet
+                Long voucherId = Long.parseLong(walletVoucherId);
+                UserDiscountWallet wallet = userDiscountWalletRepository.findById(voucherId).orElse(null);
+                if (wallet != null && wallet.getCustomer().getUserId().equals(customerId)) {
+                    wallet.decrementRemainingUses();
+                    if (wallet.isExhausted()) {
+                        wallet.markAsUsed(orderId);
+                    }
+
+                    // 2. Giảm quantity của DiscountCode (Áp dụng cho logic DiscountCode global)
+                    DiscountCode dc = wallet.getDiscountCode();
+                    if (dc != null) {
+                        int currentQty = dc.getQuantity();
+                        if (currentQty > 0) {
+                            dc.setQuantity(currentQty - 1);
+                            discountCodeRepository.save(dc);
+                        }
+                    }
+
+                    userDiscountWalletRepository.save(wallet);
+                }
+            } catch (NumberFormatException e) {
+                // Backward compatibility: Nếu không parse được thành Long (thường là discountCodeId/text code)
+                DiscountCode appliedDiscountCode = discountCodeRepository.findById(walletVoucherId).orElse(null);
+                if (appliedDiscountCode != null) {
+                    int currentQty = appliedDiscountCode.getQuantity();
+                    if (currentQty > 0) {
+                        appliedDiscountCode.setQuantity(currentQty - 1);
+                        discountCodeRepository.save(appliedDiscountCode);
+                    }
+                }
+            }
+        }
     }
 
+    /** ----------------------- HELPERS ----------------------- */
+    private User getUserFromToken(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
+        String token = authHeader.substring(7);
+        return userService.findUserById(jwtUtils.getUserIdFromToken(token));
+    }
+
+    private String getClientIp(HttpServletRequest request) {
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        return (xForwardedFor != null && !xForwardedFor.isBlank())
+                ? xForwardedFor.split(",")[0]
+                : request.getRemoteAddr();
+    }
+
+    private ResponseEntity<?> unauthorized() {
+        return ResponseEntity.status(401).body(Map.of("message", "Missing or invalid token"));
+    }
+
+    // Implemented missing method body
+    private String generateOrderId() {
+        // Simple implementation, consider using a more robust ID generator in a real system
+        return "ORD" + System.currentTimeMillis() + (int)(Math.random() * 100);
+    }
 }

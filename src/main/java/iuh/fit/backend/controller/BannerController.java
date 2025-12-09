@@ -1,5 +1,6 @@
 package iuh.fit.backend.controller;
 
+import iuh.fit.backend.dto.BannerUpdateRequest;
 import iuh.fit.backend.model.Banner;
 import iuh.fit.backend.service.BannerService;
 import iuh.fit.backend.service.CloudinaryService;
@@ -74,14 +75,10 @@ public class BannerController {
         }
     }
 
-    @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
+    @PutMapping(value = "/{id}")
     public ResponseEntity<Banner> updateBanner(
             @PathVariable String id,
-            @RequestParam(value = "title", required = false) String title,
-            @RequestParam(value = "displayOrder", required = false) Integer displayOrder,
-            @RequestParam(value = "isVisible", required = false) Boolean isVisible,
-            @RequestParam(value = "url", required = false) String url,
-            @RequestParam(value = "image", required = false) MultipartFile image) throws IOException {
+            @RequestBody BannerUpdateRequest request) throws IOException {
 
         // Kiểm tra xem banner có tồn tại không
         Banner existingBanner = bannerService.findById(id);
@@ -90,15 +87,18 @@ public class BannerController {
         }
 
         // Cập nhật các trường nếu có
-        if (title != null) existingBanner.setTitle(title);
-        if (displayOrder != null) existingBanner.setDisplayOrder(displayOrder);
-        if (isVisible != null) existingBanner.setVisible(isVisible);
-        if (url != null) existingBanner.setUrl(url);
-
-        // Upload ảnh mới lên Cloudinary nếu có
-        if (image != null && !image.isEmpty()) {
-            String imageUrl = cloudinaryService.uploadImage(image);
-            existingBanner.setImageUrl(imageUrl);
+        if (request.getTitle() != null && !request.getTitle().isEmpty()) {
+            existingBanner.setTitle(request.getTitle());
+        }
+        if (request.getDisplayOrder() != null) {
+            existingBanner.setDisplayOrder(request.getDisplayOrder());
+        }
+        if (request.getIsVisible() != null) {
+            existingBanner.setVisible(request.getIsVisible());
+        }
+        // Cho phép update url ngay cả khi nó rỗng (để xóa url)
+        if (request.getUrl() != null) {
+            existingBanner.setUrl(request.getUrl());
         }
 
         Banner updatedBanner = bannerService.save(existingBanner);
