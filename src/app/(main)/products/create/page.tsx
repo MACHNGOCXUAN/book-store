@@ -33,12 +33,16 @@ export default function CreateProductPage() {
       openNotification(message.type, message?.message);
 
       if (message.type === "success") {
-        router.back();
         dispatch(getFilterProduct({}));
+        setTimeout(() => {
+          router.back();
+        }, 500);
       }
     }
-    dispatch(resetMessage());
-  }, [message]);
+    return () => {
+      dispatch(resetMessage());
+    };
+  }, [message, dispatch, router, openNotification]);
 
   return (
     <div className="boxpage">

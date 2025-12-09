@@ -25,8 +25,10 @@ import {
   Row,
   Select,
   Upload,
+  DatePicker,
 } from "antd";
 import React, { useEffect } from "react";
+import dayjs from "dayjs";
 
 const { TextArea } = Input;
 
@@ -46,7 +48,7 @@ export default function ProductForm({
   const [form] = Form.useForm();
   const [fileList, setFileList] = React.useState<UploadFile[]>([]);
   const dispatch = useAppDispatch();
-  const { categories, loading } = useAppSelector(state => state.category);
+  const { categories, loading } = useAppSelector((state) => state.category);
 
   useEffect(() => {
     if (mode === "edit" && initialValues) {
@@ -57,7 +59,9 @@ export default function ProductForm({
         stock: initialValues.stock,
         description: initialValues.description,
         publisher: initialValues.publisher,
-        publishDate: initialValues.publishDate,
+        publishDate: initialValues.publishDate
+          ? dayjs(initialValues.publishDate)
+          : null,
         category_id: initialValues.category?.categoryId || "",
         importPrice: initialValues.importPrice,
       });
@@ -79,10 +83,22 @@ export default function ProductForm({
   }, [mode, initialValues, form]);
 
   const handleFinish = (values: any) => {
+    console.log("Form values:", values);
+    console.log(
+      "Publish date:",
+      values.publishDate,
+      "Type:",
+      typeof values.publishDate
+    );
     const formData: ProductFormValues = {
       ...values,
-      coverImage: fileList.length > 0 ? fileList[0].url || fileList[0].thumbUrl : "",
+      publishDate: values.publishDate
+        ? values.publishDate.format("YYYY-MM-DD")
+        : null,
+      coverImage:
+        fileList.length > 0 ? fileList[0].url || fileList[0].thumbUrl : "",
     };
+    console.log("Form data to submit:", formData);
     onSubmit(formData);
   };
 
@@ -100,14 +116,17 @@ export default function ProductForm({
     return false;
   };
 
-  const handleChange = ({ fileList: newFileList }: { fileList: UploadFile[] }) => {
+  const handleChange = ({
+    fileList: newFileList,
+  }: {
+    fileList: UploadFile[];
+  }) => {
     setFileList(newFileList);
   };
 
   useEffect(() => {
-    dispatch(getAllCategories())
-  }, [dispatch])
-
+    dispatch(getAllCategories());
+  }, [dispatch]);
 
   return (
     <Form
@@ -172,10 +191,7 @@ export default function ProductForm({
         </Col>
 
         <Col span={12}>
-          <Form.Item
-            label="Giảm giá(%)"
-            name="discountPercent"
-          >
+          <Form.Item label="Giảm giá(%)" name="discountPercent">
             <InputNumber
               style={{ width: "100%" }}
               min={0}
@@ -203,32 +219,43 @@ export default function ProductForm({
         </Col>
 
         <Col span={12}>
-          <Form.Item label="Nhà xuất bản" name="publisher" rules={publisherValidationRules}>
+          <Form.Item
+            label="Nhà xuất bản"
+            name="publisher"
+            rules={publisherValidationRules}
+          >
             <Input placeholder="Nhập nhà xuất bản" />
           </Form.Item>
         </Col>
 
         <Col span={12}>
-          <Form.Item label="Năm xuất bản" name="publishDate" rules={publishDateValidationRules}>
-            <InputNumber
+          <Form.Item
+            label="Ngày xuất bản"
+            name="publishDate"
+            rules={publishDateValidationRules}
+          >
+            <DatePicker
               style={{ width: "100%" }}
-              min={1900}
-              max={new Date().getFullYear()}
-              placeholder="Nhập năm xuất bản"
+              placeholder="Chọn ngày xuất bản"
+              disabledDate={(current) =>
+                current && current > dayjs().endOf("day")
+              }
             />
           </Form.Item>
         </Col>
 
         <Col span={12}>
-          <Form.Item label="Loại sách" name="category_id" rules={categoryValidationRules}>
+          <Form.Item
+            label="Loại sách"
+            name="category_id"
+            rules={categoryValidationRules}
+          >
             <Select placeholder="Chọn loại sách" allowClear>
-              {
-                categories.map((category: any) => (
-                  <Select.Option key={category.id} value={category.categoryId}>
-                    {category.categoryName}
-                  </Select.Option>
-                ))
-              }
+              {categories.map((category: any) => (
+                <Select.Option key={category.id} value={category.categoryId}>
+                  {category.categoryName}
+                </Select.Option>
+              ))}
             </Select>
           </Form.Item>
         </Col>
@@ -248,12 +275,16 @@ export default function ProductForm({
         </Col>
 
         <Col span={24}>
-          <Form.Item label="Mô tả" name="description" rules={descriptionValidationRules}>
+          <Form.Item
+            label="Mô tả"
+            name="description"
+            rules={descriptionValidationRules}
+          >
             <TextArea
               rows={4}
               placeholder="Nhập mô tả về sách"
               showCount
-              maxLength={1000}
+              maxLength={2000}
             />
           </Form.Item>
         </Col>

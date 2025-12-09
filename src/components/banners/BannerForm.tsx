@@ -1,8 +1,21 @@
 "use client";
-import { bannerTitleValidationRules, bannerUrlValidationRules } from "@/utils/validation";
+import {
+  bannerTitleValidationRules,
+  bannerUrlValidationRules,
+} from "@/utils/validation";
 import { UploadOutlined } from "@ant-design/icons";
 import type { UploadFile } from "antd";
-import { Button, Col, Form, Input, InputNumber, Row, Switch, Upload, message } from "antd";
+import {
+  Button,
+  Col,
+  Form,
+  Input,
+  InputNumber,
+  Row,
+  Switch,
+  Upload,
+  message,
+} from "antd";
 import React, { useEffect } from "react";
 
 export interface BannerFormValues {
@@ -21,7 +34,12 @@ interface BannerFormProps {
   onCancel: () => void;
 }
 
-export default function BannerForm({ mode, initialValues, onSubmit, onCancel }: BannerFormProps) {
+export default function BannerForm({
+  mode,
+  initialValues,
+  onSubmit,
+  onCancel,
+}: BannerFormProps) {
   const [form] = Form.useForm();
   const [fileList, setFileList] = React.useState<UploadFile[]>([]);
 
@@ -65,13 +83,12 @@ export default function BannerForm({ mode, initialValues, onSubmit, onCancel }: 
         url: "",
       });
       setFileList([]);
-
     } else if (mode === "edit") {
       if (initialValues) {
         form.setFieldsValue({
           title: initialValues.title,
           displayOrder: initialValues.displayOrder,
-          visible: initialValues.visible, // Lấy giá trị 'true' hoặc 'false' từ data
+          visible: initialValues.isVisible || initialValues.visible, // Hỗ trợ cả isVisible từ backend
           url: initialValues.url,
         });
 
@@ -88,7 +105,6 @@ export default function BannerForm({ mode, initialValues, onSubmit, onCancel }: 
         } else {
           setFileList([]);
         }
-
       } else {
         form.resetFields();
         setFileList([]);
@@ -120,38 +136,43 @@ export default function BannerForm({ mode, initialValues, onSubmit, onCancel }: 
     return false;
   };
 
-  const handleChange = ({ fileList: newFileList }: { fileList: UploadFile[] }) => {
+  const handleChange = ({
+    fileList: newFileList,
+  }: {
+    fileList: UploadFile[];
+  }) => {
     setFileList(newFileList);
   };
 
   const handleFinish = (values: any) => {
-    // Tạo FormData để gửi file thực
-    const formData = new FormData();
+    // Gửi JSON thay vì FormData (backend đã đổi thành nhận JSON)
+    const payload = {
+      title: values.title || "",
+      displayOrder: values.displayOrder || 0,
+      isVisible: values.visible ? true : false,
+      url: values.url || "",
+    };
 
-    formData.append("title", values.title || "");
-    formData.append("displayOrder", (values.displayOrder || 0).toString());
-    // Backend expects "isVisible" parameter name
-    formData.append("isVisible", (values.visible ? "true" : "false"));
-    if (values.url) formData.append("url", values.url);
+    console.log("Dữ liệu Banner gửi đi (JSON):");
+    console.log(payload);
 
-    // Thêm file ảnh nếu có
-    if (fileList.length > 0 && fileList[0].originFileObj) {
-      formData.append("image", fileList[0].originFileObj);
-    }
-
-    console.log("Dữ liệu Banner gửi đi (FormData):");
-    for (let [key, value] of formData.entries()) {
-      console.log(key, value);
-    }
-
-    onSubmit(formData as any);
+    onSubmit(payload as any);
   };
 
   return (
-    <Form form={form} layout="vertical" onFinish={handleFinish} autoComplete="off">
+    <Form
+      form={form}
+      layout="vertical"
+      onFinish={handleFinish}
+      autoComplete="off"
+    >
       <Row gutter={16}>
         <Col span={16}>
-          <Form.Item label="Tiêu đề" name="title" rules={bannerTitleValidationRules}>
+          <Form.Item
+            label="Tiêu đề"
+            name="title"
+            rules={bannerTitleValidationRules}
+          >
             <Input placeholder="Nhập tiêu đề banner" />
           </Form.Item>
         </Col>
@@ -169,7 +190,11 @@ export default function BannerForm({ mode, initialValues, onSubmit, onCancel }: 
         </Col>
 
         <Col span={16}>
-          <Form.Item label="Liên kết (URL)" name="url" rules={bannerUrlValidationRules}>
+          <Form.Item
+            label="Liên kết (URL)"
+            name="url"
+            rules={bannerUrlValidationRules}
+          >
             <Input placeholder="https://..." />
           </Form.Item>
         </Col>

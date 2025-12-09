@@ -38,7 +38,9 @@ export const getProductId = createAsyncThunk(
 export const updateProduct = createAsyncThunk(
   "product/updateProduct",
   async (data: ProductFormValues) => {
+    console.log("updateProduct data:", data);
     const response = await http.put(`books/${data.bookId}`, data);
+    console.log("updateProduct response:", response);
     return response;
   }
 );
@@ -115,13 +117,15 @@ export const productSlice = createSlice({
         state.message = {
           type: "success",
           message: "Tạo sản phẩm thành công!",
+          timestamp: Date.now(),
         };
       })
       .addCase(createProduct.rejected, (state) => {
         state.loading = false;
         state.message = {
-          type: "success",
+          type: "error",
           message: "Tạo sản phẩm thất bại!",
+          timestamp: Date.now(),
         };
       });
 
@@ -147,13 +151,16 @@ export const productSlice = createSlice({
         state.message = {
           type: "success",
           message: "Cập nhật sản phẩm thành công!",
+          timestamp: Date.now(),
         };
+        console.log("updateProduct fulfilled - message set to:", state.message);
       })
       .addCase(updateProduct.rejected, (state) => {
         state.loading = false;
         state.message = {
-          type: "success",
+          type: "error",
           message: "Cập nhật sản phẩm thất bại!",
+          timestamp: Date.now(),
         };
       });
   },

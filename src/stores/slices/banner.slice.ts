@@ -4,7 +4,7 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 export interface BannerFormValues {
   bannerId?: string;
   title: string;
-  imageUrl: string; // will store base64 string or URL
+  imageUrl?: string; // will store base64 string or URL
   displayOrder?: number;
   isVisible?: boolean;
   url?: string;
@@ -16,13 +16,7 @@ export interface BannerFormValues {
 export const getFilterBanner = createAsyncThunk(
   "banners/getFilterBanner",
   async (data: any) => {
-    const {
-      page,
-      limit,
-      title,
-      isVisible,
-      url,
-    } = data;
+    const { page, limit, title, isVisible, url } = data;
 
     const params = new URLSearchParams();
 
@@ -86,6 +80,8 @@ export const getBannerById = getBannerId;
 export const updateBanner = createAsyncThunk(
   "banners/updateBanner",
   async (payload: any) => {
+    console.log("updateBanner payload nhận được:", payload);
+
     let id: string;
     let data: BannerFormValues;
 
@@ -103,7 +99,19 @@ export const updateBanner = createAsyncThunk(
       throw new Error("Invalid payload for updateBanner");
     }
 
+    console.log("updateBanner gửi data:", data, "id:", id);
     const response = await http.put(`banners/${id}`, data);
+    return response;
+  }
+);
+
+// Action để toggle trạng thái hiển thị/ẩn banner
+export const toggleBannerVisibility = createAsyncThunk(
+  "banners/toggleVisibility",
+  async (payload: { id: string; isVisible: boolean }) => {
+    const response = await http.put(`banners/${payload.id}`, {
+      isVisible: !payload.isVisible,
+    });
     return response;
   }
 );
@@ -232,6 +240,25 @@ export const bannerSlice = createSlice({
         state.message = {
           type: "error",
           message: "Cập nhật banner thất bại!",
+        };
+      });
+
+    builder
+      .addCase(toggleBannerVisibility.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(toggleBannerVisibility.fulfilled, (state) => {
+        state.loading = false;
+        state.message = {
+          type: "success",
+          message: "Cập nhật trạng thái banner thành công!",
+        };
+      })
+      .addCase(toggleBannerVisibility.rejected, (state) => {
+        state.loading = false;
+        state.message = {
+          type: "error",
+          message: "Cập nhật trạng thái banner thất bại!",
         };
       });
   },
