@@ -47,9 +47,16 @@ public class UserDiscountWallet {
     private DiscountCode discountCode;
 
     /**
+     * Số lần KH còn được sử dụng voucher này
+     */
+    @Column(nullable = false)
+    private Integer remainingUses;
+
+    /**
      * true = voucher đã được dùng trong 1 order
      * false = chưa dùng
      */
+
     @Builder.Default
     @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT false")
     private Boolean used = false;
@@ -82,6 +89,24 @@ public class UserDiscountWallet {
         this.used = true;
         this.usedDate = LocalDateTime.now();
         this.usedInOrderId = orderId;
+    }
+
+    /**
+     * Giảm số lần sử dụng còn lại (khi áp dụng voucher vào đơn hàng)
+     * KHÔNG set used=true ở đây, chỉ trừ remainingUses đi 1
+     */
+    public void decrementRemainingUses() {
+        if (this.remainingUses != null && this.remainingUses > 0) {
+            this.remainingUses--;
+        }
+    }
+
+    /**
+     * Check xem voucher đã hết lượt sử dụng chưa
+     * @return true nếu remainingUses = 0
+     */
+    public boolean isExhausted() {
+        return this.remainingUses != null && this.remainingUses <= 0;
     }
 
 }

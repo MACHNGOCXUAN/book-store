@@ -83,4 +83,13 @@ public interface DiscountCodeService {
      * Trả về id của wallet entry vừa tạo.
      */
     Long exchangeVoucher(Customer customer, String voucherId, int pointsToSpend);
+
+    /**
+     * Phân phối thêm voucher cho các khách hàng mới phù hợp sau khi update DiscountCode.
+     * Chỉ tạo wallet cho khách hàng chưa sở hữu voucher này.
+     * 
+     * @param discountCode voucher sau khi update
+     * @return số lượng wallet mới được tạo
+     */
+    int distributeVoucherToNewEligibleUsers(DiscountCode discountCode);
 }

@@ -121,6 +121,15 @@ public class DiscountCodeController {
         }
         discountCode.setDiscountCodeId(id);
         DiscountCode updatedDiscount = discountCodeService.save(discountCode);
+        
+        // Phân phối thêm voucher cho khách hàng mới phù hợp sau khi update
+        try {
+            int newDistributed = discountCodeService.distributeVoucherToNewEligibleUsers(updatedDiscount);
+            log.info("Distributed updated voucher {} to {} new eligible users", id, newDistributed);
+        } catch (Exception ex) {
+            log.error("Distribute updated voucher failed for discount {}: {}", id, ex.getMessage());
+        }
+        
         return ResponseEntity.ok(updatedDiscount);
     }
 

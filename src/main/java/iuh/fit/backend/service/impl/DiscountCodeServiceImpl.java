@@ -1,6 +1,7 @@
 package iuh.fit.backend.service.impl;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -134,15 +135,17 @@ public class DiscountCodeServiceImpl implements iuh.fit.backend.service.Discount
             if (wallet.isEmpty()) {
                 throw new RuntimeException("Bạn không sở hữu voucher này");
             }
-            // Mark as used
+            // Chỉ decrement remainingUses (không set used=true ở đây)
             UserDiscountWallet w = wallet.get();
-            w.markAsUsed(""); // orderId sẽ được set sau khi order được tạo
+            w.decrementRemainingUses();
             userDiscountWalletRepository.save(w);
+            log.info("Voucher {} decremented. remainingUses now: {}", voucherId, w.getRemainingUses());
         } else {
             // Public voucher - giảm quantity
             if (voucher.getQuantity() > 0) {
                 voucher.setQuantity(voucher.getQuantity() - 1);
                 discountCodeRepository.save(voucher);
+                log.info("Public voucher {} quantity decremented. quantity now: {}", voucherId, voucher.getQuantity());
             }
         }
 
@@ -232,7 +235,21 @@ public class DiscountCodeServiceImpl implements iuh.fit.backend.service.Discount
             .findByCustomerAndDiscountCodeAndUsedFalse(customer, voucher)
             .orElseThrow(() -> new RuntimeException("Voucher không khả dụng hoặc đã được sử dụng"));
 
-        wallet.markAsUsed(orderId);
+        // ⭐ Decrement remainingUses
+        wallet.decrementRemainingUses();
+        wallet.setUsedInOrderId(orderId);
+        wallet.setUsedDate(LocalDateTime.now());
+        
+        // Set used=true nếu remainingUses = 0
+        if (wallet.isExhausted()) {
+            wallet.markAsUsed(orderId);
+            log.info("Voucher {} marked as USED (remainingUses=0) in order {} for customer {}", 
+                    voucherId, orderId, customer.getUserId());
+        } else {
+            log.info("Voucher {} applied in order {} for customer {}. remainingUses: {}", 
+                    voucherId, orderId, customer.getUserId(), wallet.getRemainingUses());
+        }
+        
         userDiscountWalletRepository.save(wallet);
         }
 
@@ -269,23 +286,38 @@ public class DiscountCodeServiceImpl implements iuh.fit.backend.service.Discount
         }
         customerRepository.save(customer);
 
-        // Create wallet entry
+        // Create wallet entry with remainingUses = maxQuantityCanUse
         UserDiscountWallet wallet = UserDiscountWallet.builder()
                 .customer(customer)
                 .discountCode(voucher)
+                .remainingUses(voucher.getMaxQuantityCanUse())
                 .used(false)
                 .build();
         UserDiscountWallet saved = userDiscountWalletRepository.save(wallet);
+        log.info("Voucher {} exchanged for customer {}. remainingUses set to {}", 
+                voucherId, customer.getUserId(), voucher.getMaxQuantityCanUse());
         return saved.getId();
     }
 
     /**
      * Phân phối voucher đến các khách hàng đủ điều kiện và thêm vào UserDiscountWallet.
+     * 
+     * Quy tắc phân phối:
+     * - isPublic=true: phân phối cho tất cả khách hàng đủ điều kiện (minTierRequired)
+     * - isPublic=false, redeemable=false: phân phối cho nhóm khách hàng cụ thể (minTierRequired)
+     * - isPublic=false, redeemable=true: KHÔNG phân phối tự động, khách hàng tự trao đổi
      */
     @Override
     @Transactional
     public int distributeVoucherToEligibleUsers(DiscountCode discountCode) {
         int created = 0;
+
+        // SKIP nếu là redeemable voucher (khách hàng tự trao đổi)
+        if (Boolean.FALSE.equals(discountCode.getIsPublic()) && Boolean.TRUE.equals(discountCode.getRedeemable())) {
+            log.info("[VoucherDist] SKIP distributing redeemable voucher {} - customers must exchange", 
+                    discountCode.getDiscountCodeId());
+            return 0;
+        }
 
         // Xác định danh sách khách hàng đủ điều kiện
         List<Customer> candidates;
@@ -344,14 +376,16 @@ public class DiscountCodeServiceImpl implements iuh.fit.backend.service.Discount
             UserDiscountWallet wallet = UserDiscountWallet.builder()
                     .customer(customer)
                     .discountCode(discountCode)
+                    .remainingUses(discountCode.getMaxQuantityCanUse())
                     .used(false)
                     .build();
             userDiscountWalletRepository.save(wallet);
             created++;
         }
 
-        log.info("[VoucherDist] Distributed voucher {} to {} eligible users (minTierRequired={}, isPublic={})",
-                discountCode.getDiscountCodeId(), created, discountCode.getMinTierRequired(), isPublic);
+        log.info("[VoucherDist] Distributed voucher {} to {} eligible users (minTierRequired={}, isPublic={}, redeemable={})",
+                discountCode.getDiscountCodeId(), created, discountCode.getMinTierRequired(), isPublic, 
+                discountCode.getRedeemable());
         return created;
     }
 
@@ -441,5 +475,80 @@ public class DiscountCodeServiceImpl implements iuh.fit.backend.service.Discount
 
     private boolean isTierSufficient(CustomerTier current, CustomerTier required) {
         return current.ordinal() >= required.ordinal();
+    }
+
+    /**
+     * Phân phối thêm voucher cho các khách hàng mới phù hợp sau khi update DiscountCode.
+     * Tương tự distributeVoucherToEligibleUsers() nhưng chỉ tạo cho khách mới phù hợp.
+     */
+    @Override
+    @Transactional
+    public int distributeVoucherToNewEligibleUsers(DiscountCode discountCode) {
+        int created = 0;
+
+        // SKIP nếu là redeemable voucher (khách hàng tự trao đổi)
+        if (Boolean.FALSE.equals(discountCode.getIsPublic()) && Boolean.TRUE.equals(discountCode.getRedeemable())) {
+            log.info("[VoucherDistUpdate] SKIP distributing redeemable voucher {} - customers must exchange", 
+                    discountCode.getDiscountCodeId());
+            return 0;
+        }
+
+        // Xác định danh sách khách hàng đủ điều kiện
+        List<Customer> candidates;
+
+        boolean isPublic = Boolean.TRUE.equals(discountCode.getIsPublic());
+        List<Customer> allCustomers = customerRepository.findAll();
+        log.info("[VoucherDistUpdate] Total customers in DB: {}", allCustomers.size());
+
+        if (discountCode.getMinTierRequired() == CustomerTier.NEW_USER) {
+            candidates = allCustomers;
+            log.info("[VoucherDistUpdate] NEW_USER candidates: {} (all customers)", candidates.size());
+        } else if (isPublic) {
+            candidates = allCustomers.stream()
+                    .filter(c -> {
+                        if (discountCode.getMinTierRequired() == null) return true;
+                        int points = java.util.Optional.ofNullable(c.getLoyaltyPoints()).orElse(0);
+                        CustomerTier calculatedTier = calculateTierFromPoints(points);
+                        return isTierSufficient(calculatedTier, discountCode.getMinTierRequired());
+                    })
+                    .collect(Collectors.toList());
+            log.info("[VoucherDistUpdate] PUBLIC candidates (minTierRequired={}, filtered by points): {}", 
+                discountCode.getMinTierRequired(), candidates.size());
+        } else {
+            candidates = allCustomers.stream()
+                    .filter(c -> {
+                        if (discountCode.getMinTierRequired() == null) return true;
+                        int points = java.util.Optional.ofNullable(c.getLoyaltyPoints()).orElse(0);
+                        CustomerTier calculatedTier = calculateTierFromPoints(points);
+                        return isTierSufficient(calculatedTier, discountCode.getMinTierRequired());
+                    })
+                    .collect(Collectors.toList());
+            log.info("[VoucherDistUpdate] NON-PUBLIC candidates (minTierRequired={}, filtered by points): {}", 
+                discountCode.getMinTierRequired(), candidates.size());
+        }
+
+        // Tạo wallet entries chỉ cho những khách hàng CHƯA sở hữu voucher này
+        for (Customer customer : candidates) {
+            boolean exists = userDiscountWalletRepository.existsByCustomerAndDiscountCode(customer, discountCode);
+            if (exists) {
+                log.debug("[VoucherDistUpdate] Skip existing wallet for userId={} and discountCodeId={}",
+                        customer.getUserId(), discountCode.getDiscountCodeId());
+                continue;
+            }
+
+            UserDiscountWallet wallet = UserDiscountWallet.builder()
+                    .customer(customer)
+                    .discountCode(discountCode)
+                    .remainingUses(discountCode.getMaxQuantityCanUse())
+                    .used(false)
+                    .build();
+            userDiscountWalletRepository.save(wallet);
+            created++;
+        }
+
+        log.info("[VoucherDistUpdate] Distributed voucher {} to {} NEW eligible users (minTierRequired={}, isPublic={}, redeemable={})",
+                discountCode.getDiscountCodeId(), created, discountCode.getMinTierRequired(), isPublic, 
+                discountCode.getRedeemable());
+        return created;
     }
 }
