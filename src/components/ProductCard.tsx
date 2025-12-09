@@ -23,6 +23,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ book }) => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
+  // Ẩn sản phẩm nếu stock = 0
+  if (book.stock <= 0) {
+    return null;
+  }
+
   // Hàm điều hướng đến trang chi tiết sản phẩm
   const handleViewDetails = () => {
     navigate(`/books/${book.bookId}`);

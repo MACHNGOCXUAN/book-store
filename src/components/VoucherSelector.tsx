@@ -13,7 +13,8 @@ import {
 } from "antd";
 import { useEffect, useState } from "react";
 import API from "../config/api";
-import { fetchWalletVouchers } from "../services/loyaltyService";
+// ❌ Bỏ service cũ vì đang normalize/filter sai
+// import { fetchWalletVouchers } from "../services/loyaltyService";
 import type { WalletVoucher } from "../types/Loyalty";
 
 const { Text, Paragraph } = Typography;
@@ -37,14 +38,53 @@ const buildApiUrl = (path: string) => {
 interface VoucherSelectorProps {
   cartTotal: number;
   onApplyVoucher: (voucherId: string, discountAmount: number) => void;
-  onRemoveVoucher: () => void; // Thêm hàm này để xử lý việc gỡ voucher
+  onRemoveVoucher: () => void;
   selectedVoucherId?: string;
 }
+
+/** ✅ Parse used an toàn hơn (backend có thể trả boolean/number/string) */
+const parseUsed = (v: unknown) => {
+  if (v === true) return true;
+  if (v === false) return false;
+  if (typeof v === "number") return v === 1;
+  if (typeof v === "string") return v.toLowerCase() === "true" || v === "1";
+  return Boolean(v);
+};
+
+/** ✅ Normalize theo đúng chuẩn VoucherPage */
+const normalizeWalletVouchers = (data: unknown): WalletVoucher[] => {
+  const arr = Array.isArray(data) ? data : [];
+
+  return arr.map((m: Record<string, unknown>) => {
+    return {
+      walletVoucherId: String(m.walletVoucherId ?? m.discountCodeId ?? ""),
+      discountCodeId: String(m.discountCodeId ?? ""),
+      name: String(m.name ?? ""),
+      percent: Number(m.percent ?? 0),
+      minPriceToApply: Number(m.minPriceToApply ?? 0),
+      description: String(m.description ?? ""),
+      startDate: String(m.startDate ?? new Date().toISOString()),
+      endDate: String(m.endDate ?? new Date().toISOString()),
+      createdDate: new Date().toISOString(),
+
+      used: parseUsed(m.used),
+      remainingUses: Number(m.remainingUses ?? 0),
+
+      isPublic: Boolean(m.isPublic ?? true),
+      redeemable: Boolean(m.redeemable ?? false),
+
+      discountType: (m.discountType === "ONE_TIME"
+        ? "ONE_TIME"
+        : "MANY_TIME") as "ONE_TIME" | "MANY_TIME",
+      maxQuantityCanUse: Number(m.maxQuantityCanUse ?? 1),
+    };
+  }) as WalletVoucher[];
+};
 
 const VoucherSelector: React.FC<VoucherSelectorProps> = ({
   cartTotal,
   onApplyVoucher,
-  onRemoveVoucher, // Sử dụng hàm mới
+  onRemoveVoucher,
   selectedVoucherId,
 }) => {
   const [vouchers, setVouchers] = useState<WalletVoucher[]>([]);
@@ -59,50 +99,72 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
   );
   const [isApplying, setIsApplying] = useState(false);
 
-  const token = localStorage.getItem("access_token") || "";
+  // ✅ Không giữ token cố định ngoài scope để tránh stale
+  const getToken = () => localStorage.getItem("access_token") || "";
 
   // Load available vouchers khi component mount hoặc cartTotal thay đổi
   useEffect(() => {
-    if (cartTotal > 0 && token) {
+    if (cartTotal > 0 && getToken()) {
       loadVouchers();
+    } else {
+      setVouchers([]);
+      setApplicableMap({});
+      setReasonMap({});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cartTotal, token]);
+  }, [cartTotal]);
 
   const loadVouchers = async () => {
     setLoading(true);
     try {
-      // Fetch từ wallet vouchers (đã filter ONE_TIME used)
-      const allVouchers = await fetchWalletVouchers(token);
+      const token = getToken();
+      if (!token) {
+        setVouchers([]);
+        return;
+      }
 
-      // Filter: ẩn đã sử dụng, hết hạn, quantity = 0
+      // ✅ Lấy đúng endpoint giống VoucherPage
+      const resp = await fetch(buildApiUrl(`/discounts/wallet`), {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!resp.ok) {
+        const t = await resp.text();
+        throw new Error(`HTTP ${resp.status}: ${t || "Không thể tải ví"}`);
+      }
+
+      const data = await resp.json();
+
+      // ✅ Normalize theo chuẩn VoucherPage
+      const normalized = normalizeWalletVouchers(data);
+
+      // ✅ Filter giống "AVAILABLE" logic
       const now = new Date();
-      const filtered = allVouchers.filter((voucher) => {
-        // Ẩn voucher đã sử dụng
-        if (voucher.used) {
-          return false;
-        }
+      const filtered = normalized.filter((voucher) => {
+        const isExpired = new Date(voucher.endDate) < now;
+        const isUsed = Boolean(voucher.used);
+        const hasRemaining = voucher.remainingUses > 0;
 
-        // Ẩn voucher hết hạn
-        if (new Date(voucher.endDate) < now) {
-          return false;
-        }
-
-        return true;
+        return !isUsed && !isExpired && hasRemaining;
       });
 
       setVouchers(filtered);
 
-      // Validate applicability per voucher against backend
+      // ✅ Validate applicability per voucher against backend
       const results: Record<string, boolean> = {};
       const reasons: Record<string, string> = {};
+
       await Promise.all(
         filtered.map(async (v) => {
           try {
-            const resp = await fetch(
+            const checkResp = await fetch(
               buildApiUrl(
                 `/discounts/wallet/${encodeURIComponent(
-                  v.discountCodeId
+                  v.walletVoucherId
                 )}?cartTotal=${encodeURIComponent(cartTotal)}`
               ),
               {
@@ -113,34 +175,36 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
                 },
               }
             );
-            if (resp.ok) {
-              const dto = await resp.json();
-              results[v.discountCodeId] = !!dto.applicable;
+
+            if (checkResp.ok) {
+              const dto = await checkResp.json();
+              results[v.walletVoucherId] = !!dto.applicable;
               if (dto.reason) {
-                reasons[v.discountCodeId] = String(dto.reason);
+                reasons[v.walletVoucherId] = String(dto.reason);
               }
             } else {
-              if (resp.status === 401) {
-                // Không khóa voucher khi chưa xác thực, hiển thị lý do thân thiện
-                results[v.discountCodeId] = true;
-                reasons[v.discountCodeId] =
+              if (checkResp.status === 401) {
+                results[v.walletVoucherId] = true;
+                reasons[v.walletVoucherId] =
                   "Cần đăng nhập để kiểm tra điều kiện áp dụng";
               } else {
-                results[v.discountCodeId] = false;
+                results[v.walletVoucherId] = false;
                 reasons[
-                  v.discountCodeId
-                ] = `HTTP ${resp.status}: Không thể kiểm tra điều kiện áp dụng`;
+                  v.walletVoucherId
+                ] = `HTTP ${checkResp.status}: Không thể kiểm tra điều kiện áp dụng`;
               }
             }
           } catch {
-            results[v.discountCodeId] = false;
-            reasons[v.discountCodeId] = "Lỗi kết nối khi kiểm tra điều kiện";
+            results[v.walletVoucherId] = false;
+            reasons[v.walletVoucherId] = "Lỗi kết nối khi kiểm tra điều kiện";
           }
         })
       );
+
       setApplicableMap(results);
       setReasonMap(reasons);
-    } catch {
+    } catch (e) {
+      console.error(e);
       message.error("Lỗi khi tải danh sách voucher");
     } finally {
       setLoading(false);
@@ -150,11 +214,14 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
   const handleApplyVoucher = async (voucher: WalletVoucher) => {
     setIsApplying(true);
     try {
+      const token = getToken();
+      if (!token) throw new Error("Vui lòng đăng nhập để áp dụng voucher");
+
       // Re-validate applicability before applying
       const resp = await fetch(
         buildApiUrl(
           `/discounts/wallet/${encodeURIComponent(
-            voucher.discountCodeId
+            voucher.walletVoucherId
           )}?cartTotal=${encodeURIComponent(cartTotal)}`
         ),
         {
@@ -165,12 +232,14 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
           },
         }
       );
+
       if (!resp.ok) {
         if (resp.status === 401) {
           throw new Error("Vui lòng đăng nhập để áp dụng voucher");
         }
         throw new Error(`Kiểm tra voucher thất bại (HTTP ${resp.status})`);
       }
+
       const dto = await resp.json();
       if (!dto.applicable) {
         throw new Error(
@@ -186,13 +255,13 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
           "vi-VN"
         )}₫`
       );
-      onApplyVoucher(voucher.discountCodeId, discountAmount);
+
+      onApplyVoucher(voucher.walletVoucherId, discountAmount);
       setIsDrawerOpen(false);
       setSelectedVoucher(null);
 
-      // Reload danh sách voucher để ẩn voucher đã được dùng (nếu là ONE_TIME)
-      // loadVouchers();
-      // Tạm thời không load để giữ voucher trong danh sách nhưng trạng thái là 'Đã chọn'
+      // ✅ Nếu bạn muốn sau khi áp dụng thì reload để ẩn ONE_TIME đã dùng
+      // await loadVouchers();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Lỗi khi áp dụng voucher";
       message.error(msg);
@@ -208,19 +277,21 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
 
   const getAppliedVoucher = () => {
     return (
-      vouchers.find((v) => v.discountCodeId === selectedVoucherId) ||
+      vouchers.find((v) => v.walletVoucherId === selectedVoucherId) ||
       selectedVoucher
     );
   };
 
+  // =================== UI GIỮ NGUYÊN ===================
+
   const renderVoucherCard = (voucher: WalletVoucher) => {
-    const backendApplicable = applicableMap[voucher.discountCodeId];
-    const backendReason = reasonMap[voucher.discountCodeId];
+    const backendApplicable = applicableMap[voucher.walletVoucherId];
+    const backendReason = reasonMap[voucher.walletVoucherId];
     const isLocked =
       cartTotal < voucher.minPriceToApply || backendApplicable === false;
-    const isSelected = selectedVoucherId === voucher.discountCodeId;
+    const isSelected = selectedVoucherId === voucher.walletVoucherId;
     const isCurrentlySelected =
-      selectedVoucher?.discountCodeId === voucher.discountCodeId;
+      selectedVoucher?.walletVoucherId === voucher.walletVoucherId;
 
     const cardBorderColor = isSelected
       ? "#C92127"
@@ -436,7 +507,7 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
         placement="right"
         onClose={() => {
           setIsDrawerOpen(false);
-          setSelectedVoucher(null); // Clear selected voucher on close
+          setSelectedVoucher(null);
         }}
         open={isDrawerOpen}
         width={500}

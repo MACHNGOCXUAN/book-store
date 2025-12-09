@@ -185,6 +185,10 @@ const PaymentFailed = ({ errorCode, errorMessage }) => {
         title: "Giao dịch bị hủy",
         desc: "Bạn đã hủy giao dịch thanh toán.",
       },
+      COD: {
+        title: "Đơn hàng đang chờ xác nhận",
+        desc: "Đơn hàng của bạn đã được tạo thành công và đang chờ xác nhận từ cửa hàng. Bạn sẽ thanh toán khi nhận hàng.",
+      },
       default: {
         title: "Thanh toán không thành công",
         desc:
@@ -297,21 +301,30 @@ const PaymentFailed = ({ errorCode, errorMessage }) => {
 const PaymentStatus = () => {
   const dispatch = useAppDispatch();
   const { currentOrder } = useAppSelector((state) => state.orders);
+  const [loading, setLoading] = useState(true);
 
   const location = useLocation();
   const params = new URLSearchParams(location.search);
 
+  // Backend đã xử lý redirect với real orderId, không cần sessionId nữa
+  const orderId = params.get("orderId"); // Real orderId từ backend handler
+  const resultCode = params.get("resultCode");
   const status = params.get("status");
-  const orderId = params.get("orderId");
 
+  // Load order details khi có orderId
   useEffect(() => {
-    if (orderId) {
+    if (orderId && orderId !== "ERROR" && orderId !== "NOT_FOUND") {
       dispatch(getOrderDetail(orderId));
     }
+    setLoading(false);
   }, [dispatch, orderId]);
 
-  if (!orderId && status == "success") {
-    return <div>Không có dữ liệu</div>;
+  if (loading) {
+    return <div>Loading</div>;
+  }
+
+  if (!orderId || orderId === "ERROR" || orderId === "NOT_FOUND") {
+    return <div>Không có dữ liệu đơn hàng</div>;
   }
 
   const mockSuccessData = {
@@ -333,17 +346,25 @@ const PaymentStatus = () => {
     return <div>Loading</div>;
   }
 
+  // Determine success or failure
+  // Success if: resultCode === "0" (MoMo/VNPay) OR no error params (COD)
+  const isSuccess =
+    resultCode === "0" || status === "success" || (!resultCode && !status);
+
+  // Nếu COD (không có error code) nhưng không phải success → hiển thị payment info
+  const isCOD = !resultCode && !status;
+
   return (
     <div>
-      {status === "success" ? (
+      {isSuccess ? (
         <PaymentSuccess
           orderId={currentOrder?.orderId}
           orderData={mockSuccessData}
         />
       ) : (
         <PaymentFailed
-          errorCode="07"
-          errorMessage="Giao dịch bị từ chối bởi ngân hàng"
+          errorCode={isCOD ? "COD" : resultCode || "07"}
+          errorMessage={params.get("message") || "Giao dịch bị từ chối"}
         />
       )}
     </div>

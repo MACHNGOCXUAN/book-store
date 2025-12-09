@@ -401,6 +401,7 @@ const CheckoutPage: React.FC = () => {
           );
 
           // 🔹 Chuyển hướng tới URL thanh toán
+          // Backend handler sẽ redirect tới /payment-status?orderId=ORDxxxx sau khi thanh toán
           window.location.href = response.paymentUrl;
         } catch (error) {
           let errorMessage = "Không thể tạo thanh toán MoMo. Vui lòng thử lại!";
@@ -526,7 +527,7 @@ const CheckoutPage: React.FC = () => {
             }
             dispatch(clearOrder());
             navigate(
-              `/payment-status?status=success&orderId=${result.payload.order?.orderId}`
+              `/payment-status?orderId=${result.payload.order?.orderId}`
             );
           }
         } else {
@@ -1092,7 +1093,7 @@ const CheckoutPage: React.FC = () => {
                   // Redirect tới trang success
                   dispatch(clearOrder());
                   navigate(
-                    `/payment-status?status=success&orderId=${currentOrderPayment.current?.orderId}`
+                    `/payment-status?orderId=${currentOrderPayment.current?.orderId}`
                   );
                 } catch (error) {
                   console.error("❌ Error creating order:", error);

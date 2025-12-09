@@ -340,7 +340,7 @@ export const fetchWalletVoucherStats = async (
     const stats: WalletVoucherStats = {
       totalVouchers: vouchers.length,
       availableVouchers: vouchers.filter(
-        (v) => !v.used && new Date(v.expiryDate) > now
+        (v) => !v.used && new Date(v.endDate) > now && v.remainingUses > 0
       ).length,
       usedVouchers: vouchers.filter((v) => v.used).length,
       exchangedVouchers: vouchers.filter((v) => v.source === "EXCHANGE").length,
@@ -348,8 +348,9 @@ export const fetchWalletVoucherStats = async (
       expiringCount: vouchers.filter(
         (v) =>
           !v.used &&
-          new Date(v.expiryDate) > now &&
-          new Date(v.expiryDate) < expiringDate
+          new Date(v.endDate) > now &&
+          new Date(v.endDate) < expiringDate &&
+          v.remainingUses > 0
       ).length,
     };
 
