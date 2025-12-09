@@ -46,6 +46,11 @@ export default function UserPage() {
     dispatch(getUserCustomerFilter({}));
   }, [dispatch]);
 
+  useEffect(() => {
+    console.log("listCustomer:", listCustomer);
+    console.log("pagination:", pagination);
+  }, [listCustomer, pagination]);
+
   const handlePageChange = (page: number, pageSize: number) => {
     dispatch(getUserCustomerFilter({ page: page, limit: pageSize }));
   };
@@ -93,7 +98,9 @@ export default function UserPage() {
   };
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { userDetail, loading: isLoading } = useAppSelector((state) => state.user);
+  const { userDetail, loading: isLoading } = useAppSelector(
+    (state) => state.user
+  );
   const handleViewDetail = (id: string) => {
     dispatch(getUserById(id));
     setIsModalOpen(true);
@@ -244,7 +251,7 @@ export default function UserPage() {
 
   return (
     <div className="boxpage">
-      { contextHolder }
+      {contextHolder}
       <div className="boxItemPage flex justify-between items-center">
         <h5 className="font-bold text-sm">Quản lý khách hàng</h5>
         {/* <div>
@@ -275,8 +282,7 @@ export default function UserPage() {
         />
       </div>
 
-
-      <UserDetailModal 
+      <UserDetailModal
         isModalOpen={isModalOpen}
         handleCancel={() => setIsModalOpen(false)}
         userData={userDetail}
