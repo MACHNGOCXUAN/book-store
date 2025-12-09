@@ -1,5 +1,6 @@
 import { GiftOutlined, HeartOutlined } from "@ant-design/icons";
 import {
+  Alert,
   Badge,
   Button,
   Card,
@@ -37,6 +38,7 @@ const ExchangeVoucherPage = () => {
   const [selectedVoucher, setSelectedVoucher] =
     useState<ExchangeableVoucher | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const token = localStorage.getItem("access_token") || "";
 
@@ -139,30 +141,22 @@ const ExchangeVoucherPage = () => {
       console.log("Exchange response:", response);
       console.log("✅ Exchange successful!");
 
-      // Hiển thị toast notification
-      message.destroy(); // Clear previous messages
-      message.success({
-        content: (
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>🎉 Đổi voucher thành công!</div>
-            <div style={{ fontSize: 12, marginTop: 4 }}>
-              {selectedVoucher.voucherName} đã được thêm vào ví của bạn
-            </div>
-          </div>
-        ),
-        duration: 4,
-      });
-
-      console.log("Notification displayed");
-
+      // Đóng modal trước
       setIsModalOpen(false);
       setSelectedVoucher(null);
 
-      // Reload dữ liệu
+      // Hiển thị success alert
+      setSuccessMessage(`🎉 Đổi voucher thành công! Voucher đã được thêm vào ví của bạn`);
+
+      // Reload dữ liệu sau 2 giây
       setTimeout(() => {
         console.log("Reloading data...");
         loadData();
-      }, 500);
+        // Clear success message sau 3 giây
+        setTimeout(() => {
+          setSuccessMessage(null);
+        }, 3000);
+      }, 1500);
     } catch (error: any) {
       console.error("Exchange error details:", error);
       console.error("Error message:", error.message);
@@ -456,6 +450,18 @@ const ExchangeVoucherPage = () => {
       }}
     >
       <Spin spinning={loading}>
+        {/* Success Alert */}
+        {successMessage && (
+          <Alert
+            message={successMessage}
+            type="success"
+            showIcon
+            closable
+            onClose={() => setSuccessMessage(null)}
+            style={{ marginBottom: 24, fontSize: 14, fontWeight: 500 }}
+          />
+        )}
+
         {/* Loyalty Info */}
         {loyaltyInfo && (
           <Card
