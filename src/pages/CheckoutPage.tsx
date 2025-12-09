@@ -71,6 +71,7 @@ const CheckoutPage: React.FC = () => {
   >();
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [calculatedTotal, setCalculatedTotal] = useState<number>(0); // Backend trả về
   const currentOrderPayment = useRef<any>(null);
   // Guard to prevent showing success toast multiple times per order
   const successToastRef = useRef(false);
@@ -177,13 +178,24 @@ const CheckoutPage: React.FC = () => {
     }
   }, [location.state, navigate]);
 
-  // Tính tổng tiền
+  // Tính tổng tiền sản phẩm (không tính phí ship, không tính giảm giá)
   const subtotal = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
   const shipping = 20000;
-  const total = subtotal + shipping - discountAmount;
+  // 🔹 Total từ backend (sẽ được tính khi checkout)
+  const total = calculatedTotal || subtotal + shipping - discountAmount;
+
+  // Log to verify calculations
+  console.log("📊 CHECKOUT PAGE RENDER:", {
+    subtotal,
+    shipping,
+    discountAmount,
+    calculatedTotal,
+    total,
+    cartItems: cartItems.length,
+  });
 
   // Safe API base and URL builder to avoid double /api
   const API_BASE: string =
@@ -237,6 +249,10 @@ const CheckoutPage: React.FC = () => {
 
       const data = await response.json();
       setDiscountAmount(data.discountAmount || 0);
+      // 🔹 Lưu voucherId nếu có (trả về từ backend)
+      if (data.voucherId) {
+        setSelectedVoucherId(data.voucherId);
+      }
       message.success(
         `Áp dụng mã giảm giá thành công! Tiết kiệm ${(
           data.discountAmount || 0
@@ -288,7 +304,7 @@ const CheckoutPage: React.FC = () => {
         quantity: item.quantity,
       }));
 
-      // Gửi cả voucherId và discountCode nếu có
+      // Gửi voucherId nếu có (từ VoucherSelector)
       const orderPayload: any = {
         customerId: authUser.userId,
         orderDetails,
@@ -298,11 +314,6 @@ const CheckoutPage: React.FC = () => {
       // Chỉ thêm voucherId nếu có (không gửi null)
       if (selectedVoucherId) {
         orderPayload.voucherId = selectedVoucherId;
-      }
-
-      // Chỉ thêm discountCode nếu có (không gửi null)
-      if (discountCode && discountCode.trim()) {
-        orderPayload.discountCode = discountCode.trim();
       }
 
       console.log("📤 Dispatching createOrder with payload:", orderPayload);
@@ -331,18 +342,24 @@ const CheckoutPage: React.FC = () => {
 
         try {
           const response = await checkoutOrder(orderPayload, token);
+          console.log("🔍 MOMO/VNPAY Full Response:", response);
+          console.log("🔍 response.amount:", response.amount);
+
+          // 🔹 Lưu response vào localStorage để kiểm tra sau
+          localStorage.setItem(
+            "lastCheckoutResponse",
+            JSON.stringify({
+              amount: response.amount,
+              paymentUrl: response.paymentUrl,
+              fullResponse: response,
+              timestamp: new Date().toISOString(),
+            })
+          );
+          console.log("💾 Saved to localStorage:", response.amount);
+
           if (!response.paymentUrl) {
             throw new Error("Không nhận được URL thanh toán từ MoMo");
-          }
-
-          toast.success(
-            "Đơn hàng đã được tạo. Đang chuyển đến trang thanh toán MoMo...",
-            {
-              position: "top-right",
-              autoClose: 2000,
-            }
-          );
-
+          } // 🔹 Tạo currentAddress object
           const currentAddress = {
             main: 1,
             province: values.province,
@@ -354,25 +371,36 @@ const CheckoutPage: React.FC = () => {
             isDefault: addressState.addresses.length === 0,
           };
 
-          const defaultAddr = addressState.addresses.find((a) => a.isDefault);
-          const isNewAddress =
-            !defaultAddr ||
-            defaultAddr.province !== values.province ||
-            defaultAddr.specifics !== values.specifics;
+          // 🔹 Lưu response vào ref để hiển thị thông tin thanh toán
+          currentOrderPayment.current = {
+            ...response,
+            orderId: response.orderId,
+            values: values,
+            address: currentAddress,
+          };
 
-          if (isNewAddress) {
-            dispatch(
-              createAddressAction({
-                customerId: authUser.userId,
-                address: currentAddress as Address,
-              })
-            );
+          // 🔹 Set calculatedTotal từ response.amount
+          if (response.amount) {
+            setCalculatedTotal(response.amount);
+            console.log("💰 Backend total (response.amount):", response.amount);
+          } else {
+            console.warn("⚠️ response.amount is missing!");
           }
 
-          dispatch(fetchCart());
+          console.log("💰 Frontend total (before checkout):", total);
+          console.log("💰 Subtotal:", subtotal);
+          console.log("💰 Discount amount:", discountAmount);
+          console.log("💰 Shipping:", shipping);
 
-          localStorage.setItem("pending_momo_order", response.orderId);
+          toast.success(
+            "Đơn hàng đã được tạo. Đang chuyển đến trang thanh toán...",
+            {
+              position: "top-right",
+              autoClose: 2000,
+            }
+          );
 
+          // 🔹 Chuyển hướng tới URL thanh toán
           window.location.href = response.paymentUrl;
         } catch (error) {
           let errorMessage = "Không thể tạo thanh toán MoMo. Vui lòng thử lại!";
@@ -402,6 +430,20 @@ const CheckoutPage: React.FC = () => {
 
         if (result.meta.requestStatus === "fulfilled") {
           console.log("✅ Order created successfully!");
+
+          // 🔹 Lấy totalAmount từ backend response
+          if (result.payload && (result.payload as any).totalAmount) {
+            setCalculatedTotal((result.payload as any).totalAmount);
+            console.log(
+              "💰 COD Backend total:",
+              (result.payload as any).totalAmount
+            );
+          }
+
+          console.log("💰 COD Frontend total (before checkout):", total);
+          console.log("💰 COD Subtotal:", subtotal);
+          console.log("💰 COD Discount amount:", discountAmount);
+          console.log("💰 COD Shipping:", shipping);
 
           if (!successToastRef.current) {
             toast.success("Đặt hàng thành công!", {
@@ -798,6 +840,10 @@ const CheckoutPage: React.FC = () => {
                 message.success(
                   `Áp dụng voucher thành công! Tiết kiệm ${discount}₫`
                 );
+              }}
+              onRemoveVoucher={() => {
+                setSelectedVoucherId(undefined);
+                setDiscountAmount(0);
               }}
             />
           </div>

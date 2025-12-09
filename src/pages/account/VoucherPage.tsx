@@ -10,7 +10,7 @@ import {
   Spin,
   Tabs,
 } from "antd";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import API from "../../config/api";
 import { useAppSelector } from "../../store/hooks";
 import type { WalletVoucher } from "../../types/Loyalty";
@@ -66,12 +66,17 @@ const VoucherPage = () => {
             percent: Number(m.percent ?? 0),
             minPriceToApply: Number(m.minPriceToApply ?? 0),
             description: String(m.description ?? ""),
-            expiryDate: String(m.expiryDate ?? new Date().toISOString()),
+            startDate: String(m.startDate ?? new Date().toISOString()),
+            endDate: String(m.endDate ?? new Date().toISOString()),
             createdDate: new Date().toISOString(),
             used: Boolean(m.used),
-            source: (m.source === "EXCLUSIVE"
-              ? "EXCLUSIVE"
-              : "PUBLIC") as WalletVoucher["source"],
+            remainingUses: Number(m.remainingUses ?? 0),
+            isPublic: Boolean(m.isPublic ?? true),
+            redeemable: Boolean(m.redeemable ?? false),
+            discountType: (m.discountType === "ONE_TIME"
+              ? "ONE_TIME"
+              : "MANY_TIME") as "ONE_TIME" | "MANY_TIME",
+            maxQuantityCanUse: Number(m.maxQuantityCanUse ?? 1),
           })
         ) as WalletVoucher[];
         setWalletVouchers(normalized as WalletVoucher[]);
@@ -115,12 +120,17 @@ const VoucherPage = () => {
           percent: Number(m.percent ?? 0),
           minPriceToApply: Number(m.minPriceToApply ?? 0),
           description: String(m.description ?? ""),
-          expiryDate: String(m.expiryDate ?? new Date().toISOString()),
+          startDate: String(m.startDate ?? new Date().toISOString()),
+          endDate: String(m.endDate ?? new Date().toISOString()),
           createdDate: new Date().toISOString(),
           used: Boolean(m.used),
-          source: (m.source === "EXCLUSIVE"
-            ? "EXCLUSIVE"
-            : "PUBLIC") as WalletVoucher["source"],
+          remainingUses: Number(m.remainingUses ?? 0),
+          isPublic: Boolean(m.isPublic ?? true),
+          redeemable: Boolean(m.redeemable ?? false),
+          discountType: (m.discountType === "ONE_TIME"
+            ? "ONE_TIME"
+            : "MANY_TIME") as "ONE_TIME" | "MANY_TIME",
+          maxQuantityCanUse: Number(m.maxQuantityCanUse ?? 1),
         })
       ) as WalletVoucher[];
       setWalletVouchers(normalized as WalletVoucher[]);
@@ -139,7 +149,7 @@ const VoucherPage = () => {
 
   const getVouchersByStatus = (status: "AVAILABLE" | "USED" | "EXPIRED") => {
     return walletVouchers.filter((v) => {
-      const isExpired = new Date(v.expiryDate) < new Date();
+      const isExpired = new Date(v.endDate) < new Date();
       const isUsed = Boolean(v.used);
 
       if (status === "EXPIRED") return isExpired;
@@ -150,127 +160,128 @@ const VoucherPage = () => {
   };
 
   const renderVoucherCard = (voucher: WalletVoucher) => {
-    const isExpired = new Date(voucher.expiryDate) < new Date();
+    const isExpired = new Date(voucher.endDate) < new Date();
     const isUsed = Boolean(voucher.used);
     const discount = `${voucher.percent}%`;
     const minOrder = voucher.minPriceToApply
       ? `Đơn hàng từ ${voucher.minPriceToApply.toLocaleString()}đ`
       : undefined;
-    const expiryDate = new Date(voucher.expiryDate).toLocaleDateString("vi-VN");
+    const expiryDate = new Date(voucher.endDate).toLocaleDateString("vi-VN");
 
     return (
       <Col xs={24} sm={12} lg={8} key={voucher.walletVoucherId}>
-        <Card
-          hoverable={!isExpired && !isUsed}
-          style={{
-            borderRadius: 12,
-            overflow: "hidden",
-            border: "2px solid #f0f0f0",
-            position: "relative",
-            opacity: isExpired || isUsed ? 0.6 : 1,
-          }}
-          styles={{ body: { padding: 0 } }}
-        >
-          {/* Voucher Header */}
-          <div
+        <div style={{ position: "relative" }}>
+          <Card
+            hoverable={!isExpired && !isUsed}
             style={{
-              background: "linear-gradient(135deg, #C92127 0%, #E63946 100%)",
-              padding: "16px 20px",
-              color: "white",
-              position: "relative",
+              borderRadius: 12,
+              overflow: "hidden",
+              border: "2px solid #f0f0f0",
+              opacity: isExpired || isUsed ? 0.6 : 1,
             }}
+            styles={{ body: { padding: 0 } }}
           >
+            {/* Voucher Header */}
             <div
               style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
+                background: "linear-gradient(135deg, #C92127 0%, #E63946 100%)",
+                padding: "16px 20px",
+                color: "white",
+                position: "relative",
               }}
             >
-              <div>
-                <div
-                  style={{
-                    fontSize: 20,
-                    fontWeight: 700,
-                    marginBottom: 4,
-                  }}
-                >
-                  {discount}
-                </div>
-                <div style={{ fontSize: 12, opacity: 0.9 }}>{minOrder}</div>
-              </div>
-              <GiftOutlined style={{ fontSize: 32, opacity: 0.3 }} />
-            </div>
-          </div>
-
-          {/* Voucher Body */}
-          <div style={{ padding: "16px 20px" }}>
-            <div
-              style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: "#333",
-                marginBottom: 8,
-              }}
-            >
-              {voucher.name}
-            </div>
-
-            {voucher.description && (
               <div
                 style={{
-                  fontSize: 12,
-                  color: "#666",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: 20,
+                      fontWeight: 700,
+                      marginBottom: 4,
+                    }}
+                  >
+                    {discount}
+                  </div>
+                  <div style={{ fontSize: 12, opacity: 0.9 }}>{minOrder}</div>
+                </div>
+                <GiftOutlined style={{ fontSize: 32, opacity: 0.3 }} />
+              </div>
+            </div>
+
+            {/* Voucher Body */}
+            <div style={{ padding: "16px 20px" }}>
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "#333",
+                  marginBottom: 8,
+                }}
+              >
+                {voucher.name}
+              </div>
+
+              {voucher.description && (
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "#666",
+                    marginBottom: 12,
+                  }}
+                >
+                  {voucher.description}
+                </div>
+              )}
+
+              {/* Voucher Code */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "8px 12px",
+                  background: "#FFF5F5",
+                  borderRadius: 8,
                   marginBottom: 12,
                 }}
               >
-                {voucher.description}
+                <span
+                  style={{
+                    fontFamily: "monospace",
+                    fontWeight: 700,
+                    color: "#C92127",
+                    fontSize: 14,
+                  }}
+                >
+                  {voucher.discountCodeId}
+                </span>
+                <Button
+                  type="link"
+                  icon={<CopyOutlined />}
+                  size="small"
+                  onClick={() => handleCopyCode(voucher.discountCodeId)}
+                  style={{ color: "#C92127" }}
+                  disabled={isExpired || isUsed}
+                >
+                  Copy
+                </Button>
               </div>
-            )}
 
-            {/* Voucher Code */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "8px 12px",
-                background: "#FFF5F5",
-                borderRadius: 8,
-                marginBottom: 12,
-              }}
-            >
-              <span
+              {/* Expiry Date */}
+              <div
                 style={{
-                  fontFamily: "monospace",
-                  fontWeight: 700,
-                  color: "#C92127",
-                  fontSize: 14,
+                  fontSize: 12,
+                  color: "#999",
+                  textAlign: "center",
                 }}
               >
-                {voucher.discountCodeId}
-              </span>
-              <Button
-                type="link"
-                icon={<CopyOutlined />}
-                size="small"
-                onClick={() => handleCopyCode(voucher.discountCodeId)}
-                style={{ color: "#C92127" }}
-                disabled={isExpired || isUsed}
-              >
-                Copy
-              </Button>
-            </div>
-
-            {/* Expiry Date */}
-            <div
-              style={{
-                fontSize: 12,
-                color: "#999",
-                textAlign: "center",
-              }}
-            >
-              HSD: {expiryDate}
+                HSD: {expiryDate}
+              </div>
             </div>
 
             {/* Status Badge */}
@@ -286,13 +297,14 @@ const VoucherPage = () => {
                   borderRadius: 12,
                   fontSize: 11,
                   fontWeight: 600,
+                  zIndex: 10,
                 }}
               >
                 {isExpired ? "Hết hạn" : "Đã dùng"}
               </div>
             )}
-          </div>
-        </Card>
+          </Card>
+        </div>
       </Col>
     );
   };
@@ -330,7 +342,11 @@ const VoucherPage = () => {
           </div>
           <Row gutter={[16, 16]}>
             {getVouchersByStatus("AVAILABLE").length > 0 ? (
-              getVouchersByStatus("AVAILABLE").map(renderVoucherCard)
+              getVouchersByStatus("AVAILABLE").map((voucher) => (
+                <React.Fragment key={voucher.walletVoucherId}>
+                  {renderVoucherCard(voucher)}
+                </React.Fragment>
+              ))
             ) : (
               <Col span={24}>
                 <Empty
@@ -372,7 +388,11 @@ const VoucherPage = () => {
           </div>
           <Row gutter={[16, 16]}>
             {getVouchersByStatus("USED").length > 0 ? (
-              getVouchersByStatus("USED").map(renderVoucherCard)
+              getVouchersByStatus("USED").map((voucher) => (
+                <React.Fragment key={voucher.walletVoucherId}>
+                  {renderVoucherCard(voucher)}
+                </React.Fragment>
+              ))
             ) : (
               <Col span={24}>
                 <Empty

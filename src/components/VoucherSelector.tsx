@@ -1,9 +1,23 @@
-import { GiftOutlined } from "@ant-design/icons";
-import { Button, Card, Col, Drawer, Empty, message, Row, Spin } from "antd";
+import { GiftOutlined, CloseCircleOutlined } from "@ant-design/icons";
+import {
+  Button,
+  Card,
+  Col,
+  Drawer,
+  Empty,
+  message,
+  Row,
+  Spin,
+  Tag,
+  Typography,
+} from "antd";
 import { useEffect, useState } from "react";
 import API from "../config/api";
 import { fetchWalletVouchers } from "../services/loyaltyService";
 import type { WalletVoucher } from "../types/Loyalty";
+
+const { Text, Paragraph } = Typography;
+
 // Derive API base safely without using 'any'
 const API_BASE: string =
   (typeof API === "object" && (API as { API_BASE?: string }).API_BASE) ||
@@ -23,12 +37,14 @@ const buildApiUrl = (path: string) => {
 interface VoucherSelectorProps {
   cartTotal: number;
   onApplyVoucher: (voucherId: string, discountAmount: number) => void;
+  onRemoveVoucher: () => void; // Thêm hàm này để xử lý việc gỡ voucher
   selectedVoucherId?: string;
 }
 
 const VoucherSelector: React.FC<VoucherSelectorProps> = ({
   cartTotal,
   onApplyVoucher,
+  onRemoveVoucher, // Sử dụng hàm mới
   selectedVoucherId,
 }) => {
   const [vouchers, setVouchers] = useState<WalletVoucher[]>([]);
@@ -68,12 +84,9 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
         }
 
         // Ẩn voucher hết hạn
-        if (new Date(voucher.expiryDate) < now) {
+        if (new Date(voucher.endDate) < now) {
           return false;
         }
-
-        // Note: Backend không trả về quantity, nhưng đã filter ONE_TIME used ở loyaltyService
-        // Không cần filter lại ở đây
 
         return true;
       });
@@ -177,8 +190,9 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
       setIsDrawerOpen(false);
       setSelectedVoucher(null);
 
-      // Reload danh sách voucher để ẩn voucher đã được dùng
-      loadVouchers();
+      // Reload danh sách voucher để ẩn voucher đã được dùng (nếu là ONE_TIME)
+      // loadVouchers();
+      // Tạm thời không load để giữ voucher trong danh sách nhưng trạng thái là 'Đã chọn'
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Lỗi khi áp dụng voucher";
       message.error(msg);
@@ -187,24 +201,48 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
     }
   };
 
+  const handleRemoveVoucher = () => {
+    onRemoveVoucher();
+    message.info("Đã gỡ voucher khỏi đơn hàng");
+  };
+
+  const getAppliedVoucher = () => {
+    return (
+      vouchers.find((v) => v.discountCodeId === selectedVoucherId) ||
+      selectedVoucher
+    );
+  };
+
   const renderVoucherCard = (voucher: WalletVoucher) => {
     const backendApplicable = applicableMap[voucher.discountCodeId];
     const backendReason = reasonMap[voucher.discountCodeId];
     const isLocked =
       cartTotal < voucher.minPriceToApply || backendApplicable === false;
     const isSelected = selectedVoucherId === voucher.discountCodeId;
+    const isCurrentlySelected =
+      selectedVoucher?.discountCodeId === voucher.discountCodeId;
+
+    const cardBorderColor = isSelected
+      ? "#C92127"
+      : isCurrentlySelected
+      ? "#F59397"
+      : "#f0f0f0";
+
+    const cardBgColor = isSelected || isCurrentlySelected ? "#FFF5F5" : "white";
 
     return (
       <Col xs={24} key={voucher.walletVoucherId}>
         <Card
           hoverable={!isLocked}
           style={{
-            borderRadius: 8,
-            border: isSelected ? "2px solid #C92127" : "1px solid #f0f0f0",
-            opacity: isLocked ? 0.6 : 1,
-            background: isSelected ? "#FFF5F5" : "white",
+            borderRadius: 12,
+            border: `2px solid ${cardBorderColor}`,
+            opacity: isLocked ? 0.7 : 1,
+            background: cardBgColor,
             cursor: isLocked ? "not-allowed" : "pointer",
+            transition: "all 0.3s",
           }}
+          bodyStyle={{ padding: 16 }}
           onClick={() => {
             if (!isLocked) {
               setSelectedVoucher(voucher);
@@ -212,56 +250,80 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
           }}
         >
           <Row gutter={16} align="middle">
-            <Col span={2} style={{ textAlign: "center" }}>
-              <GiftOutlined style={{ fontSize: 24, color: "#C92127" }} />
-            </Col>
-            <Col span={14}>
-              <div>
-                <div
-                  style={{ fontWeight: 600, color: "#333", marginBottom: 4 }}
-                >
-                  {voucher.name}
-                </div>
-                <div style={{ fontSize: 12, color: "#666" }}>
-                  {voucher.description || "Giảm giá cho đơn hàng"}
-                </div>
-                {voucher.minPriceToApply > 0 && (
-                  <div style={{ fontSize: 12, color: "#999", marginTop: 4 }}>
-                    Đơn tối thiểu:{" "}
-                    {voucher.minPriceToApply.toLocaleString("vi-VN")}₫
+            {/* Left side: Icon and Info */}
+            <Col span={17}>
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <GiftOutlined
+                  style={{
+                    fontSize: 24,
+                    color: isLocked ? "#999" : "#C92127",
+                    marginRight: 12,
+                  }}
+                />
+                <div>
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      color: isLocked ? "#999" : "#333",
+                      marginBottom: 2,
+                      fontSize: 16,
+                    }}
+                  >
+                    {voucher.name}
                   </div>
-                )}
-              </div>
-            </Col>
-            <Col span={4}>
-              <div style={{ textAlign: "center" }}>
-                <div
-                  style={{ fontWeight: 700, color: "#C92127", fontSize: 18 }}
-                >
-                  {voucher.percent}%
+                  <Paragraph
+                    type="secondary"
+                    ellipsis={{ rows: 1 }}
+                    style={{ fontSize: 12, margin: 0 }}
+                  >
+                    {voucher.description || "Giảm giá cho đơn hàng"}
+                  </Paragraph>
+                  <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>
+                    {voucher.minPriceToApply > 0 && (
+                      <span>
+                        Đơn tối thiểu:{" "}
+                        <Text strong>
+                          {voucher.minPriceToApply.toLocaleString("vi-VN")}₫
+                        </Text>
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div style={{ fontSize: 11, color: "#999" }}>OFF</div>
               </div>
             </Col>
-            <Col span={4} style={{ textAlign: "right" }}>
-              {isSelected ? (
-                <Button
-                  type="primary"
-                  size="small"
-                  style={{ background: "#C92127" }}
+
+            {/* Right side: Discount and Button */}
+            <Col span={7} style={{ textAlign: "right" }}>
+              <div style={{ marginBottom: 8 }}>
+                <Text
+                  style={{ fontWeight: 800, color: "#C92127", fontSize: 20 }}
                 >
-                  ✓ Đã chọn
-                </Button>
+                  {voucher.percent}% OFF
+                </Text>
+              </div>
+
+              {isSelected ? (
+                <Tag color="error" style={{ fontWeight: 600 }}>
+                  Đã áp dụng
+                </Tag>
               ) : isLocked ? (
-                <Button size="small" disabled>
+                <Button size="small" disabled style={{ opacity: 0.8 }}>
                   Khóa
                 </Button>
               ) : (
                 <Button
                   size="small"
-                  onClick={() => setSelectedVoucher(voucher)}
+                  type={isCurrentlySelected ? "primary" : "default"}
+                  style={{
+                    background: isCurrentlySelected ? "#C92127" : undefined,
+                    borderColor: isCurrentlySelected ? "#C92127" : undefined,
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedVoucher(voucher);
+                  }}
                 >
-                  Chọn
+                  {isCurrentlySelected ? "Đã chọn" : "Chọn"}
                 </Button>
               )}
             </Col>
@@ -271,25 +333,32 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
           {isLocked && (
             <div
               style={{
-                marginTop: 8,
+                marginTop: 12,
                 padding: "8px 12px",
                 background: "#FFE6E6",
-                borderRadius: 4,
+                borderRadius: 8,
                 fontSize: 12,
                 color: "#C92127",
+                borderLeft: "4px solid #C92127",
               }}
             >
-              🔒{" "}
+              <Text strong type="danger">
+                ⚠️ Không áp dụng được:
+              </Text>{" "}
               {backendApplicable === false
                 ? backendReason ||
                   "Voucher không đủ điều kiện áp dụng với tổng đơn hiện tại"
-                : voucher.description || "Không đủ điều kiện để áp dụng"}
+                : `Tổng đơn hàng phải đạt ${voucher.minPriceToApply.toLocaleString(
+                    "vi-VN"
+                  )}₫ trở lên.`}
             </div>
           )}
         </Card>
       </Col>
     );
   };
+
+  const applied = getAppliedVoucher();
 
   return (
     <>
@@ -301,130 +370,116 @@ const VoucherSelector: React.FC<VoucherSelectorProps> = ({
           borderColor: "#C92127",
           color: "#C92127",
           fontWeight: 600,
-          height: 40,
+          height: 44,
+          fontSize: 16,
+          boxShadow: "0 2px 0 rgba(201, 33, 39, 0.05)",
         }}
       >
-        <GiftOutlined /> Chọn voucher ({vouchers.length})
+        <GiftOutlined />{" "}
+        {selectedVoucherId
+          ? "Thay đổi Voucher"
+          : `Chọn Voucher (${vouchers.length})`}
       </Button>
 
       {/* Applied voucher summary shown under the select button */}
-      {selectedVoucherId &&
-        (() => {
-          const applied =
-            vouchers.find((v) => v.discountCodeId === selectedVoucherId) ||
-            selectedVoucher;
-          if (!applied) return null;
-          const estimatedDiscount = (cartTotal * applied.percent) / 100;
-          return (
-            <Card
-              size="small"
-              style={{
-                marginTop: 12,
-                borderRadius: 8,
-                background: "#FFF5F5",
-                border: "1px solid #F5C3C5",
-              }}
-            >
-              <Row align="middle" gutter={12}>
-                <Col flex="none">
-                  <GiftOutlined style={{ fontSize: 18, color: "#C92127" }} />
-                </Col>
-                <Col flex="auto">
-                  <div style={{ fontWeight: 600, color: "#333" }}>
-                    {applied.name}
-                  </div>
-                  <div style={{ fontSize: 12, color: "#666" }}>
-                    Đã áp dụng: Giảm {applied.percent}% (~
-                    {estimatedDiscount.toLocaleString("vi-VN")}₫)
-                  </div>
-                </Col>
-                <Col flex="none">
-                  <Button
-                    size="small"
-                    type="link"
-                    onClick={() => setIsDrawerOpen(true)}
-                  >
-                    Thay đổi
-                  </Button>
-                </Col>
-              </Row>
-            </Card>
-          );
-        })()}
+      {selectedVoucherId && applied ? (
+        <Card
+          size="small"
+          style={{
+            marginTop: 12,
+            borderRadius: 8,
+            background: "#FFF5F5",
+            border: "1px solid #F5C3C5",
+          }}
+        >
+          <Row align="middle" gutter={12}>
+            <Col flex="none">
+              <GiftOutlined style={{ fontSize: 20, color: "#C92127" }} />
+            </Col>
+            <Col flex="auto">
+              <div style={{ fontWeight: 700, color: "#C92127" }}>
+                {applied.name}
+              </div>
+              <div style={{ fontSize: 13, color: "#333" }}>
+                Giảm {applied.percent}% (Ước tính:{" "}
+                <Text strong type="danger">
+                  {((cartTotal * applied.percent) / 100).toLocaleString(
+                    "vi-VN"
+                  )}
+                  ₫
+                </Text>
+                )
+              </div>
+            </Col>
+            <Col flex="none">
+              <Button
+                size="small"
+                type="link"
+                danger
+                icon={<CloseCircleOutlined />}
+                onClick={handleRemoveVoucher}
+              >
+                Gỡ
+              </Button>
+            </Col>
+          </Row>
+        </Card>
+      ) : null}
 
       <Drawer
         title={
-          <div style={{ fontSize: 16, fontWeight: 600 }}>
-            <GiftOutlined style={{ marginRight: 8 }} />
-            Chọn voucher áp dụng
+          <div style={{ fontSize: 18, fontWeight: 700, color: "#333" }}>
+            <GiftOutlined style={{ marginRight: 8, color: "#C92127" }} />
+            Kho Voucher của bạn
           </div>
         }
         placement="right"
         onClose={() => {
           setIsDrawerOpen(false);
-          setSelectedVoucher(null);
+          setSelectedVoucher(null); // Clear selected voucher on close
         }}
         open={isDrawerOpen}
         width={500}
+        styles={{
+          body: { padding: "16px 24px" },
+          footer: selectedVoucher
+            ? { padding: "10px 24px", borderTop: "1px solid #f0f0f0" }
+            : undefined,
+        }}
+        footer={
+          selectedVoucher && (
+            <Button
+              type="primary"
+              danger
+              block
+              loading={isApplying}
+              onClick={() => handleApplyVoucher(selectedVoucher)}
+              style={{
+                background: "#C92127",
+                borderColor: "#C92127",
+                height: 48,
+                fontSize: 16,
+                fontWeight: 700,
+              }}
+            >
+              Áp dụng voucher "{selectedVoucher.name}"
+            </Button>
+          )
+        }
       >
         <Spin spinning={loading}>
           {vouchers.length > 0 ? (
-            <div>
-              <Row gutter={[0, 12]}>{vouchers.map(renderVoucherCard)}</Row>
-
-              {selectedVoucher && (
-                <div
-                  style={{
-                    marginTop: 24,
-                    padding: 16,
-                    background: "#FFF5F5",
-                    borderRadius: 8,
-                    borderTop: "2px solid #C92127",
-                  }}
-                >
-                  <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontWeight: 600, marginBottom: 8 }}>
-                      {selectedVoucher.name}
-                    </div>
-                    <div
-                      style={{ fontSize: 12, color: "#666", marginBottom: 12 }}
-                    >
-                      {selectedVoucher.description}
-                    </div>
-                    {selectedVoucher.minPriceToApply > 0 && (
-                      <div style={{ fontSize: 12, color: "#666" }}>
-                        📦 Đơn tối thiểu:{" "}
-                        {selectedVoucher.minPriceToApply.toLocaleString(
-                          "vi-VN"
-                        )}
-                        ₫
-                      </div>
-                    )}
-                  </div>
-
-                  <Button
-                    type="primary"
-                    danger
-                    block
-                    loading={isApplying}
-                    onClick={() => handleApplyVoucher(selectedVoucher)}
-                    style={{
-                      background: "#C92127",
-                      borderColor: "#C92127",
-                      height: 40,
-                      fontWeight: 600,
-                    }}
-                  >
-                    Áp dụng voucher
-                  </Button>
-                </div>
-              )}
+            <div style={{ marginBottom: selectedVoucher ? 0 : 20 }}>
+              <Row gutter={[0, 16]}>{vouchers.map(renderVoucherCard)}</Row>
             </div>
           ) : (
             <Empty
               description={
-                loading ? "Đang tải..." : "Không có voucher khả dụng"
+                loading
+                  ? "Đang tải..."
+                  : "Không có voucher khả dụng nào trong ví của bạn."
               }
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
               style={{ marginTop: 40 }}
             />
           )}
