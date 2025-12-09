@@ -228,18 +228,6 @@ export const orderColumns = (
               <Button type="primary">Cập nhật trạng thái</Button>
             </Dropdown>
           )}
-
-          {(record.status === "PENDING" || record.status === "PROCESSING") && (
-            <Button
-              danger
-              icon={<DeleteOutlined />}
-              onClick={() => {
-                console.log("Hủy đơn hàng:", record.orderId);
-              }}
-            >
-              Hủy
-            </Button>
-          )}
         </Space>
       );
     },
