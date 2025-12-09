@@ -55,29 +55,33 @@ const VoucherPage = () => {
         }
         const data = await resp.json();
         console.log("📱 Loaded wallet vouchers:", data);
+        console.log("📱 Raw data type:", typeof data, "Is array:", Array.isArray(data));
         // data là mảng map DTO trả từ backend
         const normalized = (Array.isArray(data) ? data : []).map(
-          (m: Record<string, unknown>) => ({
-            walletVoucherId: String(
-              m.walletVoucherId ?? m.discountCodeId ?? ""
-            ),
-            discountCodeId: String(m.discountCodeId ?? ""),
-            name: String(m.name ?? ""),
-            percent: Number(m.percent ?? 0),
-            minPriceToApply: Number(m.minPriceToApply ?? 0),
-            description: String(m.description ?? ""),
-            startDate: String(m.startDate ?? new Date().toISOString()),
-            endDate: String(m.endDate ?? new Date().toISOString()),
-            createdDate: new Date().toISOString(),
-            used: Boolean(m.used),
-            remainingUses: Number(m.remainingUses ?? 0),
-            isPublic: Boolean(m.isPublic ?? true),
-            redeemable: Boolean(m.redeemable ?? false),
-            discountType: (m.discountType === "ONE_TIME"
-              ? "ONE_TIME"
-              : "MANY_TIME") as "ONE_TIME" | "MANY_TIME",
-            maxQuantityCanUse: Number(m.maxQuantityCanUse ?? 1),
-          })
+          (m: Record<string, unknown>) => {
+            console.log("📱 Normalizing voucher:", m.discountCodeId, "endDate:", m.endDate);
+            return {
+              walletVoucherId: String(
+                m.walletVoucherId ?? m.discountCodeId ?? ""
+              ),
+              discountCodeId: String(m.discountCodeId ?? ""),
+              name: String(m.name ?? ""),
+              percent: Number(m.percent ?? 0),
+              minPriceToApply: Number(m.minPriceToApply ?? 0),
+              description: String(m.description ?? ""),
+              startDate: String(m.startDate ?? new Date().toISOString()),
+              endDate: String(m.endDate ?? new Date().toISOString()),
+              createdDate: new Date().toISOString(),
+              used: Boolean(m.used),
+              remainingUses: Number(m.remainingUses ?? 0),
+              isPublic: Boolean(m.isPublic ?? true),
+              redeemable: Boolean(m.redeemable ?? false),
+              discountType: (m.discountType === "ONE_TIME"
+                ? "ONE_TIME"
+                : "MANY_TIME") as "ONE_TIME" | "MANY_TIME",
+              maxQuantityCanUse: Number(m.maxQuantityCanUse ?? 1),
+            };
+          }
         ) as WalletVoucher[];
         setWalletVouchers(normalized as WalletVoucher[]);
       } catch (error) {
