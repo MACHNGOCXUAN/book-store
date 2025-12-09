@@ -362,6 +362,9 @@ public class OrderController {
             session.setStatus(SessionStatus.PENDING);
             session.setCreatedAt(LocalDateTime.now());
             session.setExpiresAt(LocalDateTime.now().plusMinutes(15)); // Hết hạn sau 15 phút
+            if(request.getVoucherId() != null) {
+                session.setDiscountCode(request.getVoucherId());
+            }
 
             checkoutSessionRepository.save(session);
 
@@ -480,6 +483,16 @@ public class OrderController {
                 order.setCustomer(customer);
                 order.setStatus(OrderStatus.PENDING);
                 order.setOrderDate(LocalDateTime.now());
+
+                String discountCodeId = session.getDiscountCode();
+
+                DiscountCode discountCode = null;
+
+                if (discountCodeId != null) {
+                    discountCode = discountCodeRepository.findById(discountCodeId).orElse(null);
+                }
+
+                order.setDiscountCode(discountCode);
 
                 List<OrderDetail> orderDetails = new ArrayList<>();
                 for (OrderInfoDTO.OrderDetailRequest detailDTO : orderDetailDTOs) {
@@ -617,6 +630,21 @@ public class OrderController {
                 order.setCustomer(customer);
                 order.setStatus(OrderStatus.PENDING);
                 order.setOrderDate(LocalDateTime.now());
+
+                String discountCodeId = session.getDiscountCode();
+
+                DiscountCode discountCode = null;
+
+                System.out.println("ijojjl: " + discountCodeId);
+
+                if (discountCodeId != null) {
+                    discountCode = discountCodeRepository.findById(discountCodeId).orElse(null);
+                }
+
+                System.out.println("discountCode: " + discountCode);
+
+                order.setDiscountCode(discountCode);
+
 
                 List<OrderDetail> orderDetails = new ArrayList<>();
                 for (OrderInfoDTO.OrderDetailRequest detailDTO : orderDetailDTOs) {
