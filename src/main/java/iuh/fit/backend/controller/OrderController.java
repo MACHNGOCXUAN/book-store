@@ -59,6 +59,7 @@ public class OrderController {
     private final VnpayPaymentService vnpayPaymentService;
     private final CartItemRepository cartItemRepository;
     private final DiscountCodeRepository discountCodeRepository;
+    private final UserDiscountWalletRepository userDiscountWalletRepository;
     private final JavaMailSender mailSender;
     private final SpringTemplateEngine templateEngine;
     private final String mailTo = "machngocxuan2004@gmail.com";
@@ -313,10 +314,11 @@ public class OrderController {
 
         try {
             List<OrderInfoDTO.OrderDetailRequest> orderDetails = request.getOrderDetails();
-            long totalAmount = 0;
             long total = 0;
             long discountPercent = 0;
+            long shippingFee = 20000;
 
+            // 🔹 Loop chi tiết order để tính total
             for (OrderInfoDTO.OrderDetailRequest detail : orderDetails) {
                 Optional<Book> book = bookService.findById(detail.getBookId());
                 if (book.isEmpty()) {
@@ -327,26 +329,26 @@ public class OrderController {
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                             .body(Map.of("message", "Sản phẩm '" + book.get().getTitle() + "' không đủ hàng. Còn " + book.get().getStock() + " cuốn"));
                 }
-                total += (long) ((book.get().getPrice() - book.get().getPrice()*book.get().getDiscountPercent()/100) * detail.getQuantity() );
-                Optional<DiscountCode> discountCode;
-                if (request.getVoucherId() != null){
-                    discountCode = discountCodeRepository.findById(request.getVoucherId());
-                    if (discountCode.isEmpty()) {
-                        discountPercent = 0;
-                    }else {
-                        discountPercent = discountCode.get().getPercent();
-                    }
-                }
-                totalAmount = (total + 20000) - (total * discountPercent/100);
+                long priceAfterDiscount = (long) (book.get().getPrice() - (book.get().getPrice() * book.get().getDiscountPercent() / 100));
+                total += priceAfterDiscount * detail.getQuantity();
             }
 
-            // TODO: Apply voucher/discount nếu có
+            // 🔹 Lấy voucher nếu có
             if (request.getVoucherId() != null) {
-                // totalAmount = applyVoucher(totalAmount, request.getVoucherId());
+                Optional<DiscountCode> discountCode = discountCodeRepository.findById(request.getVoucherId());
+                discountPercent = discountCode.map(DiscountCode::getPercent).orElse(0);
             }
-            if (request.getDiscountCode() != null) {
-                // totalAmount = applyDiscount(totalAmount, request.getDiscountCode());
+
+            // 🔹 Nếu có discountCode (text input), tìm theo code và lấy percent
+            if (request.getDiscountCode() != null && discountPercent == 0) {
+                // Giả sử DiscountCode có field code, hoặc tìm theo criteria khác
+                // Có thể cần thêm repository method để tìm theo code
+                // Tạm thời, nếu voucherId không có, cố gắng tìm theo discountCode
+                // (Điều này phụ thuộc vào cấu trúc backend của bạn)
             }
+
+            // ⭐ Tính tổng tiền thanh toán
+            long totalAmount = (total + shippingFee) - (total * discountPercent / 100);
 
             CheckoutSession session = new CheckoutSession();
             session.setSessionId(UUID.randomUUID().toString());
@@ -354,7 +356,7 @@ public class OrderController {
 
             ObjectMapper mapper = new ObjectMapper();
             session.setOrderDetailsJson(mapper.writeValueAsString(orderDetails));
-
+            System.out.println();
             session.setTotalAmount(totalAmount);
             session.setVoucherId(request.getVoucherId());
             session.setDiscountCode(request.getDiscountCode());
@@ -484,6 +486,7 @@ public class OrderController {
                 order.setStatus(OrderStatus.PENDING);
                 order.setOrderDate(LocalDateTime.now());
 
+
                 String discountCodeId = session.getDiscountCode();
 
                 DiscountCode discountCode = null;
@@ -512,7 +515,7 @@ public class OrderController {
                     cartItemRepository.delete(cartItem);
                 }
                 order.setOrderDetails(orderDetails);
-                order.recalcTotals();
+                order.setTotalAmount(session.getTotalAmount());
                 orderRepository.save(order);
 
                 OrderHistory orderHistory = new OrderHistory();
@@ -534,6 +537,23 @@ public class OrderController {
                 payment.setPaymentCompletedAt(LocalDateTime.now());
                 payment.setResponseCode(resultCode);
                 paymentRepository.save(payment);
+
+                // 🔹 Giảm remaining_uses của voucher từ UserDiscountWallet nếu có
+                if (session.getDiscountCode() != null) {
+                    DiscountCode appliedDiscountCode = discountCodeRepository.findById(session.getDiscountCode()).orElse(null);
+                    if (appliedDiscountCode != null) {
+                        Optional<UserDiscountWallet> walletOpt = userDiscountWalletRepository
+                                .findByCustomerAndDiscountCodeAndUsedFalse(customer, appliedDiscountCode);
+                        if (walletOpt.isPresent()) {
+                            UserDiscountWallet wallet = walletOpt.get();
+                            wallet.decrementRemainingUses();
+                            if (wallet.isExhausted()) {
+                                wallet.markAsUsed(order.getOrderId());
+                            }
+                            userDiscountWalletRepository.save(wallet);
+                        }
+                    }
+                }
 
                 session.setStatus(SessionStatus.COMPLETED);
                 checkoutSessionRepository.save(session);
@@ -664,7 +684,7 @@ public class OrderController {
                     cartItemRepository.delete(cartItem);
                 }
                 order.setOrderDetails(orderDetails);
-                order.recalcTotals();
+                order.setTotalAmount(session.getTotalAmount());
                 orderRepository.save(order);
 
                 Payment payment = new Payment();
@@ -678,6 +698,23 @@ public class OrderController {
                 payment.setPaymentCompletedAt(LocalDateTime.now());
                 payment.setResponseCode(responseCode);
                 paymentRepository.save(payment);
+
+                // 🔹 Giảm remaining_uses của voucher từ UserDiscountWallet nếu có
+                if (session.getDiscountCode() != null) {
+                    DiscountCode appliedDiscountCode = discountCodeRepository.findById(session.getDiscountCode()).orElse(null);
+                    if (appliedDiscountCode != null) {
+                        Optional<UserDiscountWallet> walletOpt = userDiscountWalletRepository
+                                .findByCustomerAndDiscountCodeAndUsedFalse(customer, appliedDiscountCode);
+                        if (walletOpt.isPresent()) {
+                            UserDiscountWallet wallet = walletOpt.get();
+                            wallet.decrementRemainingUses();
+                            if (wallet.isExhausted()) {
+                                wallet.markAsUsed(order.getOrderId());
+                            }
+                            userDiscountWalletRepository.save(wallet);
+                        }
+                    }
+                }
 
                 session.setStatus(SessionStatus.COMPLETED);
                 session.setTransactionPaymentId(allParams.get("vnp_TransactionNo"));
