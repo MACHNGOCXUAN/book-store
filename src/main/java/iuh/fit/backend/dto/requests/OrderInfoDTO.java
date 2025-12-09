@@ -3,6 +3,7 @@ package iuh.fit.backend.dto.requests;
 import iuh.fit.backend.model.DiscountCode;
 import iuh.fit.backend.model.enums.PaymentMethod;
 import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
@@ -12,7 +13,8 @@ public class OrderInfoDTO {
     private String discountCode;
     private String voucherId;
     private List<OrderDetailRequest> orderDetails;
-    private PaymentMethod paymentMethod;
+    private String paymentMethod;
+    
     @Data
     public static class OrderDetailRequest {
         private String bookId;

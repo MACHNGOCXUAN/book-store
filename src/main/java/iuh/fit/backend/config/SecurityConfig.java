@@ -56,6 +56,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/auth/**",
+                                "/api/admin/**",
                                 "/api/chat/**",
                                 "/api/payments/momo/**",
                                 "/api/reports/admin/**",
@@ -73,6 +74,7 @@ public class SecurityConfig {
                                 "/api/reviews/**",
                                 "/api/messages/**",
                                 "/api/banners/**",
+                                "/api/articles/**",
                                 "/api/discounts/**",
                                 "/api/momo/**",
                                 "/api/orders/**",

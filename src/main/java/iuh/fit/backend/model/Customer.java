@@ -3,6 +3,7 @@ package iuh.fit.backend.model;
 import jakarta.persistence.*;
 import lombok.*;
 import iuh.fit.backend.model.enums.CustomerTier;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -30,7 +31,8 @@ public class Customer extends User {
 
     @OneToOne(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
-    private Cart cart;   // KHÔNG dùng @JoinColumn ở đây
+    @JsonIgnore
+    private Cart cart;
 
     @ManyToMany
     @JoinTable(
@@ -38,14 +40,18 @@ public class Customer extends User {
             joinColumns = @JoinColumn(name = "customer_id"),
             inverseJoinColumns = @JoinColumn(name = "book_id")
     )
+    @ToString.Exclude
+    @JsonIgnore
     private Set<Book> favoriteBooks = new HashSet<>();
 
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
+    @JsonIgnore
     private List<Address> addresses = new ArrayList<>();
 
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
+    @JsonIgnore
     private List<UserDiscountWallet> discountWallet = new ArrayList<>();
 
     /* ========== Loyalty Methods ========== */
