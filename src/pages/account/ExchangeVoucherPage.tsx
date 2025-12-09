@@ -9,7 +9,7 @@ import {
   Modal,
   Row,
   Spin,
-  message,
+  message
 } from "antd";
 import { useEffect, useState } from "react";
 import {
@@ -137,14 +137,36 @@ const ExchangeVoucherPage = () => {
       });
 
       console.log("Exchange response:", response);
-      message.success(`Đổi thành công!`);
+      console.log("✅ Exchange successful!");
+
+      // Hiển thị toast notification
+      message.destroy(); // Clear previous messages
+      message.success({
+        content: (
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>🎉 Đổi voucher thành công!</div>
+            <div style={{ fontSize: 12, marginTop: 4 }}>
+              {selectedVoucher.voucherName} đã được thêm vào ví của bạn
+            </div>
+          </div>
+        ),
+        duration: 4,
+      });
+
+      console.log("Notification displayed");
+
       setIsModalOpen(false);
       setSelectedVoucher(null);
 
       // Reload dữ liệu
-      loadData();
+      setTimeout(() => {
+        console.log("Reloading data...");
+        loadData();
+      }, 500);
     } catch (error: any) {
       console.error("Exchange error details:", error);
+      console.error("Error message:", error.message);
+      console.error("Error response:", error.response);
       message.error(error.message || "Lỗi khi đổi voucher. Vui lòng thử lại.");
     } finally {
       setExchanging(false);

@@ -1,37 +1,27 @@
 // src/pages/CartPage.tsx
 
-import { useEffect, useState, useMemo } from "react";
 import {
-  Row,
-  Col,
-  Card,
-  Typography,
-  Checkbox,
   Button,
-  Flex,
+  Card,
+  Checkbox,
+  Col,
   Divider,
-  Progress,
+  Flex,
+  Row,
   Space,
-  Modal,
-  Drawer,
-  Tag,
-  message,
+  Typography,
+  message
 } from "antd";
-import {
-  GiftOutlined,
-  TagOutlined,
-  RightOutlined,
-  InfoCircleOutlined,
-} from "@ant-design/icons";
-import { CartItem, type CartItemType } from "../components/CartItem";
 import type { CheckboxChangeEvent } from "antd/es/checkbox";
-import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { CartItem, type CartItemType } from "../components/CartItem";
 import {
-  fetchCart,
   addOrUpdateCartItem,
+  fetchCart,
   removeCartItem,
 } from "../features/cart/cartSlice";
-import { useNavigate } from "react-router-dom";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
 
 const { Title, Text } = Typography;
 
@@ -182,7 +172,7 @@ export const CartPage = () => {
     await dispatch(fetchCart()).unwrap();
     try {
       window.dispatchEvent(new CustomEvent("cart-updated"));
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const handleRemoveItem = async (id: string | number) => {
@@ -195,7 +185,7 @@ export const CartPage = () => {
     setSelectedItemIds((ids) => ids.filter((itemId) => itemId !== id));
     try {
       window.dispatchEvent(new CustomEvent("cart-updated"));
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const handleSelect = (id: string | number, checked: boolean) => {
@@ -330,81 +320,6 @@ export const CartPage = () => {
         <Col xs={24} lg={8}>
           <Space direction="vertical" size="large" style={{ width: "100%" }}>
             {/* Khuyến mãi */}
-            <Card bordered={false}>
-              <Flex justify="space-between" align="center">
-                <Text strong>
-                  <TagOutlined style={{ color: "#0A68FF", marginRight: 8 }} />{" "}
-                  KHUYẾN MÃI
-                </Text>
-                <Button
-                  type="text"
-                  onClick={handlePromoClick}
-                  style={{ color: "#0A68FF" }}
-                >
-                  Xem thêm <RightOutlined />
-                </Button>
-              </Flex>
-              <Divider style={{ margin: "12px 0" }} />
-              <Flex align="center" gap="middle">
-                <Flex vertical style={{ flex: 1 }}>
-                  <Text strong>
-                    Mã Giảm 10K - Toàn Sàn{" "}
-                    <InfoCircleOutlined style={{ color: "#0A68FF" }} />
-                  </Text>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    Đơn hàng từ 130K - Không bao gồm...
-                  </Text>
-                  <Progress
-                    percent={Math.min(100, (subtotal / promoThreshold) * 100)}
-                    showInfo={false}
-                  />
-                  {amountToPromo > 0 ? (
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      Mua thêm {formatCurrency(amountToPromo)}
-                    </Text>
-                  ) : (
-                    <Text strong style={{ color: "green", fontSize: 12 }}>
-                      Bạn đã đủ điều kiện nhận mã!
-                    </Text>
-                  )}
-                </Flex>
-                <Button type="primary" disabled={amountToPromo > 0}>
-                  Mua thêm
-                </Button>
-              </Flex>
-            </Card>
-
-            {/* Nhận quà */}
-            <Card bordered={false}>
-              <Flex justify="space-between" align="center">
-                <Text strong>
-                  <GiftOutlined style={{ color: "#d70018", marginRight: 8 }} />{" "}
-                  Nhận quà
-                </Text>
-                <Button
-                  type="text"
-                  onClick={handleGiftClick}
-                  style={{ color: "#d70018" }}
-                >
-                  Chọn quà <RightOutlined />
-                </Button>
-              </Flex>
-              {selectedGift && (
-                <div
-                  style={{
-                    marginTop: 12,
-                    padding: "8px 12px",
-                    background: "#fff7f0",
-                    borderRadius: 6,
-                  }}
-                >
-                  <Text type="success">
-                    ✓ Đã chọn quà tặng:{" "}
-                    {mockGifts.find((g) => g.id === selectedGift)?.name}
-                  </Text>
-                </div>
-              )}
-            </Card>
 
             {/* Tóm tắt đơn hàng */}
             <Card bordered={false}>
@@ -449,157 +364,7 @@ export const CartPage = () => {
         </Col>
       </Row>
 
-      {/* PROMO MODAL */}
-      <Modal
-        title={
-          <div style={{ fontSize: 18, fontWeight: 600 }}>
-            <TagOutlined style={{ marginRight: 8, color: "#0A68FF" }} />
-            Danh Sách Khuyến Mãi
-          </div>
-        }
-        open={isPromoModalOpen}
-        onCancel={() => setIsPromoModalOpen(false)}
-        footer={null}
-        width={700}
-      >
-        <div style={{ maxHeight: "500px", overflowY: "auto" }}>
-          <Space direction="vertical" style={{ width: "100%" }} size="large">
-            {mockPromos.map((promo) => (
-              <Card
-                key={promo.id}
-                style={{ borderLeft: "4px solid #0A68FF", borderRadius: 8 }}
-              >
-                <Flex justify="space-between" align="flex-start" gap="middle">
-                  <div style={{ flex: 1 }}>
-                    <div style={{ marginBottom: 8 }}>
-                      <Text strong style={{ fontSize: 16 }}>
-                        {promo.name}
-                      </Text>
-                    </div>
-                    <div style={{ marginBottom: 8 }}>
-                      <Tag color="blue">{promo.discount}</Tag>
-                      <Text type="secondary" style={{ marginLeft: 8 }}>
-                        Đơn tối thiểu: {promo.minOrder}
-                      </Text>
-                    </div>
-                    <div style={{ marginBottom: 8 }}>
-                      <Text type="secondary">{promo.description}</Text>
-                    </div>
-                    <div style={{ marginBottom: 8 }}>
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        📅 Hiệu lực: {promo.validity}
-                      </Text>
-                    </div>
-                    <div>
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        {promo.quantity}
-                      </Text>
-                    </div>
-                  </div>
-                  <Button
-                    type="primary"
-                    onClick={() => handleCopyCode(promo.code)}
-                    style={{ background: "#0A68FF" }}
-                  >
-                    Copy: {promo.code}
-                  </Button>
-                </Flex>
-              </Card>
-            ))}
-          </Space>
-        </div>
-      </Modal>
 
-      {/* GIFT DRAWER */}
-      <Drawer
-        title={
-          <div style={{ fontSize: 18, fontWeight: 600 }}>
-            <GiftOutlined style={{ marginRight: 8, color: "#d70018" }} />
-            Chọn Quà Tặng
-          </div>
-        }
-        placement="right"
-        onClose={() => setIsGiftDrawerOpen(false)}
-        open={isGiftDrawerOpen}
-        width={450}
-      >
-        <Space direction="vertical" style={{ width: "100%" }} size="middle">
-          <div
-            style={{
-              padding: "12px",
-              background: "#fff7f0",
-              borderRadius: 8,
-              marginBottom: 16,
-            }}
-          >
-            <Text strong style={{ color: "#d70018" }}>
-              💡 Mục Tiêu Đơn Hàng Của Bạn: {formatCurrency(subtotal)}
-            </Text>
-          </div>
-
-          {mockGifts.map((gift) => {
-            const canSelect = subtotal >= gift.minOrder;
-            return (
-              <Card
-                key={gift.id}
-                hoverable={canSelect}
-                style={{
-                  borderRadius: 8,
-                  opacity: canSelect ? 1 : 0.6,
-                  border:
-                    selectedGift === gift.id
-                      ? "2px solid #d70018"
-                      : "1px solid #f0f0f0",
-                  background:
-                    selectedGift === gift.id ? "#fff7f0" : "transparent",
-                }}
-                onClick={() => {
-                  if (canSelect) {
-                    handleSelectGift(gift.id);
-                  }
-                }}
-              >
-                <Flex gap="middle" align="flex-start">
-                  <div
-                    style={{
-                      fontSize: 40,
-                      width: 60,
-                      textAlign: "center",
-                    }}
-                  >
-                    {gift.image}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ marginBottom: 8 }}>
-                      <Text strong style={{ fontSize: 14 }}>
-                        {gift.name}
-                        {selectedGift === gift.id && (
-                          <Tag color="red" style={{ marginLeft: 8 }}>
-                            ✓ Đã chọn
-                          </Tag>
-                        )}
-                      </Text>
-                    </div>
-                    <div style={{ marginBottom: 8 }}>
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        {gift.description}
-                      </Text>
-                    </div>
-                    <Flex justify="space-between" align="center">
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        Yêu cầu: từ {formatCurrency(gift.minOrder)}
-                      </Text>
-                      <Text type="secondary" style={{ fontSize: 11 }}>
-                        Còn: {gift.quantity}
-                      </Text>
-                    </Flex>
-                  </div>
-                </Flex>
-              </Card>
-            );
-          })}
-        </Space>
-      </Drawer>
     </div>
   );
 };

@@ -56,10 +56,35 @@ const VoucherPage = () => {
         const data = await resp.json();
         console.log("📱 Loaded wallet vouchers:", data);
         console.log("📱 Raw data type:", typeof data, "Is array:", Array.isArray(data));
+
+        // Log chi tiết từng voucher từ backend
+        if (Array.isArray(data)) {
+          data.forEach((item: Record<string, unknown>, index: number) => {
+            console.log(`\n📦 === Voucher ${index} ===`);
+            console.log("walletVoucherId:", item.walletVoucherId);
+            console.log("discountCodeId:", item.discountCodeId);
+            console.log("name:", item.name);
+            console.log("percent:", item.percent);
+            console.log("minPriceToApply:", item.minPriceToApply);
+            console.log("description:", item.description);
+            console.log("endDate:", item.endDate);
+            console.log("used:", item.used, "Type:", typeof item.used);
+            console.log("remainingUses:", item.remainingUses, "Type:", typeof item.remainingUses);
+            console.log("source:", item.source);
+            console.log("All keys:", Object.keys(item));
+          });
+        }
+
         // data là mảng map DTO trả từ backend
         const normalized = (Array.isArray(data) ? data : []).map(
           (m: Record<string, unknown>) => {
-            console.log("📱 Normalizing voucher:", m.discountCodeId, "endDate:", m.endDate);
+            console.log("📱 Normalizing voucher:", {
+              discountCodeId: m.discountCodeId,
+              endDate: m.endDate,
+              used: m.used,
+              remainingUses: m.remainingUses,
+              allKeys: Object.keys(m),
+            });
             return {
               walletVoucherId: String(
                 m.walletVoucherId ?? m.discountCodeId ?? ""
@@ -83,6 +108,7 @@ const VoucherPage = () => {
             };
           }
         ) as WalletVoucher[];
+        console.log("📊 Normalized vouchers:", normalized.map(v => ({ discountCodeId: v.discountCodeId, used: v.used, remainingUses: v.remainingUses })));
         setWalletVouchers(normalized as WalletVoucher[]);
       } catch (error) {
         console.error("Error loading vouchers:", error);
@@ -151,16 +177,27 @@ const VoucherPage = () => {
     message.success("Đã copy mã voucher!");
   };
 
-  const getVouchersByStatus = (status: "AVAILABLE" | "USED" | "EXPIRED") => {
-    return walletVouchers.filter((v) => {
+  const getVouchersByStatus = (status: string): WalletVoucher[] => {
+    const filtered = walletVouchers.filter((v) => {
       const isExpired = new Date(v.endDate) < new Date();
       const isUsed = Boolean(v.used);
+      const hasRemainingUses = v.remainingUses > 0;
+
+      console.log(`🔍 Filter check ${v.discountCodeId}: status=${status}, isUsed=${isUsed}, isExpired=${isExpired}, remainingUses=${v.remainingUses}, hasRemaining=${hasRemainingUses}`);
 
       if (status === "EXPIRED") return isExpired;
       if (status === "USED") return isUsed && !isExpired;
-      if (status === "AVAILABLE") return !isUsed && !isExpired;
+      if (status === "AVAILABLE") {
+        const result = !isUsed && !isExpired && hasRemainingUses;
+        if (result) {
+          console.log(`✅ ${v.discountCodeId} PASSED AVAILABLE filter`);
+        }
+        return result;
+      }
       return false;
     });
+    console.log(`📊 Status ${status}: ${filtered.length} vouchers =>`, filtered.map(v => v.discountCodeId));
+    return filtered;
   };
 
   const renderVoucherCard = (voucher: WalletVoucher) => {
@@ -276,15 +313,18 @@ const VoucherPage = () => {
                 </Button>
               </div>
 
-              {/* Expiry Date */}
+              {/* Expiry Date & Remaining Uses */}
               <div
                 style={{
                   fontSize: 12,
                   color: "#999",
-                  textAlign: "center",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
                 }}
               >
-                HSD: {expiryDate}
+                <span>HSD: {expiryDate}</span>
+
               </div>
             </div>
 
@@ -313,9 +353,6 @@ const VoucherPage = () => {
     );
   };
 
-  const usedCount = walletVouchers.filter((v) => v.used === true).length;
-  const availableCount = walletVouchers.filter((v) => v.used === false).length;
-
   const tabItems = [
     {
       key: "available",
@@ -323,7 +360,7 @@ const VoucherPage = () => {
         <span>
           Có thể sử dụng
           <Badge
-            count={availableCount}
+            count={getVouchersByStatus("AVAILABLE").length}
             style={{
               marginLeft: 8,
               backgroundColor: "#C92127",
@@ -369,7 +406,7 @@ const VoucherPage = () => {
         <span>
           Đã sử dụng
           <Badge
-            count={usedCount}
+            count={getVouchersByStatus("USED").length}
             style={{
               marginLeft: 8,
               backgroundColor: "#C92127",
