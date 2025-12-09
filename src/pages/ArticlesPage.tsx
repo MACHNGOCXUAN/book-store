@@ -58,7 +58,7 @@ const ArticlesPage: React.FC = () => {
         // Sử dụng search endpoint
         const params = new URLSearchParams();
         params.append("title", searchTitle.trim());
-        params.append("isVisible", "true"); // Chỉ lấy bài báo hiển thị
+        params.append("isVisible", "true");
         url = `${API_BASE}/articles?${params.toString()}`;
       } else {
         // Sử dụng /all endpoint để lấy tất cả bài báo
@@ -67,7 +67,7 @@ const ArticlesPage: React.FC = () => {
 
       console.log("Fetching articles from:", url);
 
-      // Lấy token từ localStorage
+      // Lấy token từ localStorage (không bắt buộc)
       const token = localStorage.getItem("access_token");
 
       const headers: Record<string, string> = {
@@ -87,21 +87,25 @@ const ArticlesPage: React.FC = () => {
       console.log("Response status:", response.status);
 
       // Xử lý các lỗi HTTP cụ thể
-      if (response.status === 401) {
-        setError("Bạn cần đăng nhập để xem bài báo. Vui lòng đăng nhập trước.");
-        message.error("Cần đăng nhập để truy cập");
-        return;
-      }
-
       if (response.status === 403) {
         setError("Bạn không có quyền truy cập bài báo này.");
         message.error("Không có quyền truy cập");
+        setArticles([]);
         return;
       }
 
       if (response.status === 404) {
         setError("Không tìm thấy API endpoint.");
         message.error("API endpoint không tồn tại");
+        setArticles([]);
+        return;
+      }
+
+      // Nếu 401 (không được phép), coi là không có dữ liệu công khai
+      if (response.status === 401) {
+        console.log("Got 401 - treating as no public articles available");
+        setArticles([]);
+        setLoading(false);
         return;
       }
 
@@ -126,10 +130,7 @@ const ArticlesPage: React.FC = () => {
       console.error("Error fetching articles:", err);
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
 
-      if (errorMessage.includes("401")) {
-        setError("Bạn cần đăng nhập để xem bài báo. Vui lòng đăng nhập trước.");
-        message.error("Cần đăng nhập để truy cập");
-      } else if (errorMessage.includes("403")) {
+      if (errorMessage.includes("403")) {
         setError("Bạn không có quyền truy cập bài báo này.");
         message.error("Không có quyền truy cập");
       } else if (errorMessage.includes("fetch")) {
@@ -193,8 +194,6 @@ const ArticlesPage: React.FC = () => {
   }
 
   if (error) {
-    const isAuthError = error.includes("đăng nhập") || error.includes("quyền");
-
     return (
       <div style={{ textAlign: "center", padding: "60px 20px" }}>
         <BookOutlined style={{ fontSize: 64, color: "#d9d9d9" }} />
@@ -202,15 +201,9 @@ const ArticlesPage: React.FC = () => {
           {error}
         </Title>
         <Space direction="vertical" size={16}>
-          {isAuthError ? (
-            <Button type="primary" href="/login">
-              Đăng nhập
-            </Button>
-          ) : (
-            <Button type="primary" onClick={() => fetchArticles()}>
-              Thử lại
-            </Button>
-          )}
+          <Button type="primary" onClick={() => fetchArticles()}>
+            Thử lại
+          </Button>
         </Space>
       </div>
     );
