@@ -22,8 +22,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import iuh.fit.backend.dto.responses.AvailableVoucherDTO;
 import iuh.fit.backend.model.Customer;
 import iuh.fit.backend.model.DiscountCode;
+import iuh.fit.backend.model.UserDiscountWallet;
 import iuh.fit.backend.model.enums.DiscountType;
 import iuh.fit.backend.repository.CustomerRepository;
+import iuh.fit.backend.repository.DiscountCodeRepository;
 import iuh.fit.backend.service.DiscountCodeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +38,7 @@ import lombok.extern.slf4j.Slf4j;
 public class DiscountCodeController {
     private final DiscountCodeService discountCodeService;
     private final CustomerRepository customerRepository;
+    private final DiscountCodeRepository discountCodeRepository;
 
     @GetMapping
     public ResponseEntity<?> filterDiscountCodes(
@@ -191,17 +194,40 @@ public class DiscountCodeController {
 
     /**
      * Danh sách voucher trong ví của khách hàng hiện tại
+     * Bao gồm: PUBLIC vouchers + Wallet entries (vouchers đã đổi/nhận)
      */
     @GetMapping("/wallet")
     @PreAuthorize("hasRole('CUSTOMER')")
-    @Operation(summary = "Lấy tất cả voucher trong ví của khách hàng")
+    @Operation(summary = "Lấy tất cả voucher trong ví của khách hàng (public + wallet)")
     public ResponseEntity<List<Object>> getWalletVouchers(Authentication auth) {
         Customer customer = customerRepository.findByUserId(auth.getName())
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
 
+        // 1. Lấy PUBLIC vouchers không hết hạn, chưa sử dụng
+        List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
+        
+        // Lấy public vouchers
+        List<DiscountCode> publicVouchers = discountCodeRepository.findByIsPublicTrue();
+        java.time.LocalDate today = java.time.LocalDate.now();
+        for (DiscountCode dc : publicVouchers) {
+            if (dc.getQuantity() > 0 && !dc.getStartDate().isAfter(today) && !dc.getEndDate().isBefore(today)) {
+                java.util.Map<String, Object> m = new java.util.HashMap<>();
+                m.put("walletVoucherId", dc.getDiscountCodeId() + "_public");
+                m.put("discountCodeId", dc.getDiscountCodeId());
+                m.put("name", dc.getName());
+                m.put("percent", dc.getPercent());
+                m.put("minPriceToApply", dc.getMinPriceToApply());
+                m.put("description", dc.getDescription());
+                m.put("endDate", dc.getEndDate());
+                m.put("used", false);
+                m.put("source", "PUBLIC");
+                result.add(m);
+            }
+        }
+        
+        // 2. Lấy wallet entries (vouchers đã đổi)
         List<iuh.fit.backend.model.UserDiscountWallet> wallets = discountCodeService.getWalletEntries(customer);
-
-        List<java.util.Map<String, Object>> result = wallets.stream().map(w -> {
+        for (UserDiscountWallet w : wallets) {
             DiscountCode dc = w.getDiscountCode();
             java.util.Map<String, Object> m = new java.util.HashMap<>();
             m.put("walletVoucherId", String.valueOf(w.getId()));
@@ -210,11 +236,11 @@ public class DiscountCodeController {
             m.put("percent", dc.getPercent());
             m.put("minPriceToApply", dc.getMinPriceToApply());
             m.put("description", dc.getDescription());
-            m.put("expiryDate", dc.getEndDate());
+            m.put("endDate", dc.getEndDate());
             m.put("used", Boolean.TRUE.equals(w.getUsed()));
-            m.put("source", Boolean.TRUE.equals(dc.getIsPublic()) ? "PUBLIC" : "EXCLUSIVE");
-            return m;
-        }).toList();
+            m.put("source", "EXCLUSIVE");
+            result.add(m);
+        }
 
         return ResponseEntity.ok((List) result);
     }
@@ -237,7 +263,7 @@ public class DiscountCodeController {
             m.put("percent", dc.getPercent());
             m.put("minPriceToApply", dc.getMinPriceToApply());
             m.put("description", dc.getDescription());
-            m.put("expiryDate", dc.getEndDate());
+            m.put("endDate", dc.getEndDate());
             m.put("used", Boolean.TRUE.equals(w.getUsed()));
             m.put("source", Boolean.TRUE.equals(dc.getIsPublic()) ? "PUBLIC" : "EXCLUSIVE");
             return m;
