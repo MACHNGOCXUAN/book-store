@@ -11,7 +11,7 @@ import {
   discountNameValidationRules,
   discountPercentValidationRules,
   discountQuantityValidationRules,
-  minPriceValidationRules
+  minPriceValidationRules,
 } from "@/utils/validation";
 import {
   Button,
@@ -26,6 +26,7 @@ import {
 } from "antd";
 import dayjs from "dayjs";
 import React, { useEffect } from "react";
+import { useMyNotification } from "@/hooks/notification";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -41,20 +42,25 @@ interface DiscountDataType {
   quantity: number;
   minPriceToApply: number;
   discountType: "ONE_TIME" | "MANY_TIME";
-  maxQuantityCanUse?: number;
-  isPublic?: boolean;
-  redeemable?: boolean;
+  maxQuantityCanUse: number;
+  isPublic: boolean;
+  redeemable: boolean;
   redeemCost?: number | null;
-  minTierRequired?: "BRONZE" | "SILVER" | "GOLD" | "PLATINUM" | null;
+  minTierRequired?: "NEW_USER" | "REGULAR" | "VIP" | "DIAMOND" | null;
 }
 
 const ModalAddDiscount = ({ isModalOpen, setIsModalOpen }: any) => {
   const dispatch = useAppDispatch();
   const [form] = Form.useForm<DiscountDataType>();
+  const [isPublic, setIsPublic] = React.useState(true);
   const [redeemable, setRedeemable] = React.useState(false);
+  const [discountType, setDiscountType] = React.useState<
+    "ONE_TIME" | "MANY_TIME"
+  >("ONE_TIME");
   const { loading, message, discount } = useAppSelector(
     (state) => state.discount
   );
+  const { openNotification, contextHolder } = useMyNotification();
 
   // GỌI API KHI SUBMIT
   const onFinish = (values: DiscountDataType) => {
@@ -69,8 +75,10 @@ const ModalAddDiscount = ({ isModalOpen, setIsModalOpen }: any) => {
       redeemCost: values.redeemable ? values.redeemCost : null,
       minTierRequired:
         values.minTierRequired === null ? null : values.minTierRequired,
-      // Luôn set maxQuantityCanUse = quantity (cho cả create và update)
-      maxQuantityCanUse: values.quantity,
+      // Chỉ set quantity cho public voucher, private voucher đặt = 0
+      quantity: values.isPublic ? values.quantity : 0,
+      // maxQuantityCanUse luôn bắt buộc (lượt dùng tối đa/khách)
+      maxQuantityCanUse: values.maxQuantityCanUse,
     };
 
     if (discount?.discountCodeId) {
@@ -93,6 +101,11 @@ const ModalAddDiscount = ({ isModalOpen, setIsModalOpen }: any) => {
     // Xóa giá trị nếu chọn "Không"
     if (!value) {
       form.setFieldValue("redeemCost", undefined);
+      form.setFieldValue("minTierRequired", null);
+    } else {
+      // Khi chuyển sang redeemable, đảm bảo isPublic=false
+      form.setFieldValue("isPublic", false);
+      setIsPublic(false);
     }
   };
 
@@ -100,6 +113,7 @@ const ModalAddDiscount = ({ isModalOpen, setIsModalOpen }: any) => {
   const handleCancel = () => {
     setIsModalOpen(false);
     form.resetFields();
+    setIsPublic(true);
     setRedeemable(false);
     dispatch(resetDiscount()); // Reset discount state khi đóng modal
   };
@@ -107,6 +121,21 @@ const ModalAddDiscount = ({ isModalOpen, setIsModalOpen }: any) => {
   // XỬ LÝ KHI THÊM/SỬA THÀNH CÔNG
   useEffect(() => {
     if (message && message?.type === "success") {
+      // Hiển thị thông báo thành công
+      if (discount?.discountCodeId) {
+        openNotification(
+          "success",
+          "Cập nhật thành công",
+          "Mã giảm giá đã được cập nhật thành công"
+        );
+      } else {
+        openNotification(
+          "success",
+          "Thêm thành công",
+          "Mã giảm giá mới đã được tạo thành công"
+        );
+      }
+
       dispatch(getDiscountsFilter({})); // Load lại table
       setIsModalOpen(false); // Đóng modal
       form.resetFields();
@@ -116,31 +145,46 @@ const ModalAddDiscount = ({ isModalOpen, setIsModalOpen }: any) => {
     if (message) {
       dispatch(resetMessage());
     }
-  }, [dispatch, message, setIsModalOpen]);
+  }, [
+    dispatch,
+    message,
+    setIsModalOpen,
+    openNotification,
+    discount?.discountCodeId,
+  ]);
 
   // ĐIỀN DỮ LIỆU KHI MỞ MODAL (SỬA)
   useEffect(() => {
     if (isModalOpen) {
       if (discount) {
         // Chế độ Sửa: điền đầy đủ data
+        const isPublicValue = discount.isPublic !== false;
+        const redeemableValue = discount.redeemable === true;
+
+        setIsPublic(isPublicValue);
+        setRedeemable(redeemableValue);
+        setDiscountType(discount.discountType || "ONE_TIME");
+
         form.setFieldsValue({
           ...discount,
           startDate: dayjs(discount.startDate),
           endDate: dayjs(discount.endDate),
-          isPublic: discount.isPublic !== false,
-          redeemable: discount.redeemable === true,
+          isPublic: isPublicValue,
+          redeemable: redeemableValue,
           redeemCost: discount.redeemCost || undefined,
           minTierRequired: discount.minTierRequired || null,
         });
-        setRedeemable(discount.redeemable === true);
       } else {
         // Chế độ Thêm: dọn form
         form.resetFields();
+        setIsPublic(true);
         setRedeemable(false);
+        setDiscountType("ONE_TIME");
         // Set default values for new discount
         form.setFieldsValue({
           isPublic: true,
           redeemable: false,
+          discountType: "ONE_TIME",
         });
       }
     }
@@ -158,6 +202,7 @@ const ModalAddDiscount = ({ isModalOpen, setIsModalOpen }: any) => {
       footer={null}
       width={900}
     >
+      {contextHolder}
       <Form
         form={form}
         layout="vertical"
@@ -180,7 +225,10 @@ const ModalAddDiscount = ({ isModalOpen, setIsModalOpen }: any) => {
               name="discountType"
               rules={[{ required: true, message: "Vui lòng chọn loại" }]}
             >
-              <Select placeholder="Chọn loại giảm giá">
+              <Select
+                placeholder="Chọn loại giảm giá"
+                onChange={(value) => setDiscountType(value)}
+              >
                 <Option value="ONE_TIME">Một lần</Option>
                 <Option value="MANY_TIME">Nhiều lần</Option>
               </Select>
@@ -204,14 +252,32 @@ const ModalAddDiscount = ({ isModalOpen, setIsModalOpen }: any) => {
             </Form.Item>
           </Col>
           <Col span={8}>
-            <Form.Item
-              label="Số lượng"
-              name="quantity"
-              rules={discountQuantityValidationRules}
-            >
-              <InputNumber min={1} style={{ width: "100%" }} />
-            </Form.Item>
+            {/* Chỉ hiển thị Số lượng nếu isPublic = true */}
+            {isPublic && (
+              <Form.Item
+                label="Số lượng (Public)"
+                name="quantity"
+                rules={discountQuantityValidationRules}
+              >
+                <InputNumber min={1} style={{ width: "100%" }} />
+              </Form.Item>
+            )}
           </Col>
+          <Col span={8}>
+            {/* Hiển thị maxQuantityCanUse khi chọn MANY_TIME hoặc khi isPrivate */}
+            {discountType === "MANY_TIME" || !isPublic ? (
+              <Form.Item
+                label="Lượt dùng tối đa/khách"
+                name="maxQuantityCanUse"
+                rules={[{ required: true, message: "Bắt buộc" }]}
+              >
+                <InputNumber min={1} style={{ width: "100%" }} />
+              </Form.Item>
+            ) : null}
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
           <Col span={8}>
             <Form.Item
               label="Giá tối thiểu để áp dụng (VNĐ)"
@@ -288,38 +354,57 @@ const ModalAddDiscount = ({ isModalOpen, setIsModalOpen }: any) => {
         {/* ========== LOYALTY + TIER SYSTEM FIELDS ========== */}
         <div className="mt-6 pt-4 border-t border-gray-300">
           <h4 className="font-semibold text-base mb-4">
-            Cấu hình Loyalty & Tier
+            Cấu hình Phân Phối & Trao Đổi
           </h4>
 
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="Loại voucher"
+                label="Loại Voucher"
                 name="isPublic"
                 rules={[{ required: true, message: "Vui lòng chọn" }]}
               >
-                <Select placeholder="Chọn loại voucher">
-                  <Option value={true}>Công khai (Tất cả khách hàng)</Option>
-                  <Option value={false}>Riêng tư (Cấp phát cá nhân)</Option>
+                <Select
+                  placeholder="Chọn loại voucher"
+                  onChange={(value) => {
+                    setIsPublic(value);
+                    if (value) {
+                      // Public: không thể redeemable
+                      setRedeemable(false);
+                      form.setFieldValue("redeemable", false);
+                      form.setFieldValue("redeemCost", undefined);
+                      form.setFieldValue("minTierRequired", null);
+                    }
+                  }}
+                >
+                  <Option value={true}>🎁 Công khai (Tất cả khách hàng)</Option>
+                  <Option value={false}>🔒 Riêng tư (Cấp phát cá nhân)</Option>
                 </Select>
               </Form.Item>
             </Col>
 
-            <Col span={12}>
-              <Form.Item label="Có thể đổi bằng điểm?" name="redeemable">
-                <Select placeholder="Chọn" onChange={handleRedeemableChange}>
-                  <Option value={true}>
-                    Có - Có thể đổi bằng loyaltyPoints
-                  </Option>
-                  <Option value={false}>Không - Chỉ là voucher thường</Option>
-                </Select>
-              </Form.Item>
-            </Col>
+            {!isPublic && (
+              <Col span={12}>
+                <Form.Item
+                  label="Có thể đổi bằng Loyalty Points?"
+                  name="redeemable"
+                >
+                  <Select placeholder="Chọn" onChange={handleRedeemableChange}>
+                    <Option value={false}>
+                      ❌ Không - Voucher cá nhân thường
+                    </Option>
+                    <Option value={true}>
+                      💳 Có - Trao đổi bằng Loyalty Points
+                    </Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+            )}
           </Row>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              {redeemable && (
+          {!isPublic && redeemable && (
+            <Row gutter={16}>
+              <Col span={12}>
                 <Form.Item
                   label="Chi phí đổi (Loyalty Points)"
                   name="redeemCost"
@@ -336,25 +421,101 @@ const ModalAddDiscount = ({ isModalOpen, setIsModalOpen }: any) => {
                     style={{ width: "100%" }}
                   />
                 </Form.Item>
-              )}
-            </Col>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  label="Tier tối thiểu để đổi"
+                  name="minTierRequired"
+                  rules={[{ required: false }]}
+                >
+                  <Select placeholder="Chọn tier (không bắt buộc)" allowClear>
+                    <Option value={null}>Không ràng buộc</Option>
+                    <Option value="NEW_USER">
+                      🆕 NEW_USER - Người dùng mới
+                    </Option>
+                    <Option value="REGULAR">
+                      ⭐ REGULAR - Thành viên thường
+                    </Option>
+                    <Option value="VIP">✨ VIP - Thành viên VIP</Option>
+                    <Option value="DIAMOND">
+                      💎 DIAMOND - Thành viên Diamond
+                    </Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+          )}
 
-            <Col span={12}>
-              <Form.Item
-                label="Tier tối thiểu yêu cầu"
-                name="minTierRequired"
-                rules={[{ required: false }]}
-              >
-                <Select placeholder="Chọn tier (không bắt buộc)" allowClear>
-                  <Option value={null}>Không ràng buộc</Option>
-                  <Option value="NEW_USER">NEW_USER - Người dùng mới</Option>
-                  <Option value="REGULAR">REGULAR - Thành viên thường</Option>
-                  <Option value="VIP">VIP - Thành viên VIP</Option>
-                  <Option value="DIAMOND">DIAMOND - Thành viên Diamond</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
+          {!isPublic && !redeemable && (
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  label="Tier tối thiểu yêu cầu"
+                  name="minTierRequired"
+                  rules={[{ required: false }]}
+                >
+                  <Select placeholder="Chọn tier (không bắt buộc)" allowClear>
+                    <Option value={null}>Không ràng buộc</Option>
+                    <Option value="NEW_USER">
+                      🆕 NEW_USER - Người dùng mới
+                    </Option>
+                    <Option value="REGULAR">
+                      ⭐ REGULAR - Thành viên thường
+                    </Option>
+                    <Option value="VIP">✨ VIP - Thành viên VIP</Option>
+                    <Option value="DIAMOND">
+                      💎 DIAMOND - Thành viên Diamond
+                    </Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+          )}
+
+          {/* Hướng dẫn cho admin */}
+          <div className="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded text-sm">
+            <p className="font-semibold text-blue-900 mb-2">📌 Hướng dẫn:</p>
+            {isPublic && (
+              <ul className="list-disc list-inside text-blue-800">
+                <li>
+                  ✅ Tạo mã công khai cho <strong>tất cả khách hàng</strong>
+                </li>
+                <li>
+                  📊 Nhập <strong>Số lượng</strong> = tổng lượt dùng cho tất cả
+                  khách
+                </li>
+                <li>
+                  🔄 Mỗi khách được dùng tối đa{" "}
+                  <strong>Lượt dùng tối đa</strong> lần
+                </li>
+              </ul>
+            )}
+            {!isPublic && !redeemable && (
+              <ul className="list-disc list-inside text-blue-800">
+                <li>
+                  ✅ Cấp phát <strong>tự động</strong> cho khách hàng phù hợp
+                  Tier
+                </li>
+                <li>
+                  📊 Mỗi khách nhận <strong>Lượt dùng tối đa</strong> lần dùng
+                </li>
+                <li>🔄 Hệ thống sẽ tạo wallet cho từng khách</li>
+              </ul>
+            )}
+            {!isPublic && redeemable && (
+              <ul className="list-disc list-inside text-blue-800">
+                <li>❌ KHÔNG cấp phát tự động</li>
+                <li>💳 Khách tự trao đổi bằng Loyalty Points</li>
+                <li>
+                  📊 Chi phí: {form.getFieldValue("redeemCost") || "---"} điểm
+                </li>
+                <li>
+                  🔄 Sau đổi, khách được <strong>Lượt dùng tối đa</strong> lần
+                  dùng
+                </li>
+              </ul>
+            )}
+          </div>
         </div>
 
         <div className="flex justify-end gap-3 mt-6">

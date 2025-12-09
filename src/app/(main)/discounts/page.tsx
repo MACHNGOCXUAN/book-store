@@ -131,41 +131,31 @@ export default function DiscountPage() {
       render: (value) => <span>{value?.toLocaleString("vi-VN")}đ</span>,
     },
     {
-      title: "Công khai",
+      title: "Loại Voucher",
       dataIndex: "isPublic",
       key: "isPublic",
-      render: (isPublic) => (
-        <Tag color={isPublic ? "blue" : "orange"}>
-          {isPublic ? "Công khai" : "Riêng tư"}
-        </Tag>
-      ),
+      render: (isPublic, record) => {
+        if (isPublic) {
+          return <Tag color="blue">🎁 Công khai</Tag>;
+        }
+        if (record.redeemable) {
+          return <Tag color="purple">💳 Trao đổi</Tag>;
+        }
+        return <Tag color="orange">🔒 Riêng tư</Tag>;
+      },
     },
     {
-      title: "Đổi điểm",
-      dataIndex: "redeemable",
-      key: "redeemable",
-      render: (redeemable) => (
-        <Tag color={redeemable ? "purple" : "default"}>
-          {redeemable ? "Có" : "Không"}
-        </Tag>
-      ),
+      title: "Lượt dùng tối đa",
+      dataIndex: "maxQuantityCanUse",
+      key: "maxQuantityCanUse",
+      render: (value) => <span>{value} lần</span>,
     },
     {
-      title: "Tier tối thiểu",
+      title: "Tier",
       dataIndex: "minTierRequired",
       key: "minTierRequired",
       render: (tier) =>
         tier ? <Tag color="cyan">{tier}</Tag> : <span>-</span>,
-    },
-    {
-      title: "Số lượng",
-      dataIndex: "quantity",
-      key: "quantity",
-      render: (quantity, record) => (
-        <span>
-          {quantity || 0}/{record.maxQuantityCanUse}
-        </span>
-      ),
     },
     {
       title: "Thao tác",
@@ -251,6 +241,52 @@ export default function DiscountPage() {
           <Button type="primary" size="middle" onClick={handleOpenAddModal}>
             Thêm mã giảm giá mới
           </Button>
+        </div>
+      </div>
+      {/* Hướng dẫn 3 loại voucher */}
+      <div className="boxItemPage">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="p-4 bg-blue-50 border-l-4 border-blue-400 rounded">
+            <h4 className="font-bold text-blue-900 mb-2">
+              🎁 Voucher Công Khai
+            </h4>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>✅ Phân phối tất cả khách hàng</li>
+              <li>
+                📊 Dùng trường <strong>Số lượng (Public)</strong>
+              </li>
+              <li>
+                🔄 Mỗi KH dùng tối đa <strong>Lượt dùng tối đa</strong> lần
+              </li>
+            </ul>
+          </div>
+
+          <div className="p-4 bg-orange-50 border-l-4 border-orange-400 rounded">
+            <h4 className="font-bold text-orange-900 mb-2">
+              🔒 Voucher Riêng Tư
+            </h4>
+            <ul className="text-sm text-orange-800 space-y-1">
+              <li>✅ Cấp phát theo Tier tự động</li>
+              <li>
+                📊 Dùng trường <strong>Lượt dùng tối đa</strong>
+              </li>
+              <li>🔄 Hệ thống tạo wallet cho mỗi KH</li>
+            </ul>
+          </div>
+
+          <div className="p-4 bg-purple-50 border-l-4 border-purple-400 rounded">
+            <h4 className="font-bold text-purple-900 mb-2">
+              💳 Voucher Trao Đổi
+            </h4>
+            <ul className="text-sm text-purple-800 space-y-1">
+              <li>❌ Không cấp phát tự động</li>
+              <li>💵 KH trao đổi bằng Loyalty Points</li>
+              <li>
+                🔄 Sau đổi, được dùng tối đa <strong>Lượt dùng tối đa</strong>{" "}
+                lần
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
       <div className="boxItemPage">
