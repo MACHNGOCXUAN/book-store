@@ -45,6 +45,29 @@ export interface ExchangeableVoucher {
 }
 
 /**
+ * DiscountCode DTO từ Backend
+ * Response từ GET /api/discounts
+ */
+export interface DiscountCode {
+  discountCodeId: string;
+  name: string;
+  percent: number;
+  startDate: string | Date;
+  endDate: string | Date;
+  description: string;
+  quantity: number;
+  minPriceToApply: number;
+  discountType: "ONE_TIME" | "MANY_TIME";
+  maxQuantityCanUse: number;
+
+  // Loyalty + Tier System
+  isPublic: boolean;
+  redeemable: boolean;
+  redeemCost?: number | null;
+  minTierRequired?: CustomerTier;
+}
+
+/**
  * Exchange Reward Request DTO
  * Body cho POST /api/rewards/exchange
  */
@@ -95,16 +118,24 @@ export interface ApplyVoucherResponse {
  */
 export interface WalletVoucher {
   walletVoucherId: string;
-  discountCodeId: string;
+  discountCodeId: string; // PK của DiscountCode
   name: string;
   percent: number;
   minPriceToApply: number;
   description: string;
-  expiryDate: string | Date;
+  startDate: string | Date;
+  endDate: string | Date;
   createdDate: string | Date;
-  used: boolean; // true if already used
-  source: "PUBLIC" | "EXCLUSIVE" | "EXCHANGE";
-  voucherTag?: string; // Optional tag for special vouchers
+  remainingUses: number; // Lượt dùng còn lại
+  used: boolean; // true nếu đã dùng hết (remainingUses = 0)
+
+  // Loyalty + Tier System
+  isPublic: boolean;
+  redeemable: boolean;
+  redeemCost?: number | null;
+  minTierRequired?: CustomerTier;
+  discountType: "ONE_TIME" | "MANY_TIME";
+  maxQuantityCanUse: number;
 }
 
 /**

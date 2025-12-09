@@ -71,7 +71,7 @@ const CheckoutPage: React.FC = () => {
   >();
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [showQRModal, setShowQRModal] = useState(false);
-  const [currentOrderPayment, setCurrentOrderPayment] = useState<any>(null);
+  const currentOrderPayment = useRef<any>(null);
   // Guard to prevent showing success toast multiple times per order
   const successToastRef = useRef(false);
 
@@ -292,12 +292,7 @@ const CheckoutPage: React.FC = () => {
       const orderPayload: any = {
         customerId: authUser.userId,
         orderDetails,
-        paymentMethod: paymentMethod || "COD", // ⭐ Thêm payment method
-        // Pass computed totals to backend for verification
-        subtotal,
-        shipping,
-        total,
-        discountAmount,
+        paymentMethod: paymentMethod || "COD",
       };
 
       // Chỉ thêm voucherId nếu có (không gửi null)
@@ -460,6 +455,7 @@ const CheckoutPage: React.FC = () => {
                 const token = localStorage.getItem("access_token") || "";
                 const orderId = (result.payload as any)?.order?.orderId;
                 if (orderId) {
+                  // 1️⃣ Gọi POST /discounts/wallet/{voucherId}/mark-used để decrement remainingUses
                   const resp = await fetch(
                     buildApiUrl(
                       `/discounts/wallet/${encodeURIComponent(
@@ -476,6 +472,10 @@ const CheckoutPage: React.FC = () => {
                   );
                   if (!resp.ok) {
                     console.warn("Mark-used failed:", resp.status);
+                  } else {
+                    console.log(
+                      "✅ Voucher remainingUses decremented successfully"
+                    );
                   }
                 }
               }
@@ -1017,7 +1017,7 @@ const CheckoutPage: React.FC = () => {
               key="confirm"
               type="primary"
               onClick={async () => {
-                // ⭐ Order đã được tạo ở /checkout-momo hoặc /checkout
+                // ⭐ Order đã được tạo ở handleCheckout
                 // Chỉ cần lưu address và redirect
                 try {
                   console.log("💾 Saving address and closing modal...");
@@ -1029,80 +1029,31 @@ const CheckoutPage: React.FC = () => {
                   const isNewAddress =
                     !defaultAddr ||
                     defaultAddr.province !==
-                      currentOrderPayment?.values.province ||
+                      currentOrderPayment.current?.values.province ||
                     defaultAddr.specifics !==
-                      currentOrderPayment?.values.specifics;
+                      currentOrderPayment.current?.values.specifics;
 
-                  if (isNewAddress && currentOrderPayment?.address) {
+                  if (isNewAddress && currentOrderPayment.current?.address) {
                     dispatch(
                       createAddressAction({
                         customerId: authUser!.userId,
-                        address: currentOrderPayment.address as Address,
+                        address: currentOrderPayment.current.address as Address,
                       })
                     );
-
-                    if (result.meta.requestStatus === "fulfilled") {
-                      toast.success("Đặt hàng thành công!", {
-                        position: "top-right",
-                        autoClose: 2000,
-                      });
-
-                      // Lưu địa chỉ nếu cần
-                      const defaultAddr = addressState.addresses.find(
-                        (a) => a.isDefault
-                      );
-                      const isNewAddress =
-                        !defaultAddr ||
-                        defaultAddr.province !==
-                          currentOrderPayment.values.province ||
-                        defaultAddr.specifics !==
-                          currentOrderPayment.values.specifics;
-
-                      if (isNewAddress) {
-                        dispatch(
-                          createAddressAction({
-                            customerId: authUser!.userId,
-                            address: currentOrderPayment.address as Address,
-                          })
-                        );
-                      }
-
-                      // Reload cart
-                      dispatch(fetchCart());
-
-                      // Navigate to success page
-                      dispatch(clearOrder());
-                      navigate(
-                        `/payment-status?status=success&orderId=${
-                          (result.payload as any)?.order?.orderId
-                        }`
-                      );
-                      setShowQRModal(false);
-                    } else {
-                      toast.error(
-                        "Không thể tạo đơn hàng. Vui lòng liên hệ hỗ trợ!",
-                        {
-                          position: "top-right",
-                          autoClose: 3000,
-                        }
-                      );
-                    }
                   }
 
                   setShowQRModal(false);
-                  // Redirect tới trang success giống như COD flow
+                  // Redirect tới trang success
                   dispatch(clearOrder());
                   navigate(
-                    `/payment-status?status=success&orderId=${currentOrderPayment?.orderPayload?.orderId}`
+                    `/payment-status?status=success&orderId=${currentOrderPayment.current?.orderId}`
                   );
                 } catch (error) {
                   console.error("❌ Error creating order:", error);
                   toast.error("Có lỗi xảy ra khi tạo đơn hàng!", {
                     position: "top-right",
                     autoClose: 2000,
-                    toastId: "order-success",
                   });
-                  successToastRef.current = true;
                 }
               }}
               style={{
@@ -1123,7 +1074,7 @@ const CheckoutPage: React.FC = () => {
             </Text>
             {/* Hiển thị QR cho cả MoMo và VNPay */}
             {paymentMethod === "MOMO" &&
-            currentOrderPayment?.payment?.qrCodeUrl ? (
+            currentOrderPayment.current?.payment?.qrCodeUrl ? (
               <>
                 <div
                   style={{
@@ -1142,7 +1093,7 @@ const CheckoutPage: React.FC = () => {
                   >
                     {/* Generate QR từ chuỗi EMVCo data */}
                     <QRCodeSVG
-                      value={currentOrderPayment.payment.qrCodeUrl}
+                      value={currentOrderPayment.current.payment.qrCodeUrl}
                       size={280}
                       level="M"
                       includeMargin={true}
@@ -1152,9 +1103,9 @@ const CheckoutPage: React.FC = () => {
                 <div style={{ marginBottom: 16 }}>
                   <Text type="secondary" style={{ fontSize: 13 }}>
                     Hạn thanh toán:{" "}
-                    {currentOrderPayment.payment.expiresAt
+                    {currentOrderPayment.current.payment.expiresAt
                       ? new Date(
-                          currentOrderPayment.payment.expiresAt
+                          currentOrderPayment.current.payment.expiresAt
                         ).toLocaleString("vi-VN")
                       : "15 phút từ bây giờ"}
                   </Text>
@@ -1170,14 +1121,14 @@ const CheckoutPage: React.FC = () => {
                   }}
                 >
                   <Text strong style={{ color: "#d82d8b", fontSize: 18 }}>
-                    {currentOrderPayment.payment.amount?.toLocaleString(
+                    {currentOrderPayment.current.payment.amount?.toLocaleString(
                       "vi-VN"
                     )}{" "}
                     ₫
                   </Text>
                 </div>
               </>
-            ) : currentOrderPayment?.payment?.qrCodeBase64 ? (
+            ) : currentOrderPayment.current?.payment?.qrCodeBase64 ? (
               <>
                 <div
                   style={{
@@ -1195,7 +1146,7 @@ const CheckoutPage: React.FC = () => {
                     }}
                   >
                     <img
-                      src={currentOrderPayment.payment.qrCodeBase64}
+                      src={currentOrderPayment.current.payment.qrCodeBase64}
                       alt="VNPay QR Code"
                       style={{
                         maxWidth: 280,
@@ -1209,9 +1160,9 @@ const CheckoutPage: React.FC = () => {
                 <div style={{ marginBottom: 16 }}>
                   <Text type="secondary" style={{ fontSize: 13 }}>
                     Hạn thanh toán:{" "}
-                    {currentOrderPayment.payment.expiresAt
+                    {currentOrderPayment.current.payment.expiresAt
                       ? new Date(
-                          currentOrderPayment.payment.expiresAt
+                          currentOrderPayment.current.payment.expiresAt
                         ).toLocaleString("vi-VN")
                       : "15 phút từ bây giờ"}
                   </Text>
@@ -1227,7 +1178,7 @@ const CheckoutPage: React.FC = () => {
                   }}
                 >
                   <Text strong style={{ color: "#d32f2f", fontSize: 18 }}>
-                    {currentOrderPayment.payment.amount?.toLocaleString(
+                    {currentOrderPayment.current.payment.amount?.toLocaleString(
                       "vi-VN"
                     )}{" "}
                     ₫
