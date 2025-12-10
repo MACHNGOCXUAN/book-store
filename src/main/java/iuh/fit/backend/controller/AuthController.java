@@ -183,6 +183,12 @@ public class AuthController {
             System.out.println("xuan: " + userRole);
             List<String> allowedRoles = Arrays.asList("ADMIN", "STAFF");
 
+            User user = userService.findUserById(userDetails.getUserId());
+            if(!user.isStatus()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("Bạn không có quyền truy cập!");
+            }
+
             if (!allowedRoles.contains(userRole)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body("Bạn không có quyền truy cập!");
