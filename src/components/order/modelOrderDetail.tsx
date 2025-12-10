@@ -80,12 +80,12 @@ const OrderDetailModal = ({
       icon: <CheckCircleOutlined />,
       step: 2,
     },
-    CANCELLED: {
-      label: "Đã hủy",
-      color: "red",
-      icon: <CloseCircleOutlined />,
-      step: -1,
-    },
+    // CANCELLED: {
+    //   label: "Đã hủy",
+    //   color: "red",
+    //   icon: <CloseCircleOutlined />,
+    //   step: -1,
+    // },
   };
 
   const getAvailableStatuses = (status: OrderStatus): OrderStatus[] => {
@@ -315,11 +315,11 @@ const OrderDetailModal = ({
                       {/* custom time line */}
                       <HorizontalTimeline
                         items={order?.orderHistories?.map((h) => ({
-                          color: statusConfig[h.status].color,
+                          color: statusConfig[h?.status]?.color,
                           children: (
                             <div>
                               <div className="font-medium text-gray-900">
-                                {statusConfig[h.status].label}
+                                {statusConfig[h?.status]?.label}
                               </div>
                               <div className="text-xs text-gray-500 mt-1">
                                 {formatDate(h.timestamp)}

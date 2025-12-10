@@ -67,6 +67,14 @@ const statusLabel: Record<OrderStatus, string> = {
   CANCELLED: "Đã hủy",
 };
 
+const statusButton: Record<OrderStatus, string> = {
+  PENDING: "Vừa tạo",
+  PROCESSING: "Đang xử lý",
+  SHIPPING: "Đang giao hàng",
+  COMPLETED: "Đã giao",
+  // CANCELLED: "Đã hủy",
+};
+
 const statusColor: Record<OrderStatus, string> = {
   PENDING: "gold",
   PROCESSING: "blue",
@@ -197,7 +205,7 @@ export const orderColumns = (
       const availableStatuses = getAvailableStatuses(record.status);
       const statusMenuItems = availableStatuses.map((status) => ({
         key: status,
-        label: statusLabel[status],
+        label: statusButton[status],
       }));
 
       return (

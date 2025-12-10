@@ -75,11 +75,22 @@ const ModalAddDiscount = ({ isModalOpen, setIsModalOpen }: any) => {
       redeemCost: values.redeemable ? values.redeemCost : null,
       minTierRequired:
         values.minTierRequired === null ? null : values.minTierRequired,
-      // Gửi quantity cho cả public và private voucher
-      quantity: values.quantity,
-      // maxQuantityCanUse luôn bắt buộc (lượt dùng tối đa/khách)
-      maxQuantityCanUse: values.maxQuantityCanUse,
     };
+
+    // Xử lý quantity và maxQuantityCanUse dựa trên discountType
+    if (values.discountType === "ONE_TIME" && isPublic) {
+      // ONE_TIME + Public: gửi quantity, set maxQuantityCanUse = 1
+      payload.quantity = values.quantity;
+      payload.maxQuantityCanUse = 1;
+    } else if (values.discountType === "ONE_TIME" && !isPublic) {
+      // ONE_TIME + Private: gửi cả quantity và maxQuantityCanUse
+      payload.quantity = values.quantity;
+      payload.maxQuantityCanUse = values.maxQuantityCanUse;
+    } else if (values.discountType === "MANY_TIME") {
+      // MANY_TIME: gửi cả quantity và maxQuantityCanUse
+      payload.quantity = values.quantity;
+      payload.maxQuantityCanUse = values.maxQuantityCanUse;
+    }
 
     if (discount?.discountCodeId) {
       // Logic Cập nhật
@@ -106,6 +117,24 @@ const ModalAddDiscount = ({ isModalOpen, setIsModalOpen }: any) => {
       // Khi chuyển sang redeemable, đảm bảo isPublic=false
       form.setFieldValue("isPublic", false);
       setIsPublic(false);
+    }
+  };
+
+  // XỬ LÝ KHI THAY ĐỔI LOẠI VOUCHER (PUBLIC/PRIVATE)
+  const handleIsPublicChange = (value: boolean) => {
+    setIsPublic(value);
+    if (value) {
+      // Public: không thể redeemable, xóa maxQuantityCanUse vì sẽ mặc định = 1
+      setRedeemable(false);
+      form.setFieldValue("redeemable", false);
+      form.setFieldValue("redeemCost", undefined);
+      form.setFieldValue("minTierRequired", null);
+      form.setFieldValue("maxQuantityCanUse", undefined);
+    } else {
+      // Private: thêm giá trị mặc định cho maxQuantityCanUse nếu chưa có
+      if (!form.getFieldValue("maxQuantityCanUse")) {
+        form.setFieldValue("maxQuantityCanUse", 1);
+      }
     }
   };
 
@@ -261,8 +290,8 @@ const ModalAddDiscount = ({ isModalOpen, setIsModalOpen }: any) => {
             </Form.Item>
           </Col>
           <Col span={8}>
-            {/* Hiển thị maxQuantityCanUse khi chọn MANY_TIME hoặc khi isPrivate */}
-            {discountType === "MANY_TIME" || !isPublic ? (
+            {/* Hiển thị maxQuantityCanUse chỉ khi không phải ONE_TIME + Public */}
+            {!(discountType === "ONE_TIME" && isPublic) ? (
               <Form.Item
                 label="Lượt dùng tối đa/khách"
                 name="maxQuantityCanUse"
@@ -363,16 +392,7 @@ const ModalAddDiscount = ({ isModalOpen, setIsModalOpen }: any) => {
               >
                 <Select
                   placeholder="Chọn loại voucher"
-                  onChange={(value) => {
-                    setIsPublic(value);
-                    if (value) {
-                      // Public: không thể redeemable
-                      setRedeemable(false);
-                      form.setFieldValue("redeemable", false);
-                      form.setFieldValue("redeemCost", undefined);
-                      form.setFieldValue("minTierRequired", null);
-                    }
-                  }}
+                  onChange={handleIsPublicChange}
                 >
                   <Option value={true}>🎁 Công khai (Tất cả khách hàng)</Option>
                   <Option value={false}>🔒 Riêng tư (Cấp phát cá nhân)</Option>

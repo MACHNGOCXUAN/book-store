@@ -204,7 +204,7 @@ const BookPreview = () => {
               <BarChart
                 data={data.slice(0, 10)} // top 10
                 layout="vertical"
-                margin={{ top: 10, right: 30, left: 40, bottom: 5 }}
+                margin={{ top: 10, right: 30, left: 100, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" />
