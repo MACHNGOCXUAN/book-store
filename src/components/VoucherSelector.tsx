@@ -24,7 +24,7 @@ const API_BASE: string =
   (typeof API === "object" && (API as { API_BASE?: string }).API_BASE) ||
   (import.meta.env &&
     (import.meta.env as { VITE_API_URL?: string }).VITE_API_URL) ||
-  "http://localhost:8080";
+  "http://DESKTOP-GL3I116:8080";
 
 // Build URL safely to avoid double /api in base
 const buildApiUrl = (path: string) => {

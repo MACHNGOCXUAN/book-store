@@ -1,6 +1,6 @@
 import type { Address } from "../types/Address";
 
-const API_BASE = "http://localhost:8080/api/addresses";
+const API_BASE = "http://DESKTOP-GL3I116:8080/api/addresses";
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem("access_token");

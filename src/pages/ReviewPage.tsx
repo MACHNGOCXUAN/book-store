@@ -34,7 +34,9 @@ const ReviewPage: React.FC = () => {
     const fetchTopBooks = async () => {
       setLoading(true);
       try {
-        const res = await fetch("http://localhost:8080/api/reviews/top10");
+        const res = await fetch(
+          "http://DESKTOP-GL3I116:8080/api/reviews/top10"
+        );
         if (!res.ok) throw new Error("Không thể tải dữ liệu top 10 sách");
         const data: BookReview[] = await res.json();
 

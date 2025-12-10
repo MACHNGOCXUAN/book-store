@@ -6,7 +6,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import type { Address } from "../../types/Address";
 
-const API_BASE = "http://localhost:8080/api/addresses";
+const API_BASE = "http://DESKTOP-GL3I116:8080/api/addresses";
 
 // Helper to get auth headers
 const getAuthHeaders = () => {

@@ -200,7 +200,7 @@ const CheckoutPage: React.FC = () => {
   // Safe API base and URL builder to avoid double /api
   const API_BASE: string =
     (import.meta.env && (import.meta.env as any).VITE_API_URL) ||
-    "http://localhost:8080/api";
+    "http://DESKTOP-GL3I116:8080/api";
   const buildApiUrl = (path: string) => {
     const base = API_BASE.replace(/\/$/, "");
     return base.endsWith("/api") ? `${base}${path}` : `${base}/api${path}`;
@@ -223,7 +223,7 @@ const CheckoutPage: React.FC = () => {
     try {
       // Get API URL from config
       const API_URL =
-        import.meta.env.VITE_API_URL || "http://localhost:8080/api";
+        import.meta.env.VITE_API_URL || "http://DESKTOP-GL3I116:8080/api";
 
       const response = await fetch(
         `${API_URL}/discounts/apply-code?code=${encodeURIComponent(

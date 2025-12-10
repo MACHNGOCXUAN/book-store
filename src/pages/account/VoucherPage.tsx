@@ -26,7 +26,7 @@ const VoucherPage = () => {
     (typeof API === "object" && (API as { API_BASE?: string }).API_BASE) ||
     (import.meta.env &&
       (import.meta.env as { VITE_API_URL?: string }).VITE_API_URL) ||
-    "http://localhost:8080/api";
+    "http://DESKTOP-GL3I116:8080/api";
   const buildApiUrl = (path: string) => {
     const base = API_BASE.replace(/\/$/, "");
     return base.endsWith("/api") ? `${base}${path}` : `${base}/api${path}`;
@@ -55,7 +55,12 @@ const VoucherPage = () => {
         }
         const data = await resp.json();
         console.log("📱 Loaded wallet vouchers:", data);
-        console.log("📱 Raw data type:", typeof data, "Is array:", Array.isArray(data));
+        console.log(
+          "📱 Raw data type:",
+          typeof data,
+          "Is array:",
+          Array.isArray(data)
+        );
 
         // Log chi tiết từng voucher từ backend
         if (Array.isArray(data)) {
@@ -69,7 +74,12 @@ const VoucherPage = () => {
             console.log("description:", item.description);
             console.log("endDate:", item.endDate);
             console.log("used:", item.used, "Type:", typeof item.used);
-            console.log("remainingUses:", item.remainingUses, "Type:", typeof item.remainingUses);
+            console.log(
+              "remainingUses:",
+              item.remainingUses,
+              "Type:",
+              typeof item.remainingUses
+            );
             console.log("source:", item.source);
             console.log("All keys:", Object.keys(item));
           });
@@ -108,7 +118,14 @@ const VoucherPage = () => {
             };
           }
         ) as WalletVoucher[];
-        console.log("📊 Normalized vouchers:", normalized.map(v => ({ discountCodeId: v.discountCodeId, used: v.used, remainingUses: v.remainingUses })));
+        console.log(
+          "📊 Normalized vouchers:",
+          normalized.map((v) => ({
+            discountCodeId: v.discountCodeId,
+            used: v.used,
+            remainingUses: v.remainingUses,
+          }))
+        );
         setWalletVouchers(normalized as WalletVoucher[]);
       } catch (error) {
         console.error("Error loading vouchers:", error);
@@ -183,7 +200,9 @@ const VoucherPage = () => {
       const isUsed = Boolean(v.used);
       const hasRemainingUses = v.remainingUses > 0;
 
-      console.log(`🔍 Filter check ${v.discountCodeId}: status=${status}, isUsed=${isUsed}, isExpired=${isExpired}, remainingUses=${v.remainingUses}, hasRemaining=${hasRemainingUses}`);
+      console.log(
+        `🔍 Filter check ${v.discountCodeId}: status=${status}, isUsed=${isUsed}, isExpired=${isExpired}, remainingUses=${v.remainingUses}, hasRemaining=${hasRemainingUses}`
+      );
 
       if (status === "EXPIRED") return isExpired;
       if (status === "USED") return isUsed && !isExpired;
@@ -196,7 +215,10 @@ const VoucherPage = () => {
       }
       return false;
     });
-    console.log(`📊 Status ${status}: ${filtered.length} vouchers =>`, filtered.map(v => v.discountCodeId));
+    console.log(
+      `📊 Status ${status}: ${filtered.length} vouchers =>`,
+      filtered.map((v) => v.discountCodeId)
+    );
     return filtered;
   };
 
@@ -324,7 +346,6 @@ const VoucherPage = () => {
                 }}
               >
                 <span>HSD: {expiryDate}</span>
-
               </div>
             </div>
 

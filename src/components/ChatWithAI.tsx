@@ -46,7 +46,9 @@ const ChatPopoverWidget = () => {
       const loadHealth = async () => {
         setHealthLoading(true);
         try {
-          const res = await fetch("http://localhost:8080/api/chat/health");
+          const res = await fetch(
+            "http://DESKTOP-GL3I116:8080/api/chat/health"
+          );
           if (!res.ok) throw new Error("Health HTTP " + res.status);
           const data = await res.json();
           setGeminiEnabled(!!data.geminiEnabled);
@@ -79,7 +81,7 @@ const ChatPopoverWidget = () => {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:8080/api/chat", {
+      const res = await fetch("http://DESKTOP-GL3I116:8080/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: input }),

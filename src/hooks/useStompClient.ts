@@ -7,7 +7,7 @@ export function useStompClient(userId: string) {
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    const socket = new SockJS("http://localhost:8080/ws");
+    const socket = new SockJS("http://DESKTOP-GL3I116:8080/ws");
     const client = new Client({
       webSocketFactory: () => socket,
       reconnectDelay: 5000,

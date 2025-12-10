@@ -464,7 +464,7 @@ function DetailPage() {
                       >
                         Thêm vào giỏ hàng
                       </Button>
-                      <Button
+                      {/* <Button
                         size="large"
                         icon={<CreditCardOutlined />}
                         block
@@ -478,7 +478,7 @@ function DetailPage() {
                         }}
                       >
                         Thanh toán ngay
-                      </Button>
+                      </Button> */}
                     </Space>
 
                     <Card
