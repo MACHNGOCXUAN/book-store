@@ -1,0 +1,32 @@
+import { configureStore } from '@reduxjs/toolkit'
+import authReducer from './slices/auth.slice'
+import userReducer from "./slices/user.slice"
+import productReducer from "./slices/product.slice"
+import bannerReducer from "./slices/banner.slice"
+import sessionReducer from "./slices/session.slice"
+import discountReducer from "./slices/discount.slice"
+import orderReducer from "./slices/order.slice"
+import categoryReducer from "./slices/category.slice"
+
+export const makeStore = () => {
+  return configureStore({
+    reducer: {
+      auth: authReducer,
+      user: userReducer,
+      product: productReducer,
+      banner: bannerReducer,
+      session: sessionReducer,
+      discount: discountReducer,
+      order: orderReducer,
+      category: categoryReducer,
+    },
+  })
+}
+
+export const store = makeStore();
+
+// Infer the type of makeStore
+export type AppStore = ReturnType<typeof makeStore>
+// Infer the `RootState` and `AppDispatch` types from the store itself
+export type RootState = ReturnType<AppStore['getState']>
+export type AppDispatch = AppStore['dispatch']
