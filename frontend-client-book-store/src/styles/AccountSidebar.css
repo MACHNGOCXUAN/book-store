@@ -1,0 +1,21 @@
+/* AccountSidebar styling */
+
+/* Highlight selected menu item with red background */
+.ant-menu-item-selected {
+  background-color: #FFF5F5 !important;
+}
+
+/* Highlight the selected item's border indicator */
+.ant-menu-item-selected::after {
+  border-inline-end-color: #C92127 !important;
+}
+
+/* Text color for selected menu item */
+.ant-menu-item-selected > span {
+  color: #C92127;
+}
+
+/* Icon color for selected menu item */
+.ant-menu-item-selected .anticon {
+  color: #C92127;
+}
